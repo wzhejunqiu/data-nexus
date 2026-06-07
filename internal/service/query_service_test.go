@@ -119,6 +119,75 @@ func TestQueryServiceDescTableReturnsSchema(t *testing.T) {
 	}
 }
 
+func TestQueryServiceWithDeleteUsesExecPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "app.db")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	qs := service.NewQueryService(mgr)
+	_, err = qs.Execute(context.Background(), model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE orders (id INTEGER)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := qs.Execute(context.Background(), model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "WITH c AS (SELECT 1) DELETE FROM orders WHERE id = 1",
+	})
+	if err != nil {
+		t.Fatalf("WITH DELETE: %v", err)
+	}
+	if res.Kind != "exec" {
+		t.Fatalf("expected exec kind, got %+v", res)
+	}
+}
+
+func TestQueryServiceClassifySQL(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "app.db")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	qs := service.NewQueryService(mgr)
+	kind, err := qs.ClassifySQL(context.Background(), conn.ID, "CREATE TABLE z(id INTEGER)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kind != model.StatementWrite {
+		t.Fatalf("got %q want write", kind)
+	}
+}
+
 func TestQueryServiceInvalidDescReturnsSQLError(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "app.db")

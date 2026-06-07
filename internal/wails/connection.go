@@ -59,6 +59,12 @@ func (s *ConnectionService) RenameConnection(connectionID string, name string) (
 	})
 }
 
+func (s *ConnectionService) UpdateConnectionReadOnly(connectionID string, readOnly bool) (*model.SavedConnection, error) {
+	return call(s.log, "ConnectionService.UpdateConnectionReadOnly", func() (*model.SavedConnection, error) {
+		return s.mgr.UpdateConnectionReadOnly(context.Background(), connectionID, readOnly)
+	})
+}
+
 func (s *ConnectionService) GetRestoreOpenOnStartup() (bool, error) {
 	return call(s.log, "ConnectionService.GetRestoreOpenOnStartup", func() (bool, error) {
 		return s.mgr.GetRestoreOpenOnStartup(), nil

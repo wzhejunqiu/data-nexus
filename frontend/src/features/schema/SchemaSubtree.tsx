@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { schemaApi } from '@/lib/api/schema'
+import type { TableInfo } from '@/lib/types'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 
 export function SchemaSubtree({
@@ -46,7 +47,7 @@ export function SchemaSubtree({
       {tables.length > 0 && (
         <SchemaGroup
           title={t('connection.tables')}
-          names={tables.map((t) => t.name)}
+          items={tables}
           selected={activeConnectionId === connectionId ? selectedTable : null}
           onSelect={onSelectTable}
         />
@@ -54,7 +55,7 @@ export function SchemaSubtree({
       {views.length > 0 && (
         <SchemaGroup
           title={t('connection.views')}
-          names={views.map((v) => v.name)}
+          items={views}
           selected={activeConnectionId === connectionId ? selectedTable : null}
           onSelect={onSelectTable}
         />
@@ -65,28 +66,35 @@ export function SchemaSubtree({
 
 function SchemaGroup({
   title,
-  names,
+  items,
   selected,
   onSelect,
 }: {
   title: string
-  names: string[]
+  items: TableInfo[]
   selected: string | null
   onSelect: (name: string) => void
 }) {
+  const { t } = useTranslation()
+
   return (
     <div>
       <p className="text-xs font-semibold text-muted">{title}</p>
       <ul className="mt-1 space-y-0.5">
-        {names.map((name) => (
-          <li key={name}>
+        {items.map((item) => (
+          <li key={item.name}>
             <button
-              className={`w-full truncate rounded px-2 py-1 text-left text-xs hover:bg-muted/40 ${
-                selected === name ? 'bg-accent/20 text-accent' : ''
+              className={`flex w-full items-center justify-between gap-2 truncate rounded px-2 py-1 text-left text-xs hover:bg-muted/40 ${
+                selected === item.name ? 'bg-accent/20 text-accent' : ''
               }`}
-              onClick={() => onSelect(name)}
+              onClick={() => onSelect(item.name)}
             >
-              {name}
+              <span className="truncate">{item.name}</span>
+              {item.type === 'table' && item.rowCount != null && (
+                <span className="shrink-0 text-muted">
+                  {t('data.rowCountShort', { count: item.rowCount })}
+                </span>
+              )}
             </button>
           </li>
         ))}

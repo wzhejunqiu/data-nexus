@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { Header, StatusBar } from '@/components/Header'
 import { Tabs } from '@/components/ui/Tabs'
-import { Toaster } from '@/components/ui/Toast'
+import { Toaster, useToastStore } from '@/components/ui/Toast'
 import { ConnectionTree } from '@/features/connection/ConnectionTree'
 import { SchemaTable } from '@/features/schema/SchemaTable'
 import { SqlEditor } from '@/features/sql-editor/SqlEditor'
@@ -50,9 +50,15 @@ export function AppShell() {
   }, [activeConnectionId])
 
   useEffect(() => {
+    const pushToast = useToastStore.getState().push
     const unsubs = [
       EventsOn('app:connections-changed', () => {
         qc.invalidateQueries({ queryKey: ['connections'] })
+      }),
+      EventsOn('app:toast', (payload: { message?: string; variant?: 'error' | 'info' }) => {
+        if (payload?.message) {
+          pushToast(payload.message, payload.variant ?? 'error')
+        }
       }),
       EventsOn('app:theme', (mode: string) => {
         if (mode === 'light' || mode === 'dark' || mode === 'system') {

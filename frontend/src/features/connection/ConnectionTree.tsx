@@ -8,6 +8,7 @@ import { formatError } from '@/lib/api/errors'
 import type { ConnectionListItem } from '@/lib/types'
 import { SchemaSubtree } from '@/features/schema/SchemaSubtree'
 import { NewConnectionDialog } from './NewConnectionDialog'
+import { EditConnectionDialog } from './EditConnectionDialog'
 import { RenameDialog } from '@/features/schema/IndexList'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 
@@ -180,6 +181,7 @@ function ConnectionTreeItem({
   const isOpen = item.status === 'open'
   const path = item.config.sqlite?.filePath ?? ''
   const [renameOpen, setRenameOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [name, setName] = useState(item.name)
 
   const rename = async () => {
@@ -223,11 +225,13 @@ function ConnectionTreeItem({
             size="sm"
             variant="outline"
             onClick={() => {
-              setName(item.name)
               setRenameOpen(true)
             }}
           >
             {t('connection.rename')}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+            {t('connection.edit')}
           </Button>
           <Button size="sm" variant="danger" onClick={onRemove}>
             {t('connection.remove')}
@@ -239,8 +243,17 @@ function ConnectionTreeItem({
         open={renameOpen}
         name={name}
         onNameChange={setName}
-        onOpenChange={setRenameOpen}
+        onOpenChange={(open) => {
+          setRenameOpen(open)
+          if (open) setName(item.name)
+        }}
         onConfirm={rename}
+      />
+      <EditConnectionDialog
+        item={item}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSaved={onRenamed}
       />
     </div>
   )

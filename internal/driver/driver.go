@@ -18,6 +18,7 @@ type Driver interface {
 	BrowseTable(ctx context.Context, tableName string, opts model.BrowseOptions) (*model.PaginatedTableData, error)
 	QueryRows(ctx context.Context, sql string, params []any, maxRows int) (*model.QueryResult, error)
 	Exec(ctx context.Context, sql string, params []any) (*model.ExecResult, error)
+	ClassifySQL(ctx context.Context, sql string) (model.StatementKind, error)
 }
 
 func NewDriver(t model.DriverType) (Driver, error) {

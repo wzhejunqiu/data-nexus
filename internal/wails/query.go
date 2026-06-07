@@ -22,3 +22,13 @@ func (s *QueryService) Execute(req model.ExecuteQueryRequest) (*model.QueryRespo
 		return s.query.Execute(context.Background(), req)
 	})
 }
+
+func (s *QueryService) ClassifySQL(connectionID, sql string) (string, error) {
+	return call(s.log, "QueryService.ClassifySQL", func() (string, error) {
+		kind, err := s.query.ClassifySQL(context.Background(), connectionID, sql)
+		if err != nil {
+			return "", err
+		}
+		return string(kind), nil
+	})
+}

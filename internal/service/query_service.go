@@ -48,46 +48,54 @@ func (s *QueryService) Execute(ctx context.Context, req model.ExecuteQueryReques
 	}
 	maxRows := req.MaxRows
 	if maxRows <= 0 {
-		maxRows = 1000
+		maxRows = model.MaxQueryRows
 	}
 	sqlText := normalizeSQL(req.SQL)
-	if isQuerySQL(sqlText) {
-		result, err := drv.QueryRows(ctx, sqlText, req.Params, maxRows)
+	kind, err := drv.ClassifySQL(ctx, sqlText)
+	if err != nil {
+		return nil, err
+	}
+	if kind == model.StatementWrite {
+		if drv.ReadOnly() {
+			return nil, model.ErrReadOnly()
+		}
+		execResult, err := drv.Exec(ctx, sqlText, req.Params)
 		if err != nil {
 			return nil, err
 		}
 		return &model.QueryResponse{
-			Kind:       "result",
-			Columns:    result.Columns,
-			Rows:       result.Rows,
-			RowCount:   result.RowCount,
-			Truncated:  result.Truncated,
-			DurationMs: result.Duration.Milliseconds(),
+			Kind:         "exec",
+			RowsAffected: execResult.RowsAffected,
+			LastInsertID: execResult.LastInsertID,
+			DurationMs:   execResult.Duration.Milliseconds(),
 		}, nil
 	}
-	execResult, err := drv.Exec(ctx, sqlText, req.Params)
+	result, err := drv.QueryRows(ctx, sqlText, req.Params, maxRows)
 	if err != nil {
 		return nil, err
 	}
 	return &model.QueryResponse{
-		Kind:         "exec",
-		RowsAffected: execResult.RowsAffected,
-		LastInsertID: execResult.LastInsertID,
-		DurationMs:   execResult.Duration.Milliseconds(),
+		Kind:       "result",
+		Columns:    result.Columns,
+		Rows:       result.Rows,
+		RowCount:   result.RowCount,
+		Truncated:  result.Truncated,
+		DurationMs: result.Duration.Milliseconds(),
 	}, nil
 }
 
-func isQuerySQL(sql string) bool {
-	trimmed := strings.TrimSpace(strings.ToUpper(sql))
-	switch {
-	case strings.HasPrefix(trimmed, "SELECT"),
-		strings.HasPrefix(trimmed, "WITH"),
-		strings.HasPrefix(trimmed, "PRAGMA"),
-		strings.HasPrefix(trimmed, "EXPLAIN"):
-		return true
-	default:
-		return false
+func (s *QueryService) ClassifySQL(ctx context.Context, connectionID, sql string) (model.StatementKind, error) {
+	if connectionID == "" {
+		return "", model.ErrInvalidRequest("connectionId is required")
 	}
+	if strings.TrimSpace(sql) == "" {
+		return "", model.ErrInvalidRequest("sql is required")
+	}
+	drv, err := s.mgr.Driver(connectionID)
+	if err != nil {
+		return "", err
+	}
+	return drv.ClassifySQL(ctx, normalizeSQL(sql))
 }
 
 func (s *QueryService) BrowseRows(ctx context.Context, req model.BrowseRowsRequest) (*model.PaginatedTableData, error) {

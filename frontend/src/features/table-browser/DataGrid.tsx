@@ -87,6 +87,7 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
   if (!data) return null
 
   const columnNames = data.columns.map((c) => c.name)
+  const isEmpty = data.rows.length === 0
 
   return (
     <div className="flex h-full flex-col p-4">
@@ -111,64 +112,68 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
         <span className="text-muted">{t('data.total', { count: data.pagination.totalRows })}</span>
         {isFetching && <span className="text-muted">{t('common.loading')}</span>}
       </div>
-      <div ref={parentRef} className="min-h-0 flex-1 overflow-auto rounded border border-border">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-card">
-            <tr>
-              {columnNames.map((col) => (
-                <th
-                  key={col}
-                  className="cursor-pointer border-b border-border px-3 py-2 text-left font-medium hover:bg-muted/30"
-                  onClick={() => toggleSort(col)}
-                >
-                  {col}
-                  {sort === col ? (order === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody
-            style={
-              useVirtual
-                ? { height: `${virtualizer.getTotalSize()}px`, position: 'relative' }
-                : undefined
-            }
-          >
-            {useVirtual
-              ? virtualizer.getVirtualItems().map((virtualRow) => {
-                  const row = rows[virtualRow.index]
-                  return (
-                    <tr
-                      key={row.id}
-                      className="border-b border-border/40"
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
+      {isEmpty ? (
+        <p className="mt-3 text-sm text-muted">{t('data.emptyTable')}</p>
+      ) : (
+        <div ref={parentRef} className="min-h-0 flex-1 overflow-auto rounded border border-border">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-card">
+              <tr>
+                {columnNames.map((col) => (
+                  <th
+                    key={col}
+                    className="cursor-pointer border-b border-border px-3 py-2 text-left font-medium hover:bg-muted/30"
+                    onClick={() => toggleSort(col)}
+                  >
+                    {col}
+                    {sort === col ? (order === 'asc' ? ' ▲' : ' ▼') : ''}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody
+              style={
+                useVirtual
+                  ? { height: `${virtualizer.getTotalSize()}px`, position: 'relative' }
+                  : undefined
+              }
+            >
+              {useVirtual
+                ? virtualizer.getVirtualItems().map((virtualRow) => {
+                    const row = rows[virtualRow.index]
+                    return (
+                      <tr
+                        key={row.id}
+                        className="border-b border-border/40"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} className="px-3 py-2 font-mono text-xs">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        ))}
+                      </tr>
+                    )
+                  })
+                : rows.map((row) => (
+                    <tr key={row.id} className="border-b border-border/40">
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className="px-3 py-2 font-mono text-xs">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
                     </tr>
-                  )
-                })
-              : rows.map((row) => (
-                  <tr key={row.id} className="border-b border-border/40">
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-3 py-2 font-mono text-xs">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-          </tbody>
-        </table>
-      </div>
+                  ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <Pagination pagination={data.pagination} page={page} onPageChange={setPage} />
     </div>
   )

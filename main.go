@@ -9,6 +9,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/wzhejunqiu/data-nexus/internal/config"
 	"github.com/wzhejunqiu/data-nexus/internal/logger"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
@@ -51,12 +52,16 @@ func main() {
 			if appErr, ok := err.(*model.AppError); ok && appErr.Code == "DIALOG_CANCELLED" {
 				return
 			}
+			app.emitError(err)
 			log.Warn("open database dialog failed", zap.Error(err))
 			return
 		}
 		if _, err := connWails.OpenConnectionFromFile(model.ConnectRequest{FilePath: path}); err != nil {
+			app.emitError(err)
 			log.Warn("open connection failed", zap.Error(err))
+			return
 		}
+		runtime.EventsEmit(app.ctx, "app:connections-changed")
 	})
 
 	err = wails.Run(&options.App{

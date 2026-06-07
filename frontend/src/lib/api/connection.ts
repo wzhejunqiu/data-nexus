@@ -8,6 +8,7 @@ import {
   RemoveConnection,
   RenameConnection,
   SetRestoreOpenOnStartup,
+  UpdateConnectionReadOnly,
 } from '../../../wailsjs/go/wails/ConnectionService'
 import type { ConnectRequest, Connection, ConnectionListView, SavedConnection } from '../types'
 import { mapWailsError } from './errors'
@@ -30,6 +31,8 @@ export const connectionApi = {
   remove: (id: string) => wrap(() => RemoveConnection(id)),
   rename: (id: string, name: string) =>
     wrap(() => RenameConnection(id, name) as Promise<SavedConnection>),
+  updateReadOnly: (id: string, readOnly: boolean) =>
+    wrap(() => UpdateConnectionReadOnly(id, readOnly) as Promise<SavedConnection>),
   getRestoreOpenOnStartup: () => wrap(() => GetRestoreOpenOnStartup() as Promise<boolean>),
   setRestoreOpenOnStartup: (enabled: boolean) => wrap(() => SetRestoreOpenOnStartup(enabled)),
 }

@@ -11,6 +11,8 @@
     "remove": "删除",
     "readOnly": "只读",
     "rename": "重命名",
+    "edit": "编辑",
+    "readOnlyHint": "只读模式下写 SQL 将被拒绝；已打开的连接会重新连接以应用设置",
     "restoreOnStartup": "启动时恢复已打开连接",
     "pathHint": "输入路径或点击浏览选择 SQLite 文件",
     "browse": "浏览…",
@@ -41,6 +43,8 @@
     "selectTable": "从左侧选择一个表",
     "pageSize": "每页行数",
     "total": "共 {{count}} 行",
+    "emptyTable": "此表没有数据",
+    "rowCountShort": "{{count}}",
     "null": "NULL"
   },
   "sql": {

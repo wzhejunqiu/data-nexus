@@ -157,6 +157,29 @@ func (m *ConnectionManager) RemoveConnection(ctx context.Context, connectionID s
 	return m.store.Save()
 }
 
+func (m *ConnectionManager) UpdateConnectionReadOnly(ctx context.Context, connectionID string, readOnly bool) (*model.SavedConnection, error) {
+	item, err := m.store.UpdateReadOnly(connectionID, readOnly)
+	if err != nil {
+		return nil, err
+	}
+	if err := m.store.Save(); err != nil {
+		return nil, model.ErrInternal(err.Error())
+	}
+
+	m.mu.RLock()
+	_, isOpen := m.active[connectionID]
+	m.mu.RUnlock()
+	if isOpen {
+		if err := m.CloseConnection(ctx, connectionID); err != nil {
+			return nil, err
+		}
+		if _, err := m.OpenConnection(ctx, connectionID); err != nil {
+			return nil, err
+		}
+	}
+	return item, nil
+}
+
 func (m *ConnectionManager) RenameConnection(connectionID, name string) (*model.SavedConnection, error) {
 	item, err := m.store.Rename(connectionID, name)
 	if err != nil {

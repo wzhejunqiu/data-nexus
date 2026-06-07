@@ -7,7 +7,7 @@ import { connectionApi } from '@/lib/api/connection'
 import { formatError } from '@/lib/api/errors'
 import { queryApi } from '@/lib/api/query'
 import type { QueryResponse } from '@/lib/types'
-import { formatCell, isWriteSQL, rowsToCSV } from '@/lib/utils'
+import { formatCell, rowsToCSV } from '@/lib/utils'
 import { useQueryHistoryStore } from '@/stores/queryHistoryStore'
 import { resolveTheme, useThemeStore } from '@/stores/themeStore'
 import { useStatusStore } from '@/stores/statusStore'
@@ -22,6 +22,9 @@ const PRAGMAS = [
 ]
 
 const EMPTY_HISTORY: string[] = []
+const MIN_EDITOR_LINES = 8
+const MAX_EDITOR_LINES = 20
+const EDITOR_LINE_HEIGHT = 19
 
 export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const { t } = useTranslation()
@@ -33,6 +36,7 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const [error, setError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingRun, setPendingRun] = useState(false)
+  const [editorHeight, setEditorHeight] = useState(MIN_EDITOR_LINES * EDITOR_LINE_HEIGHT)
   const addHistory = useQueryHistoryStore((s) => s.add)
   const history = useQueryHistoryStore((s) =>
     connectionId ? (s.items[connectionId] ?? EMPTY_HISTORY) : EMPTY_HISTORY,
@@ -52,7 +56,7 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
 
   const runQuery = useCallback(async () => {
     if (!activeConn) throw new Error(t('sql.noConnection'))
-    const res = await queryApi.execute({ connectionId: activeConn, sql, maxRows: 1000 })
+    const res = await queryApi.execute({ connectionId: activeConn, sql, maxRows: 10000 })
     setError(null)
     setResult(res)
     addHistory(activeConn, sql)
@@ -74,25 +78,39 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
 
   const handleRunRef = useRef<() => void>(() => {})
 
-  const handleRun = () => {
+  const handleRun = async () => {
     if (!activeConn) return
-    if (connReadOnly && isWriteSQL(sql)) {
-      setError(t('sql.readOnlyBlocked'))
-      return
+    try {
+      const kind = await queryApi.classifySQL(activeConn, sql)
+      if (connReadOnly && kind === 'write') {
+        setError(t('sql.readOnlyBlocked'))
+        return
+      }
+      if (kind === 'write') {
+        setConfirmOpen(true)
+        setPendingRun(true)
+        return
+      }
+      setError(null)
+      execute.mutate()
+    } catch (err) {
+      setError(formatError(t, err))
     }
-    if (isWriteSQL(sql)) {
-      setConfirmOpen(true)
-      setPendingRun(true)
-      return
-    }
-    execute.mutate()
   }
 
   useEffect(() => {
-    handleRunRef.current = handleRun
+    handleRunRef.current = () => {
+      void handleRun()
+    }
   })
 
   const handleEditorMount: OnMount = (editor, monaco) => {
+    const updateHeight = () => {
+      const lines = Math.max(MIN_EDITOR_LINES, editor.getContentHeight() / EDITOR_LINE_HEIGHT)
+      setEditorHeight(Math.min(MAX_EDITOR_LINES, lines) * EDITOR_LINE_HEIGHT)
+    }
+    updateHeight()
+    editor.onDidContentSizeChange(updateHeight)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       handleRunRef.current()
     })
@@ -123,7 +141,7 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
             ))}
           </select>
         </label>
-        <Button onClick={handleRun} disabled={!activeConn || execute.isPending}>
+        <Button onClick={() => void handleRun()} disabled={!activeConn || execute.isPending}>
           {t('sql.run')} (⌘↵)
         </Button>
         <QueryHistory history={history} onSelect={setSql} />
@@ -142,7 +160,7 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
       </div>
       <div className="overflow-hidden rounded border border-border">
         <Editor
-          height="180px"
+          height={`${editorHeight}px`}
           defaultLanguage="sql"
           theme={monacoTheme}
           value={sql}

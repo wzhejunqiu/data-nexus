@@ -76,6 +76,27 @@ func (a *App) SetOpenDatabaseHandler(fn func()) {
 	a.onOpenDatabase = fn
 }
 
+func (a *App) emitToast(message, variant string) {
+	if a.ctx == nil || message == "" {
+		return
+	}
+	runtime.EventsEmit(a.ctx, "app:toast", map[string]string{
+		"message": message,
+		"variant": variant,
+	})
+}
+
+func (a *App) emitError(err error) {
+	if err == nil {
+		return
+	}
+	msg := err.Error()
+	if appErr, ok := err.(*model.AppError); ok && appErr.Message != "" {
+		msg = appErr.Message
+	}
+	a.emitToast(msg, "error")
+}
+
 func (a *App) handleOpenDatabase() {
 	if a.onOpenDatabase != nil {
 		a.onOpenDatabase()

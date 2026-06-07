@@ -147,6 +147,22 @@ func (s *ConnectionStore) Remove(id string) error {
 	return model.ErrSavedNotFound(id)
 }
 
+func (s *ConnectionStore) UpdateReadOnly(id string, readOnly bool) (*model.SavedConnection, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.data.Items {
+		if s.data.Items[i].ID == id {
+			if s.data.Items[i].Config.SQLite != nil {
+				s.data.Items[i].Config.SQLite.ReadOnly = readOnly
+			}
+			s.data.Items[i].UpdatedAt = time.Now().UTC()
+			item := s.data.Items[i]
+			return &item, nil
+		}
+	}
+	return nil, model.ErrSavedNotFound(id)
+}
+
 func (s *ConnectionStore) Rename(id, name string) (*model.SavedConnection, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

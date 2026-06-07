@@ -167,3 +167,39 @@ func TestConnectionManagerCreateWithoutOpen(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestConnectionManagerUpdateReadOnly(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "app.db")
+	f, err := os.Create(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	updated, err := mgr.UpdateConnectionReadOnly(context.Background(), conn.ID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !updated.Config.SQLite.ReadOnly {
+		t.Fatal("expected read-only config")
+	}
+
+	list := mgr.ListConnections()
+	if list.Items[0].Status != model.ConnectionStatusOpen {
+		t.Fatal("expected connection to stay open after read-only update")
+	}
+	if !list.Items[0].Config.SQLite.ReadOnly {
+		t.Fatal("expected list item read-only")
+	}
+}

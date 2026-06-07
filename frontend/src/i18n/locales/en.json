@@ -11,6 +11,8 @@
     "remove": "Remove",
     "readOnly": "Read-only",
     "rename": "Rename",
+    "edit": "Edit",
+    "readOnlyHint": "Write SQL is blocked in read-only mode. Open connections reconnect to apply changes.",
     "restoreOnStartup": "Restore open connections on startup",
     "pathHint": "Enter a path or browse for a SQLite file",
     "browse": "Browse…",
@@ -41,6 +43,8 @@
     "selectTable": "Select a table from the sidebar",
     "pageSize": "Rows per page",
     "total": "Total {{count}} rows",
+    "emptyTable": "This table has no rows",
+    "rowCountShort": "{{count}}",
     "null": "NULL"
   },
   "sql": {

@@ -41,3 +41,10 @@ type VersionInfo struct {
 }
 
 const MaxQueryRows = 10000
+
+type StatementKind string
+
+const (
+	StatementQuery StatementKind = "query"
+	StatementWrite StatementKind = "write"
+)

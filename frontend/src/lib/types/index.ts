@@ -136,6 +136,8 @@ export interface QueryResponse {
   durationMs: number
 }
 
+export type StatementKind = 'query' | 'write'
+
 export interface VersionInfo {
   version: string
   platform: string
