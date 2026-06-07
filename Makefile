@@ -1,4 +1,4 @@
-.PHONY: dev build test lint generate ci-test fmt-check fmt vuln-check check embed-stub gen-test-db
+.PHONY: dev build test test-cover test-perf bench lint generate ci-test fmt-check fmt vuln-check check embed-stub gen-test-db
 
 UNAME_S := $(shell uname -s)
 WAILS_TAGS :=
@@ -13,7 +13,16 @@ build:
 	wails build $(WAILS_TAGS)
 
 test:
-	go test ./...
+	go test -short ./...
+
+test-cover:
+	go test -short ./internal/... -cover
+
+test-perf:
+	go test ./internal/driver/sqlite/... ./internal/service/... -run 'TestPerf' -count=1
+
+bench:
+	go test ./internal/driver/sqlite/... -bench=. -benchtime=3x -run='^$$'
 
 generate: embed-stub
 	wails generate module
@@ -33,7 +42,7 @@ lint-frontend:
 
 ci-test: generate
 	cd frontend && npm ci && npm run format:check && npm run lint && npm test && npm run build
-	go test ./...
+	go test -short ./...
 
 lint: embed-stub
 	golangci-lint run ./internal/... .

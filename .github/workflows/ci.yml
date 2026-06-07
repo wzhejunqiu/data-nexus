@@ -149,7 +149,7 @@ jobs:
         run: npm run build
 
       - name: Go tests
-        run: go test ./...
+        run: go test -short ./...
 
   smoke-build:
     name: Smoke build (linux-amd64)

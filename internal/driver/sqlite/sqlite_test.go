@@ -192,3 +192,110 @@ func TestDriverReadOnlyExecRejected(t *testing.T) {
 		t.Fatal("expected read-only error")
 	}
 }
+
+func TestListTablesExcludesSystemTables(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "sys.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE users (id INTEGER); INSERT INTO users (id) VALUES (1); ANALYZE users;`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+
+	drv := sqlite.New()
+	if err := drv.Connect(context.Background(), model.DriverConfig{
+		Type: model.DriverTypeSQLite, SQLite: &model.SQLiteConfig{FilePath: path},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	tables, err := drv.ListTables(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tbl := range tables {
+		if tbl.Name == "sqlite_stat1" {
+			t.Fatal("sqlite_ system table should be excluded")
+		}
+	}
+	if len(tables) != 1 || tables[0].Name != "users" {
+		t.Fatalf("unexpected tables: %+v", tables)
+	}
+}
+
+func TestListTablesIncludesView(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "view.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE t (id INTEGER); CREATE VIEW v AS SELECT id FROM t;`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+
+	drv := sqlite.New()
+	if err := drv.Connect(context.Background(), model.DriverConfig{
+		Type: model.DriverTypeSQLite, SQLite: &model.SQLiteConfig{FilePath: path},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	tables, err := drv.ListTables(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var hasView bool
+	for _, tbl := range tables {
+		if tbl.Name == "v" && tbl.Type == model.TableTypeView {
+			hasView = true
+		}
+	}
+	if !hasView {
+		t.Fatalf("expected view in list: %+v", tables)
+	}
+}
+
+func TestSerializeNull(t *testing.T) {
+	if sqlite.SerializeCellValue(nil) != nil {
+		t.Fatal("expected nil for null value")
+	}
+}
+
+func TestBrowseInvalidSortColumn(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "sort.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE t (id INTEGER);`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+
+	drv := sqlite.New()
+	if err := drv.Connect(context.Background(), model.DriverConfig{
+		Type: model.DriverTypeSQLite, SQLite: &model.SQLiteConfig{FilePath: path},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	_, err = drv.BrowseTable(context.Background(), "t", model.BrowseOptions{
+		Page: 1, PageSize: 50, Sort: "bad-name",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_REQUEST" {
+		t.Fatalf("expected INVALID_REQUEST, got %v", err)
+	}
+}

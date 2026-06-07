@@ -25,8 +25,17 @@ wails doctor
 
 ```bash
 make dev          # wails dev
-make test         # go test ./...
+make test         # go test -short ./...（CI 等价，跳过性能测试）
+make test-cover   # 带覆盖率
 make build        # wails build → build/bin/
+```
+
+发布前本地性能验收：
+
+```bash
+make test-perf    # 10 万行 Browse <500ms、1 万行 SELECT <200ms
+make bench        # Go benchmark（可选 profiling）
+make gen-test-db  # 含 data/large.db（10 万行，手动验 UI）
 ```
 
 CI：推送到 `main` 或 PR 时运行 [GitHub Actions](.github/workflows/ci.yml)（**格式检查**、**漏洞扫描**、Go/前端测试；`main` 上额外三平台构建）。推送 `v*` tag 时 [Release](.github/workflows/release.yml) 会构建并上传产物。

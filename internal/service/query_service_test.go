@@ -188,6 +188,128 @@ func TestQueryServiceClassifySQL(t *testing.T) {
 	}
 }
 
+func TestQueryServiceBrowseRows(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+
+	_, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "INSERT INTO items (name) VALUES ('a'), ('b'), ('c')",
+	})
+
+	data, err := qs.BrowseRows(ctx, model.BrowseRowsRequest{
+		ConnectionID: conn.ID,
+		TableName:    "items",
+		Page:         1,
+		PageSize:     2,
+		Sort:         "id",
+		Order:        model.SortAsc,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data.Pagination.TotalRows != 3 || len(data.Rows) != 2 {
+		t.Fatalf("unexpected browse result: %+v", data.Pagination)
+	}
+}
+
+func TestQueryServiceListTables(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+
+	_, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	list, err := qs.ListTables(ctx, conn.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 1 || list.Items[0].Name != "users" {
+		t.Fatalf("unexpected tables: %+v", list.Items)
+	}
+}
+
+func TestQueryServiceGetTableSchema(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+
+	_, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE users (email TEXT UNIQUE)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	schema, err := qs.GetTableSchema(ctx, conn.ID, "users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(schema.Columns) != 1 {
+		t.Fatalf("expected 1 column, got %d", len(schema.Columns))
+	}
+	if len(schema.Indexes) == 0 {
+		t.Fatal("expected at least one index")
+	}
+}
+
+func TestQueryServiceNotConnected(t *testing.T) {
+	_, qs, _ := newTestEnv(t)
+	ctx := context.Background()
+
+	_, err := qs.BrowseRows(ctx, model.BrowseRowsRequest{
+		ConnectionID: "nonexistent",
+		TableName:    "t",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "CONNECTION_NOT_FOUND" {
+		t.Fatalf("expected CONNECTION_NOT_FOUND, got %v", err)
+	}
+}
+
+func TestQueryServiceBrowseInvalidSort(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+
+	_, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE t (id INTEGER PRIMARY KEY)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = qs.BrowseRows(ctx, model.BrowseRowsRequest{
+		ConnectionID: conn.ID,
+		TableName:    "t",
+		Page:         1,
+		PageSize:     50,
+		Sort:         "bad-name",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_REQUEST" {
+		t.Fatalf("expected INVALID_REQUEST, got %v", err)
+	}
+}
+
 func TestQueryServiceInvalidDescReturnsSQLError(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "app.db")
