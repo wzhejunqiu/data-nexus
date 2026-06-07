@@ -1,4 +1,8 @@
-.PHONY: dev build test test-cover test-perf bench lint generate sync-version ci-test fmt-check fmt-check-go fmt-check-go-staged fmt-check-go-head fmt vuln-check check pre-commit pre-push install-hooks embed-stub gen-test-db test-db-up test-db-down test-db-integration
+.PHONY: dev build test test-cover test-coverage test-coverage-go test-coverage-frontend test-coverage-html test-coverage-go-html test-perf bench lint generate sync-version ci-test fmt-check fmt-check-go fmt-check-go-staged fmt-check-go-head fmt vuln-check check pre-commit pre-push install-hooks embed-stub gen-test-db test-db-up test-db-down test-db-integration
+
+COVERAGE_DIR := coverage
+GO_COVERAGE := $(COVERAGE_DIR)/go.out
+FRONTEND_COVERAGE := $(COVERAGE_DIR)/frontend
 
 UNAME_S := $(shell uname -s)
 WAILS_TAGS :=
@@ -17,6 +21,27 @@ test: sync-version
 
 test-cover: sync-version
 	go test -short ./internal/... -cover
+
+# 测试覆盖率（Go + 前端）
+test-coverage: test-coverage-go test-coverage-frontend
+
+# Go 测试覆盖率：生成 profile 并在终端输出各包汇总
+test-coverage-go: sync-version
+	@mkdir -p $(COVERAGE_DIR)
+	go test -short ./internal/... -coverprofile=$(GO_COVERAGE) -covermode=atomic
+	go tool cover -func=$(GO_COVERAGE)
+
+# 前端测试覆盖率（Vitest，输出 coverage/frontend/）
+test-coverage-frontend:
+	cd frontend && npm run test:coverage
+
+# 测试覆盖率 HTML 报告（Go + 前端）
+test-coverage-html: test-coverage-go-html test-coverage-frontend
+	@echo "Go:       $(COVERAGE_DIR)/go.html"
+	@echo "Frontend: $(FRONTEND_COVERAGE)/index.html"
+
+test-coverage-go-html: test-coverage-go
+	go tool cover -html=$(GO_COVERAGE) -o $(COVERAGE_DIR)/go.html
 
 test-perf:
 	go test ./internal/driver/sqlite/... ./internal/service/... -run 'TestPerf' -count=1

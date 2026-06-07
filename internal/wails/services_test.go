@@ -5,7 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/wzhejunqiu/data-nexus/internal/config"
+	"github.com/wzhejunqiu/data-nexus/internal/executionlog/sqlite"
+	"github.com/wzhejunqiu/data-nexus/internal/logger"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
 	wailssvc "github.com/wzhejunqiu/data-nexus/internal/wails"
@@ -202,5 +206,259 @@ func TestAppServiceActiveConnection(t *testing.T) {
 	}
 	if svc.ActiveConnectionID() != "conn-1" {
 		t.Fatalf("unexpected active id %s", svc.ActiveConnectionID())
+	}
+}
+
+func TestCannedQueryServiceWails(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewQueryStore(filepath.Join(dir, "queries.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := wailssvc.NewCannedQueryService(service.NewCannedQueryService(store), zap.NewNop())
+
+	list, err := svc.ListCannedQueries()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 0 {
+		t.Fatalf("expected empty list, got %+v", list.Items)
+	}
+
+	saved, err := svc.SaveCannedQuery(model.SaveCannedQueryRequest{Name: "Q1", SQL: "SELECT 1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeleteCannedQuery(saved.ID); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestConfigServiceWails(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	logMgr, err := logger.NewManager(config.DefaultConfig().Log, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := wailssvc.NewConfigService(logMgr, zap.NewNop())
+
+	cfg, err := svc.GetConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Log.Level != "info" {
+		t.Fatalf("unexpected config level %s", cfg.Log.Level)
+	}
+	path, err := svc.GetConfigPath()
+	if err != nil || path == "" {
+		t.Fatalf("unexpected config path: %q err=%v", path, err)
+	}
+	cfg.Log.Level = "warn"
+	if err := svc.UpdateConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := svc.GetConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.Log.Level != "warn" {
+		t.Fatalf("expected warn after update, got %s", reloaded.Log.Level)
+	}
+}
+
+func TestConnectionServiceCreateAndRemove(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "app.db")
+	f, err := os.Create(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewTestConnectionManager(store)
+	svc := wailssvc.NewConnectionService(mgr, zap.NewNop())
+
+	saved, err := svc.CreateConnection(model.ConnectRequest{FilePath: dbPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.ID == "" {
+		t.Fatal("expected saved connection id")
+	}
+
+	list, err := svc.ListConnections()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 1 || list.Items[0].Status != model.ConnectionStatusClosed {
+		t.Fatalf("expected one closed connection, got %+v", list.Items)
+	}
+
+	opened, err := svc.OpenConnection(saved.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opened.ID != saved.ID {
+		t.Fatalf("expected opened id %s, got %s", saved.ID, opened.ID)
+	}
+
+	list, err = svc.ListConnections()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 1 || list.Items[0].Status != model.ConnectionStatusOpen {
+		t.Fatalf("expected open connection, got %+v", list.Items)
+	}
+
+	if err := svc.RemoveConnection(saved.ID); err != nil {
+		t.Fatal(err)
+	}
+	list, err = svc.ListConnections()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 0 {
+		t.Fatalf("expected empty list after remove, got %+v", list.Items)
+	}
+}
+
+func TestConnectionServiceAttachDetach(t *testing.T) {
+	mgr, _, conn := newWailsTestEnv(t)
+	svc := wailssvc.NewConnectionService(mgr, zap.NewNop())
+
+	otherPath := filepath.Join(t.TempDir(), "other.db")
+	f, err := os.Create(otherPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	if err := svc.Attach(conn.ID, otherPath, "other"); err != nil {
+		t.Fatal(err)
+	}
+	attached, err := svc.ListAttached(conn.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attached) != 1 || attached[0].Alias != "other" {
+		t.Fatalf("unexpected attached: %+v", attached)
+	}
+	if err := svc.Detach(conn.ID, "other"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSchemaServiceGetTableProfile(t *testing.T) {
+	_, qs, conn := newWailsTestEnv(t)
+	querySvc := wailssvc.NewQueryService(qs, zap.NewNop())
+	schemaSvc := wailssvc.NewSchemaService(qs, zap.NewNop())
+
+	_, err := querySvc.Execute(model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = querySvc.Execute(model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "INSERT INTO t (v) VALUES ('x')",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	profile, err := schemaSvc.GetTableProfile(conn.ID, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if profile.TotalRows == nil || *profile.TotalRows != 1 {
+		t.Fatalf("expected 1 row, got %v", profile.TotalRows)
+	}
+}
+
+func TestSqlExecutionServiceWails(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sql-global.db")
+	store, err := sqlite.NewStore(&model.ExecutionLogSQLiteConfig{FilePath: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+
+	svc := wailssvc.NewSqlExecutionService(service.NewSqlExecutionService(store), zap.NewNop())
+	if err := store.Insert(context.Background(), model.SqlExecutionRecord{
+		ConnectionID: "conn-1",
+		SQL:          "SELECT 1",
+		Kind:         model.SqlExecutionResult,
+		EffectRows:   1,
+		DurationMs:   1,
+		ExecutedAt:   time.Now().UTC(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	history, err := svc.ListQueryHistory("conn-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(history) == 0 {
+		t.Fatal("expected query history")
+	}
+	executions, err := svc.ListSqlExecutions("conn-1", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(executions.Items) != 1 {
+		t.Fatalf("expected 1 execution, got %d", len(executions.Items))
+	}
+}
+
+func TestTableServiceUpdateCellsBatch(t *testing.T) {
+	_, qs, conn := newWailsTestEnv(t)
+	querySvc := wailssvc.NewQueryService(qs, zap.NewNop())
+	tableSvc := wailssvc.NewTableService(qs, zap.NewNop())
+
+	_, err := querySvc.Execute(model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE cells (id INTEGER PRIMARY KEY, val TEXT)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = querySvc.Execute(model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "INSERT INTO cells (val) VALUES ('old')",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := tableSvc.BrowseRows(model.BrowseRowsRequest{
+		ConnectionID: conn.ID,
+		TableName:    "cells",
+		Page:         1,
+		PageSize:     10,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rowID := data.Rows[0]["id"]
+
+	res, err := tableSvc.UpdateCellsBatch(model.UpdateCellsBatchRequest{
+		ConnectionID: conn.ID,
+		TableName:    "cells",
+		Changes: []model.CellChange{
+			{ColumnName: "val", PrimaryKey: map[string]any{"id": rowID}, NewValue: "new"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.UpdatedCount != 1 {
+		t.Fatalf("expected 1 update, got %d", res.UpdatedCount)
 	}
 }

@@ -40,3 +40,22 @@ func TestWriteRowsNullValue(t *testing.T) {
 		t.Fatalf("expected ok in output, got %q", out)
 	}
 }
+
+func TestLineEndingAndEncodeContent(t *testing.T) {
+	lf := model.CSVFormatOptions{LineEnding: "lf"}
+	if LineEnding(lf) != "\n" {
+		t.Fatalf("expected LF, got %q", LineEnding(lf))
+	}
+	if LineEnding(model.DefaultCSVFormat()) != "\r\n" {
+		t.Fatal("expected CRLF by default")
+	}
+
+	body := "a\nb\r\nc"
+	if got := EncodeContent(body, lf); got != "a\nb\nc" {
+		t.Fatalf("expected normalized LF content, got %q", got)
+	}
+	crlf := model.DefaultCSVFormat()
+	if got := EncodeContent("a\nb", crlf); got != "a\r\nb" {
+		t.Fatalf("expected CRLF content, got %q", got)
+	}
+}

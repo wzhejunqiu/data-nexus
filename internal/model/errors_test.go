@@ -31,8 +31,13 @@ func TestAppErrorConstructors(t *testing.T) {
 		{"read only", model.ErrReadOnly(), "READ_ONLY"},
 		{"dialog cancelled", model.ErrDialogCancelled(), "DIALOG_CANCELLED"},
 		{"export cancelled", model.ErrExportCancelled(), "EXPORT_CANCELLED"},
+		{"export no stable key", model.ErrExportNoStableKey("t"), "EXPORT_NO_STABLE_KEY"},
 		{"invalid path", model.ErrInvalidPath("msg"), "INVALID_PATH"},
 		{"internal", model.ErrInternal("msg"), "INTERNAL_ERROR"},
+		{"secrets vault locked", model.ErrSecretsVaultLocked(), "SECRETS_VAULT_LOCKED"},
+		{"secrets vault not initialized", model.ErrSecretsVaultNotInitialized(), "SECRETS_VAULT_NOT_INITIALIZED"},
+		{"secrets vault wrong password", model.ErrSecretsVaultWrongPassword(), "SECRETS_VAULT_WRONG_PASSWORD"},
+		{"connection failed with reason", model.ErrConnectionFailedWithReason("failed", "timeout"), "CONNECTION_FAILED"},
 	}
 
 	for _, tc := range tests {

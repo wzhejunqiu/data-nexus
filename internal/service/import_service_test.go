@@ -294,6 +294,94 @@ func TestImportServiceMalformedCSV(t *testing.T) {
 	}
 }
 
+func TestImportServiceUpdateModeUpsert(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+	is := service.NewImportService(qs)
+
+	_, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "INSERT INTO users (id, name) VALUES (1, 'alice')",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	csvPath := writeTempCSV(t, "id,name\n1,bob\n2,carol\n")
+	res, err := is.ImportCSV(ctx, model.ImportCSVRequest{
+		ConnectionID: conn.ID,
+		TargetTable:  "users",
+		Mode:         "update",
+		ColumnMap:    map[string]string{"id": "id", "name": "name"},
+		FilePath:     csvPath,
+		Format:       model.DefaultCSVFormat(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.RowsUpdated != 1 || res.RowsInserted != 1 {
+		t.Fatalf("expected 1 update and 1 insert, got %+v", res)
+	}
+
+	data, err := qs.BrowseRows(ctx, model.BrowseRowsRequest{
+		ConnectionID: conn.ID,
+		TableName:    "users",
+		Page:         1,
+		PageSize:     10,
+		Sort:         "id",
+		Order:        model.SortAsc,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data.Rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(data.Rows))
+	}
+	if data.Rows[0]["name"] != "bob" || data.Rows[1]["name"] != "carol" {
+		t.Fatalf("unexpected row data: %+v", data.Rows)
+	}
+}
+
+func TestImportServiceSanitizedColumnHeaders(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+	is := service.NewImportService(qs)
+
+	csvPath := writeTempCSV(t, "1-id,发送\n1,alpha\n")
+	res, err := is.ImportCSV(ctx, model.ImportCSVRequest{
+		ConnectionID: conn.ID,
+		NewTableName: "sanitized",
+		Mode:         "append",
+		FilePath:     csvPath,
+		Format:       model.DefaultCSVFormat(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.RowsInserted != 1 {
+		t.Fatalf("expected 1 insert, got %d", res.RowsInserted)
+	}
+
+	schema, err := qs.GetTableSchema(ctx, conn.ID, "sanitized")
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := map[string]bool{}
+	for _, col := range schema.Columns {
+		names[col.Name] = true
+	}
+	if !names["col_1_id"] || !names["__"] {
+		t.Fatalf("expected sanitized column names, got %+v", names)
+	}
+}
+
 func writeTempCSV(t *testing.T, content string) string {
 	t.Helper()
 	dir := t.TempDir()

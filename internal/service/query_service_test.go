@@ -684,3 +684,85 @@ func TestQueryServiceExecuteRecordsExecution(t *testing.T) {
 		t.Fatalf("failed execution should not insert, got %d items", len(items))
 	}
 }
+
+func TestQueryServiceGetTableProfile(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+
+	_, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE profiled (id INTEGER PRIMARY KEY, label TEXT NOT NULL)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "INSERT INTO profiled (label) VALUES ('a'), ('b')",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	profile, err := qs.GetTableProfile(ctx, conn.ID, "profiled")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if profile.TotalRows == nil || *profile.TotalRows != 2 || len(profile.Columns) != 2 {
+		t.Fatalf("unexpected profile: totalRows=%v columns=%d", profile.TotalRows, len(profile.Columns))
+	}
+}
+
+func TestQueryServiceDetectFTSTable(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+
+	_, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE VIRTUAL TABLE docs USING fts5(title, body)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := qs.DetectFTSTable(ctx, conn.ID, "docs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info == nil || !info.Enabled {
+		t.Fatalf("expected FTS table, got %+v", info)
+	}
+}
+
+func TestQueryServiceAttachDatabase(t *testing.T) {
+	mgr, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+
+	otherPath := filepath.Join(t.TempDir(), "attached.db")
+	f, err := os.Create(otherPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	if err := qs.AttachDatabase(ctx, conn.ID, otherPath, "extra"); err != nil {
+		t.Fatal(err)
+	}
+	attached, err := qs.ListAttachedDatabases(ctx, conn.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attached) != 1 || attached[0].Alias != "extra" {
+		t.Fatalf("unexpected attached: %+v", attached)
+	}
+	if err := qs.DetachDatabase(ctx, conn.ID, "extra"); err != nil {
+		t.Fatal(err)
+	}
+	attached, err = mgr.ListAttachedDatabases(ctx, conn.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attached) != 0 {
+		t.Fatalf("expected no attached databases, got %+v", attached)
+	}
+}

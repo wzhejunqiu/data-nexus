@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/wzhejunqiu/data-nexus/internal/config"
+	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"gopkg.in/yaml.v3"
 )
 
@@ -71,6 +72,27 @@ func TestConfigPaths(t *testing.T) {
 	}
 	if config.ConnectionsPath() != filepath.Join(home, ".data-nexus", "connections.json") {
 		t.Fatal("unexpected connections path")
+	}
+	if config.QueriesPath() != filepath.Join(home, ".data-nexus", "queries.json") {
+		t.Fatal("unexpected queries path")
+	}
+	if config.SqlGlobalDBPath() != filepath.Join(home, ".data-nexus", "sql-global.db") {
+		t.Fatal("unexpected sql global db path")
+	}
+	if config.VaultDir() != filepath.Join(home, ".data-nexus", "vault") {
+		t.Fatal("unexpected vault dir")
+	}
+}
+
+func TestDefaultExecutionLogConfig(t *testing.T) {
+	home := withHome(t)
+	cfg := config.DefaultExecutionLogConfig()
+	if cfg.Driver != model.ExecutionLogSQLite || cfg.SQLite == nil {
+		t.Fatalf("unexpected execution log config: %+v", cfg)
+	}
+	want := filepath.Join(home, ".data-nexus", "sql-global.db")
+	if cfg.SQLite.FilePath != want {
+		t.Fatalf("expected %s, got %s", want, cfg.SQLite.FilePath)
 	}
 }
 

@@ -165,3 +165,12 @@ func TestExportServiceExportCancelled(t *testing.T) {
 		t.Fatal("partial export file should be removed")
 	}
 }
+
+func TestDefaultCSVFilename(t *testing.T) {
+	if got := service.DefaultCSVFilename("user orders"); got != "user_orders.csv" {
+		t.Fatalf("got %q", got)
+	}
+	if got := service.DefaultCSVFilename("items-v2"); got != "items-v2.csv" {
+		t.Fatalf("got %q", got)
+	}
+}

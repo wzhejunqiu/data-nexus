@@ -428,3 +428,68 @@ func TestRestoreConnectionsOnStartup_MissingFileLogsWarning(t *testing.T) {
 		t.Fatal("expected warn log for failed restore")
 	}
 }
+
+func TestConnectionManagerAttachDetach(t *testing.T) {
+	dir := t.TempDir()
+	mainPath := filepath.Join(dir, "main.db")
+	otherPath := filepath.Join(dir, "other.db")
+	for _, p := range []string{mainPath, otherPath} {
+		f, err := os.Create(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = f.Close()
+	}
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewTestConnectionManager(store)
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: mainPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	if err := mgr.AttachDatabase(ctx, conn.ID, otherPath, "other"); err != nil {
+		t.Fatal(err)
+	}
+	attached, err := mgr.ListAttachedDatabases(ctx, conn.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attached) != 1 || attached[0].Alias != "other" {
+		t.Fatalf("unexpected attached: %+v", attached)
+	}
+	if err := mgr.DetachDatabase(ctx, conn.ID, "other"); err != nil {
+		t.Fatal(err)
+	}
+	attached, err = mgr.ListAttachedDatabases(ctx, conn.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(attached) != 0 {
+		t.Fatalf("expected no attached databases, got %+v", attached)
+	}
+}
+
+func TestConnectionManagerAttachValidation(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewTestConnectionManager(store)
+	ctx := context.Background()
+
+	for _, err := range []error{
+		mgr.AttachDatabase(ctx, "", "/tmp/x.db", "x"),
+		mgr.AttachDatabase(ctx, "id", "", "x"),
+		mgr.AttachDatabase(ctx, "id", "/tmp/x.db", ""),
+	} {
+		if err == nil {
+			t.Fatal("expected validation error")
+		}
+	}
+}

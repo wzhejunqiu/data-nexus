@@ -193,3 +193,58 @@ func TestConnectionStore_UpdateSQLiteSettings_NotFound(t *testing.T) {
 		t.Fatalf("expected SAVED_NOT_FOUND, got %v", err)
 	}
 }
+
+func TestConnectionStoreUpsertRemote(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := model.RemoteConnectRequest{
+		Type: model.DriverTypePostgres,
+		Name: "prod-pg",
+		Postgres: &model.PostgresConfig{
+			Host:     "db.example.com",
+			Port:     5432,
+			Database: "app",
+			User:     "admin",
+			Schema:   "public",
+		},
+	}
+	first, err := store.UpsertRemote(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Name != "prod-pg" || first.Type != model.DriverTypePostgres {
+		t.Fatalf("unexpected first upsert: %+v", first)
+	}
+
+	req.Name = ""
+	second, err := store.UpsertRemote(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.ID != first.ID {
+		t.Fatalf("expected same remote connection id, got %s vs %s", second.ID, first.ID)
+	}
+	if second.Name != "admin@db.example.com/app" {
+		t.Fatalf("expected derived display name on upsert, got %q", second.Name)
+	}
+
+	mysqlReq := model.RemoteConnectRequest{
+		Type: model.DriverTypeMySQL,
+		MySQL: &model.MySQLConfig{
+			Host:     "mysql.example.com",
+			Database: "shop",
+			User:     "root",
+		},
+	}
+	mysqlItem, err := store.UpsertRemote(mysqlReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mysqlItem.Name != "root@mysql.example.com/shop" {
+		t.Fatalf("unexpected mysql display name %q", mysqlItem.Name)
+	}
+}
