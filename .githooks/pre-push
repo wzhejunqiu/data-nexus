@@ -5,5 +5,5 @@ set -e
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-echo "pre-push: running format-check (gofmt + prettier), lint, and vuln-check..."
+echo "pre-push: running format-check, Go/frontend lint, and vuln-check..."
 make pre-push

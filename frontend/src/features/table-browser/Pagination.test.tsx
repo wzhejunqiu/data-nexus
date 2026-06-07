@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { cleanup, render, screen, fireEvent, within } from '@testing-library/react'
+import { cleanup, render, fireEvent, within } from '@testing-library/react'
 import { Pagination } from './Pagination'
 
 const pagination = { page: 2, pageSize: 50, totalRows: 120, totalPages: 3 }

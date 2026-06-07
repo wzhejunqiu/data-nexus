@@ -55,7 +55,10 @@ vuln-check:
 check: fmt-check lint vuln-check ci-test
 
 # Lightweight gate before git push (matches CI format + security jobs).
-pre-push: embed-stub fmt-check lint vuln-check
+# embed-stub must finish before lint; the rest run in parallel.
+PRE_PUSH_JOBS ?= 4
+pre-push: embed-stub
+	@$(MAKE) -j$(PRE_PUSH_JOBS) fmt-check lint lint-frontend vuln-check
 
 install-hooks:
 	@chmod +x .githooks/pre-push

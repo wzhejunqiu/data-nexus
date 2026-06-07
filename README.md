@@ -44,10 +44,11 @@ CI：推送到 `main` 或 PR 时运行 [GitHub Actions](.github/workflows/ci.yml
 
 ```bash
 make fmt-check    # gofmt + frontend prettier
-make lint         # golangci-lint（需已安装）
+make lint         # golangci-lint（Go，需已安装）
+make lint-frontend # eslint（前端）
 make vuln-check   # govulncheck + npm audit
 make check        # 上述 + 测试构建
-make pre-push     # push 前检查：format + lint + vuln（与 CI 格式/安全 job 对齐）
+make pre-push     # push 前检查：format + Go/前端 lint + vuln（与 CI 格式/安全 job 对齐）
 make install-hooks # 安装 pre-push hook，失败时阻止 push
 ```
 

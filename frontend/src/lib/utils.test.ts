@@ -3,7 +3,7 @@ import { cn, formatCell, rowsToCSV } from './utils'
 
 describe('cn', () => {
   it('merges class names', () => {
-    expect(cn('px-2', 'py-1', false && 'hidden', 'px-4')).toBe('py-1 px-4')
+    expect(cn('px-2', 'py-1', false, 'px-4')).toBe('py-1 px-4')
   })
 })
 
