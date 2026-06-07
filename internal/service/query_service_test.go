@@ -342,3 +342,153 @@ func TestQueryServiceInvalidDescReturnsSQLError(t *testing.T) {
 		t.Fatalf("expected SQL_ERROR, got %v", err)
 	}
 }
+
+func TestQueryServiceExecute_EmptyConnectionID(t *testing.T) {
+	_, qs, _ := newTestEnv(t)
+	_, err := qs.Execute(context.Background(), model.ExecuteQueryRequest{SQL: "SELECT 1"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_REQUEST" {
+		t.Fatalf("expected INVALID_REQUEST, got %v", err)
+	}
+}
+
+func TestQueryServiceExecute_EmptySQL(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	_, err := qs.Execute(context.Background(), model.ExecuteQueryRequest{ConnectionID: conn.ID})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_REQUEST" {
+		t.Fatalf("expected INVALID_REQUEST, got %v", err)
+	}
+}
+
+func TestQueryServiceExecute_InsertUsesExecPath(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+
+	_, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "INSERT INTO items (name) VALUES ('alice')",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Kind != "exec" || res.RowsAffected != 1 || res.LastInsertID != 1 {
+		t.Fatalf("unexpected exec response: %+v", res)
+	}
+}
+
+func TestQueryServiceExecute_DefaultMaxRows(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+
+	res, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "SELECT 1 AS n",
+		MaxRows:      0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Kind != "result" || res.RowCount != 1 {
+		t.Fatalf("unexpected response: %+v", res)
+	}
+}
+
+func TestQueryServiceClassifySQL_EmptyConnectionID(t *testing.T) {
+	_, qs, _ := newTestEnv(t)
+	_, err := qs.ClassifySQL(context.Background(), "", "SELECT 1")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_REQUEST" {
+		t.Fatalf("expected INVALID_REQUEST, got %v", err)
+	}
+}
+
+func TestQueryServiceClassifySQL_EmptySQL(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	_, err := qs.ClassifySQL(context.Background(), conn.ID, "   ")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_REQUEST" {
+		t.Fatalf("expected INVALID_REQUEST, got %v", err)
+	}
+}
+
+func TestQueryServiceListTables_NotConnected(t *testing.T) {
+	_, qs, _ := newTestEnv(t)
+	_, err := qs.ListTables(context.Background(), "nonexistent")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "CONNECTION_NOT_FOUND" {
+		t.Fatalf("expected CONNECTION_NOT_FOUND, got %v", err)
+	}
+}
+
+func TestQueryServiceGetTableSchema_NotConnected(t *testing.T) {
+	_, qs, _ := newTestEnv(t)
+	_, err := qs.GetTableSchema(context.Background(), "nonexistent", "t")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "CONNECTION_NOT_FOUND" {
+		t.Fatalf("expected CONNECTION_NOT_FOUND, got %v", err)
+	}
+}
+
+func TestQueryServiceBrowseRows_DefaultOrderAsc(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+
+	_, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE t (id INTEGER PRIMARY KEY, v INTEGER)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "INSERT INTO t (v) VALUES (2), (1)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := qs.BrowseRows(ctx, model.BrowseRowsRequest{
+		ConnectionID: conn.ID,
+		TableName:    "t",
+		Page:         1,
+		PageSize:     10,
+		Sort:         "v",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data.Rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(data.Rows))
+	}
+	if data.Rows[0]["v"] != int64(1) {
+		t.Fatalf("expected ascending order, got %+v", data.Rows)
+	}
+}

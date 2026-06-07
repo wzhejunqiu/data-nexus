@@ -3,7 +3,7 @@ package wails
 import (
 	"context"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"go.uber.org/zap"
 )
@@ -11,10 +11,15 @@ import (
 type DialogService struct {
 	ctx context.Context
 	log *zap.Logger
+	rt  RuntimePort
 }
 
 func NewDialogService(log *zap.Logger) *DialogService {
-	return &DialogService{log: log}
+	return NewDialogServiceWithRuntime(log, wailsRuntime{})
+}
+
+func NewDialogServiceWithRuntime(log *zap.Logger, rt RuntimePort) *DialogService {
+	return &DialogService{log: log, rt: rt}
 }
 
 func (s *DialogService) SetContext(ctx context.Context) {
@@ -26,9 +31,9 @@ func (s *DialogService) OpenDatabaseFile() (string, error) {
 		if s.ctx == nil {
 			return "", model.ErrInternal("dialog context not ready")
 		}
-		path, err := runtime.OpenFileDialog(s.ctx, runtime.OpenDialogOptions{
+		path, err := s.rt.OpenFileDialog(s.ctx, wailsruntime.OpenDialogOptions{
 			Title: "Open SQLite Database",
-			Filters: []runtime.FileFilter{
+			Filters: []wailsruntime.FileFilter{
 				{DisplayName: "SQLite Database", Pattern: "*.db;*.sqlite;*.sqlite3"},
 			},
 		})

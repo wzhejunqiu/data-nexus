@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import i18n from '@/i18n'
-import { isDialogCancelled, mapWailsError, translateAppError } from './errors'
+import { formatError, isDialogCancelled, mapWailsError, translateAppError } from './errors'
 
 const KNOWN_ERROR_CODES = [
   'INVALID_REQUEST',
@@ -65,5 +65,44 @@ describe('mapWailsError', () => {
     const t = i18n.getFixedT('en')
     const msg = translateAppError(t, { code: 'UNKNOWN', message: 'custom' })
     expect(msg).toBe('custom')
+  })
+
+  it('parses object message string shape', () => {
+    const err = mapWailsError({ message: 'SQL_ERROR: syntax error' })
+    expect(err.code).toBe('SQL_ERROR')
+    expect(err.message).toBe('syntax error')
+  })
+
+  it('falls back for object with unknown message code', () => {
+    const err = mapWailsError({ message: 'UNKNOWN: broken' })
+    expect(err.code).toBe('INTERNAL_ERROR')
+    expect(err.message).toBe('UNKNOWN: broken')
+  })
+
+  it('stringifies non-object errors', () => {
+    const err = mapWailsError(404)
+    expect(err.code).toBe('INTERNAL_ERROR')
+    expect(err.message).toBe('404')
+  })
+
+  it('includes details when provided on object shape', () => {
+    const err = mapWailsError({
+      code: 'INVALID_REQUEST',
+      message: 'bad',
+      details: { field: 'sql' },
+    })
+    expect(err.details).toEqual({ field: 'sql' })
+  })
+
+  it('formatError maps and translates end to end', () => {
+    const t = i18n.getFixedT('en')
+    const msg = formatError(t, { code: 'READ_ONLY', message: 'fallback' })
+    expect(msg.toLowerCase()).toContain('read-only')
+  })
+
+  it('translateAppError uses internal fallback when no message', () => {
+    const t = i18n.getFixedT('en')
+    const msg = translateAppError(t, { code: 'TOTALLY_UNKNOWN', message: '' })
+    expect(msg.length).toBeGreaterThan(0)
   })
 })

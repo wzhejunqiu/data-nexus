@@ -9,6 +9,7 @@ import (
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestConnectionStoreUpsertSamePath(t *testing.T) {
@@ -201,5 +202,226 @@ func TestConnectionManagerUpdateReadOnly(t *testing.T) {
 	}
 	if !list.Items[0].Config.SQLite.ReadOnly {
 		t.Fatal("expected list item read-only")
+	}
+}
+
+func TestOpenConnectionFromFile_EmptyPath(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+
+	_, err = mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_PATH" {
+		t.Fatalf("expected INVALID_PATH, got %v", err)
+	}
+}
+
+func TestOpenConnectionFromFile_Directory(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+
+	_, err = mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dir})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_PATH" {
+		t.Fatalf("expected INVALID_PATH, got %v", err)
+	}
+}
+
+func TestOpenConnectionFromFile_FileNotExist(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+
+	_, err = mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{
+		FilePath: filepath.Join(dir, "missing.db"),
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_PATH" {
+		t.Fatalf("expected INVALID_PATH, got %v", err)
+	}
+}
+
+func TestOpenConnectionFromFile_RelativePath(t *testing.T) {
+	dir := t.TempDir()
+	dbName := "app.db"
+	f, err := os.Create(filepath.Join(dir, dbName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(origWd) })
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbName})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if conn.ID == "" {
+		t.Fatal("expected connection id")
+	}
+}
+
+func TestOpenConnection_AlreadyOpen(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "app.db")
+	f, err := os.Create(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = mgr.OpenConnection(context.Background(), conn.ID)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "CONNECTION_ALREADY_OPEN" {
+		t.Fatalf("expected CONNECTION_ALREADY_OPEN, got %v", err)
+	}
+}
+
+func TestCloseConnection_NotOpen(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+
+	err = mgr.CloseConnection(context.Background(), "nonexistent")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "CONNECTION_NOT_FOUND" {
+		t.Fatalf("expected CONNECTION_NOT_FOUND, got %v", err)
+	}
+}
+
+func TestRestoreConnectionsOnStartup_Disabled(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	if err := mgr.RestoreConnectionsOnStartup(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRestoreConnectionsOnStartup_RestoresOpenConnection(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "app.db")
+	f, err := os.Create(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	storePath := filepath.Join(dir, "connections.json")
+	store, err := service.NewConnectionStore(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.SetRestoreOpenOnStartup(true); err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.PersistOpenConnections(); err != nil {
+		t.Fatal(err)
+	}
+	mgr.CloseAll()
+
+	store2, err := service.NewConnectionStore(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr2 := service.NewConnectionManager(store2, zap.NewNop())
+	if err := mgr2.RestoreConnectionsOnStartup(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	list := mgr2.ListConnections()
+	if len(list.Items) != 1 || list.Items[0].Status != model.ConnectionStatusOpen {
+		t.Fatalf("expected restored open connection, got %+v", list.Items)
+	}
+	if list.Items[0].ID != conn.ID {
+		t.Fatalf("expected id %s, got %s", conn.ID, list.Items[0].ID)
+	}
+}
+
+func TestRestoreConnectionsOnStartup_MissingFileLogsWarning(t *testing.T) {
+	dir := t.TempDir()
+	missing := filepath.Join(dir, "gone.db")
+	storePath := filepath.Join(dir, "connections.json")
+
+	store, err := service.NewConnectionStore(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := store.Upsert(model.ConnectRequest{FilePath: missing})
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.SetRestoreOpenOnStartup(true)
+	store.SetOpenConnectionIDs([]string{item.ID})
+	if err := store.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	core, logs := observer.New(zap.WarnLevel)
+	mgr := service.NewConnectionManager(store, zap.New(core))
+	if err := mgr.RestoreConnectionsOnStartup(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if logs.FilterMessageSnippet("failed to restore connection").Len() == 0 {
+		t.Fatal("expected warn log for failed restore")
 	}
 }

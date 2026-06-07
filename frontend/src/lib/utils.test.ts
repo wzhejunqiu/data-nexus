@@ -1,13 +1,28 @@
 import { describe, expect, it } from 'vitest'
-import { formatCell, rowsToCSV } from './utils'
+import { cn, formatCell, rowsToCSV } from './utils'
+
+describe('cn', () => {
+  it('merges class names', () => {
+    expect(cn('px-2', 'py-1', false && 'hidden', 'px-4')).toBe('py-1 px-4')
+  })
+})
 
 describe('formatCell', () => {
   it('renders NULL', () => {
     expect(formatCell(null)).toBe('NULL')
   })
 
+  it('renders undefined as NULL', () => {
+    expect(formatCell(undefined)).toBe('NULL')
+  })
+
   it('renders blob placeholder', () => {
     expect(formatCell({ type: 'blob', size: 42 })).toBe('[BLOB 42 bytes]')
+  })
+
+  it('renders strings and numbers', () => {
+    expect(formatCell('hello')).toBe('hello')
+    expect(formatCell(42)).toBe('42')
   })
 })
 

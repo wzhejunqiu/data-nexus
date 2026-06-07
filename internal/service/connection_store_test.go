@@ -130,3 +130,67 @@ func TestConnectionManagerRename(t *testing.T) {
 		t.Fatalf("unexpected name %s", renamed.Name)
 	}
 }
+
+func TestConnectionStore_FindByFilePath(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "app.db")
+	f, err := os.Create(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := store.Upsert(model.ConnectRequest{FilePath: dbPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	found, ok := store.FindByFilePath(dbPath)
+	if !ok || found.ID != item.ID {
+		t.Fatalf("expected to find connection by path, got ok=%v item=%+v", ok, found)
+	}
+}
+
+func TestConnectionStore_FindByID_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, ok := store.FindByID("missing")
+	if ok {
+		t.Fatal("expected not found")
+	}
+}
+
+func TestConnectionStore_LoadCorruptJSON(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "connections.json")
+	if err := os.WriteFile(path, []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := service.NewConnectionStore(path)
+	if err == nil {
+		t.Fatal("expected error for corrupt JSON")
+	}
+}
+
+func TestConnectionStore_UpdateReadOnly_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = store.UpdateReadOnly("missing", true)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "SAVED_NOT_FOUND" {
+		t.Fatalf("expected SAVED_NOT_FOUND, got %v", err)
+	}
+}

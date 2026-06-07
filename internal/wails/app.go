@@ -15,13 +15,18 @@ const appVersion = "0.1.0"
 
 type AppService struct {
 	log                *zap.Logger
+	rt                 RuntimePort
 	ctx                context.Context
 	mu                 sync.RWMutex
 	activeConnectionID string
 }
 
 func NewAppService(log *zap.Logger) *AppService {
-	return &AppService{log: log}
+	return NewAppServiceWithRuntime(log, wailsRuntime{})
+}
+
+func NewAppServiceWithRuntime(log *zap.Logger, rt RuntimePort) *AppService {
+	return &AppService{log: log, rt: rt}
 }
 
 func (s *AppService) SetContext(ctx context.Context) {
@@ -48,7 +53,7 @@ func (s *AppService) SetWindowTitle(title string) error {
 		if s.ctx == nil {
 			return model.ErrInternal("app context not ready")
 		}
-		wailsruntime.WindowSetTitle(s.ctx, title)
+		s.rt.WindowSetTitle(s.ctx, title)
 		return nil
 	})
 }
@@ -63,7 +68,7 @@ func (s *AppService) ShowAbout() error {
 			return err
 		}
 		msg := fmt.Sprintf("Data Nexus v%s\nPlatform: %s/%s", info.Version, info.Platform, info.Arch)
-		_, err = wailsruntime.MessageDialog(s.ctx, wailsruntime.MessageDialogOptions{
+		_, err = s.rt.MessageDialog(s.ctx, wailsruntime.MessageDialogOptions{
 			Type:    wailsruntime.InfoDialog,
 			Title:   "About Data Nexus",
 			Message: msg,
@@ -77,7 +82,7 @@ func (s *AppService) EmitThemeChange(mode string) error {
 		if s.ctx == nil {
 			return model.ErrInternal("app context not ready")
 		}
-		wailsruntime.EventsEmit(s.ctx, "app:theme", mode)
+		s.rt.EventsEmit(s.ctx, "app:theme", mode)
 		return nil
 	})
 }
@@ -87,7 +92,7 @@ func (s *AppService) EmitLanguageChange(lang string) error {
 		if s.ctx == nil {
 			return model.ErrInternal("app context not ready")
 		}
-		wailsruntime.EventsEmit(s.ctx, "app:language", lang)
+		s.rt.EventsEmit(s.ctx, "app:language", lang)
 		return nil
 	})
 }

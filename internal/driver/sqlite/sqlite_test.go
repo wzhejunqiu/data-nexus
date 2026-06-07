@@ -299,3 +299,247 @@ func TestBrowseInvalidSortColumn(t *testing.T) {
 		t.Fatalf("expected INVALID_REQUEST, got %v", err)
 	}
 }
+
+func TestDriverTypeAndReadOnly(t *testing.T) {
+	drv := sqlite.New()
+	if drv.Type() != model.DriverTypeSQLite {
+		t.Fatalf("unexpected type %s", drv.Type())
+	}
+	if drv.ReadOnly() {
+		t.Fatal("expected read-write by default")
+	}
+}
+
+func TestDriverConnectNilSQLiteConfig(t *testing.T) {
+	drv := sqlite.New()
+	err := drv.Connect(context.Background(), model.DriverConfig{Type: model.DriverTypeSQLite})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_REQUEST" {
+		t.Fatalf("expected INVALID_REQUEST, got %v", err)
+	}
+}
+
+func TestDriverConnectReconnect(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "reconnect.db")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	drv := sqlite.New()
+	cfg := model.DriverConfig{
+		Type:   model.DriverTypeSQLite,
+		SQLite: &model.SQLiteConfig{FilePath: path},
+	}
+	if err := drv.Connect(context.Background(), cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := drv.Connect(context.Background(), cfg); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	if err := drv.Ping(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDriverConnectInvalidPath(t *testing.T) {
+	drv := sqlite.New()
+	err := drv.Connect(context.Background(), model.DriverConfig{
+		Type:   model.DriverTypeSQLite,
+		SQLite: &model.SQLiteConfig{FilePath: "/nonexistent/path/to/db.db"},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "CONNECTION_FAILED" {
+		t.Fatalf("expected CONNECTION_FAILED, got %v", err)
+	}
+}
+
+func TestDriverPingNotConnected(t *testing.T) {
+	drv := sqlite.New()
+	err := drv.Ping(context.Background())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "CONNECTION_NOT_FOUND" {
+		t.Fatalf("expected CONNECTION_NOT_FOUND, got %v", err)
+	}
+}
+
+func TestDriverExecInsertSuccess(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "exec.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT)`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+
+	drv := sqlite.New()
+	if err := drv.Connect(context.Background(), model.DriverConfig{
+		Type: model.DriverTypeSQLite, SQLite: &model.SQLiteConfig{FilePath: path},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	res, err := drv.Exec(context.Background(), `INSERT INTO t (name) VALUES ('alice')`, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.RowsAffected != 1 || res.LastInsertID != 1 {
+		t.Fatalf("unexpected exec result: %+v", res)
+	}
+}
+
+func TestDriverGetTableSchemaTableNotFound(t *testing.T) {
+	drv := openTestDBFromPath(t, filepath.Join(t.TempDir(), "schema.db"))
+	defer func() { _ = drv.Close() }()
+
+	_, err := drv.GetTableSchema(context.Background(), "missing_table")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "TABLE_NOT_FOUND" {
+		t.Fatalf("expected TABLE_NOT_FOUND, got %v", err)
+	}
+}
+
+func TestDriverGetTableSchemaWithDefaultValue(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "default.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE t (id INTEGER PRIMARY KEY, status TEXT DEFAULT 'active')`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+
+	drv := sqlite.New()
+	if err := drv.Connect(context.Background(), model.DriverConfig{
+		Type: model.DriverTypeSQLite, SQLite: &model.SQLiteConfig{FilePath: path},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	schema, err := drv.GetTableSchema(context.Background(), "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(schema.Columns) != 2 {
+		t.Fatalf("expected 2 columns, got %d", len(schema.Columns))
+	}
+	def := schema.Columns[1].DefaultValue
+	if def == nil || *def != "'active'" {
+		t.Fatalf("expected default value, got %+v", def)
+	}
+}
+
+func TestDriverGetTableSchemaPrimaryAndUniqueIndexes(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "idx2.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE users (
+		a INTEGER,
+		b INTEGER,
+		email TEXT UNIQUE,
+		PRIMARY KEY (a, b)
+	)`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+
+	drv := sqlite.New()
+	if err := drv.Connect(context.Background(), model.DriverConfig{
+		Type: model.DriverTypeSQLite, SQLite: &model.SQLiteConfig{FilePath: path},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	schema, err := drv.GetTableSchema(context.Background(), "users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(schema.Indexes) == 0 {
+		t.Fatal("expected indexes")
+	}
+	var hasPrimary bool
+	for _, idx := range schema.Indexes {
+		if idx.Primary {
+			hasPrimary = true
+		}
+	}
+	if !hasPrimary {
+		t.Fatalf("expected primary index, got %+v", schema.Indexes)
+	}
+}
+
+func TestDriverGetTableSchemaViewType(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "viewschema.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE t (id INTEGER); CREATE VIEW v AS SELECT id FROM t`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+
+	drv := sqlite.New()
+	if err := drv.Connect(context.Background(), model.DriverConfig{
+		Type: model.DriverTypeSQLite, SQLite: &model.SQLiteConfig{FilePath: path},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	schema, err := drv.GetTableSchema(context.Background(), "v")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if schema.Type != model.TableTypeView {
+		t.Fatalf("expected view type, got %s", schema.Type)
+	}
+}
+
+func openTestDBFromPath(t *testing.T, path string) *sqlite.Driver {
+	t.Helper()
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+
+	drv := sqlite.New()
+	if err := drv.Connect(context.Background(), model.DriverConfig{
+		Type: model.DriverTypeSQLite, SQLite: &model.SQLiteConfig{FilePath: path},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return drv
+}

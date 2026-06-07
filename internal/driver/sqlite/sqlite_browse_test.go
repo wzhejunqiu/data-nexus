@@ -80,3 +80,107 @@ func TestInvalidTableName(t *testing.T) {
 		t.Fatal("expected error for invalid table name")
 	}
 }
+
+func TestBrowseTableSortDesc(t *testing.T) {
+	drv := openTestDB(t)
+	defer func() { _ = drv.Close() }()
+
+	data, err := drv.BrowseTable(context.Background(), "items", model.BrowseOptions{
+		Page: 1, PageSize: 10, Sort: "id", Order: model.SortDesc,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data.Rows) < 2 {
+		t.Fatalf("expected rows, got %d", len(data.Rows))
+	}
+	firstID := data.Rows[0]["id"]
+	lastID := data.Rows[len(data.Rows)-1]["id"]
+	if firstID.(int64) <= lastID.(int64) {
+		t.Fatalf("expected descending order, got first=%v last=%v", firstID, lastID)
+	}
+}
+
+func TestBrowseTablePaginationDefaults(t *testing.T) {
+	drv := openTestDB(t)
+	defer func() { _ = drv.Close() }()
+
+	data, err := drv.BrowseTable(context.Background(), "items", model.BrowseOptions{
+		Page: 0, PageSize: 500,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data.Pagination.Page != 1 {
+		t.Fatalf("expected page 1, got %d", data.Pagination.Page)
+	}
+	if data.Pagination.PageSize != 200 {
+		t.Fatalf("expected pageSize 200, got %d", data.Pagination.PageSize)
+	}
+}
+
+func TestBrowseTableEmptyTable(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "empty.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE empty_t (id INTEGER PRIMARY KEY)`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+
+	drv := sqlite.New()
+	if err := drv.Connect(context.Background(), model.DriverConfig{
+		Type: model.DriverTypeSQLite, SQLite: &model.SQLiteConfig{FilePath: path},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	data, err := drv.BrowseTable(context.Background(), "empty_t", model.BrowseOptions{Page: 1, PageSize: 50})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data.Pagination.TotalRows != 0 || data.Pagination.TotalPages != 1 {
+		t.Fatalf("unexpected pagination: %+v", data.Pagination)
+	}
+	if data.Rows == nil {
+		t.Fatal("expected non-nil empty rows slice")
+	}
+}
+
+func TestQueryRowsZeroRows(t *testing.T) {
+	drv := openTestDB(t)
+	defer func() { _ = drv.Close() }()
+
+	res, err := drv.QueryRows(context.Background(), "SELECT * FROM items WHERE 1=0", nil, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.RowCount != 0 || res.Rows == nil {
+		t.Fatalf("expected empty slice, got %+v", res)
+	}
+}
+
+func TestQueryRowsMaxRowsClamping(t *testing.T) {
+	drv := openTestDB(t)
+	defer func() { _ = drv.Close() }()
+
+	res, err := drv.QueryRows(context.Background(), "SELECT id FROM items", nil, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.RowCount != 3 {
+		t.Fatalf("expected 3 rows with default max, got %d", res.RowCount)
+	}
+
+	res, err = drv.QueryRows(context.Background(), "SELECT id FROM items", nil, model.MaxQueryRows+100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.RowCount != 3 {
+		t.Fatalf("expected 3 rows with clamped max, got %d", res.RowCount)
+	}
+}
