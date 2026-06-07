@@ -11,7 +11,9 @@ describe('IndexList', () => {
 
   it('renders unique marker', () => {
     renderWithProviders(
-      <IndexList indexes={[{ name: 'idx_email', columns: ['email'], unique: true, primary: false }]} />,
+      <IndexList
+        indexes={[{ name: 'idx_email', columns: ['email'], unique: true, primary: false }]}
+      />,
     )
     expect(screen.getByText(/idx_email/)).toBeInTheDocument()
     expect(screen.getByText(/\[unique\]/)).toBeInTheDocument()

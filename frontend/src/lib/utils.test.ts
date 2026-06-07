@@ -28,10 +28,13 @@ describe('formatCell', () => {
 
 describe('rowsToCSV', () => {
   it('formats header and rows', () => {
-    const csv = rowsToCSV(['id', 'name'], [
-      { id: 1, name: 'alice' },
-      { id: 2, name: 'bob' },
-    ])
+    const csv = rowsToCSV(
+      ['id', 'name'],
+      [
+        { id: 1, name: 'alice' },
+        { id: 2, name: 'bob' },
+      ],
+    )
     expect(csv).toBe('id,name\n1,alice\n2,bob')
   })
 

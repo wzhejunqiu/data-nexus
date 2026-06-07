@@ -6,18 +6,8 @@ import { useQueryHistoryStore } from '@/stores/queryHistoryStore'
 import { useStatusStore } from '@/stores/statusStore'
 
 vi.mock('@monaco-editor/react', () => ({
-  default: ({
-    value,
-    onChange,
-  }: {
-    value: string
-    onChange?: (v: string | undefined) => void
-  }) => (
-    <textarea
-      data-testid="sql-editor"
-      value={value}
-      onChange={(e) => onChange?.(e.target.value)}
-    />
+  default: ({ value, onChange }: { value: string; onChange?: (v: string | undefined) => void }) => (
+    <textarea data-testid="sql-editor" value={value} onChange={(e) => onChange?.(e.target.value)} />
   ),
 }))
 

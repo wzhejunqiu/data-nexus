@@ -29,6 +29,7 @@ generate: embed-stub
 
 fmt-check:
 	@test -z "$$(gofmt -l .)" || (gofmt -l . && exit 1)
+	cd frontend && npm run format:check
 
 fmt:
 	gofmt -w .
