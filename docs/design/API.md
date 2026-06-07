@@ -204,6 +204,18 @@ func (s *ConnectionService) SetRestoreOpenOnStartup(enabled bool) error
 
 退出时持久化 `openConnectionIds`；下次启动自动 `OpenConnection`（默认 `false`）。
 
+### 3.9 Attach / Detach（v0.3）
+
+```go
+func (s *ConnectionService) Attach(connectionId string, filePath string, alias string) error
+func (s *ConnectionService) Detach(connectionId string, alias string) error
+func (s *ConnectionService) ListAttached(connectionId string) ([]AttachedDatabase, error)
+```
+
+- 会话级 `ATTACH DATABASE`；关闭连接时自动 `DETACH`
+- 只读连接以 `mode=ro` attach
+- `ListTables` 返回 `schema` 字段区分 `main` 与 attached alias
+
 ---
 
 ## 4. SavedConnectionService（可选合并）
@@ -272,6 +284,22 @@ func (s *SchemaService) GetTableSchema(connectionId string, tableName string) (*
 
 **Errors:** `TABLE_NOT_FOUND`
 
+### 5.3 GetTableProfile（v0.3）
+
+```go
+func (s *SchemaService) GetTableProfile(connectionId string, tableName string) (*TableProfile, error)
+```
+
+列级采样统计：`distinctCount`、`nullPercent`、数值/日期 `min`/`max`、低基数列 `topValues`。超过 10,000 行时 `isSampled=true`。
+
+### 5.4 DetectFTSTable（v0.3）
+
+```go
+func (s *SchemaService) DetectFTSTable(connectionId string, tableName string) (*FTSInfo, error)
+```
+
+检测 FTS4/FTS5 虚拟表（`{table}_fts`、`fts_{table}` 等命名）。
+
 ---
 
 ## 6. TableService
@@ -291,7 +319,9 @@ func (s *TableService) BrowseRows(req BrowseRowsRequest) (*PaginatedTableData, e
   "page": 1,
   "pageSize": 50,
   "sort": "id",
-  "order": "asc"
+  "order": "asc",
+  "filters": [{ "column": "status", "operator": "eq", "value": "active" }],
+  "search": "keyword"
 }
 ```
 
@@ -300,6 +330,8 @@ func (s *TableService) BrowseRows(req BrowseRowsRequest) (*PaginatedTableData, e
 | `page` | 1 | ≥ 1 |
 | `pageSize` | 50 | 最大 200 |
 | `order` | `asc` | `asc` \| `desc` |
+| `filters` | — | 结构化 WHERE（列名白名单 + 值参数化） |
+| `search` | — | FTS `MATCH`（检测到 FTS 表时） |
 
 **返回:**
 
@@ -670,11 +702,41 @@ func (s *ImportService) ImportCSV(req ImportCSVRequest) (*ImportResult, error)
 
 ---
 
-## 13. ConfigService（v0.2）
+## 13. CannedQueryService（v0.3）
+
+持久化至 `~/.data-nexus/queries.json`。
+
+```go
+func (s *CannedQueryService) ListCannedQueries() (*CannedQueryList, error)
+func (s *CannedQueryService) SaveCannedQuery(req SaveCannedQueryRequest) (*CannedQuery, error)
+func (s *CannedQueryService) DeleteCannedQuery(id string) error
+```
+
+---
+
+## 14. SqlExecutionService（v0.3）
+
+执行日志存储于 `~/.data-nexus/sql-global.db`；由 `QueryService.Execute` 成功时自动写入，无单独 Insert API。
+
+```go
+func (s *SqlExecutionService) ListQueryHistory(connectionID string) ([]string, error)
+func (s *SqlExecutionService) ListSqlExecutions(connectionID string, limit int) (*SqlExecutionList, error)
+```
+
+| 方法 | 说明 |
+|------|------|
+| `ListQueryHistory` | 该连接最近执行的 SQL，按文本去重，最多 50 条（SQL Tab 下拉） |
+| `ListSqlExecutions` | 完整 `SqlExecutionRecord` 列表，按时间倒序；`limit` 默认 50，上限 200 |
+
+记录字段见 [DATA_MODEL.md §9](./DATA_MODEL.md#9-sql-执行历史v03)。
+
+---
+
+## 15. ConfigService（v0.2）
 
 读写 `~/.data-nexus/config.yaml`；模型见 [DATA_MODEL.md §2.4](./DATA_MODEL.md#24-appconfig应用配置含日志)。
 
-### 13.1 GetConfig
+### 15.1 GetConfig
 
 ```go
 func (s *ConfigService) GetConfig() (*AppConfig, error)
@@ -682,7 +744,7 @@ func (s *ConfigService) GetConfig() (*AppConfig, error)
 
 返回当前生效配置（含默认值填充后的完整视图）。
 
-### 13.2 UpdateConfig
+### 15.2 UpdateConfig
 
 ```go
 func (s *ConfigService) UpdateConfig(req UpdateConfigRequest) (*AppConfig, error)

@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=https://huacnlee.github.io/autocorrect/schema.json
+rules:
+  spellcheck: 2
+context:
+  codeblock: 1
+textRules: {}

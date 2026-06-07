@@ -7,6 +7,7 @@ import { connectionApi } from '@/lib/api/connection'
 import { formatError } from '@/lib/api/errors'
 import type { ConnectionListItem } from '@/lib/types'
 import { SchemaSubtree } from '@/features/schema/SchemaSubtree'
+import { SavedQueries } from '@/features/saved-queries/SavedQueries'
 import { NewConnectionDialog } from './NewConnectionDialog'
 import { EditConnectionDialog } from './EditConnectionDialog'
 import { RenameDialog } from '@/features/schema/IndexList'
@@ -105,6 +106,7 @@ export function ConnectionTree() {
           <RestoreOnStartupToggle />
           {error && <p className="text-xs text-red-500">{error}</p>}
         </div>
+        <SavedQueries />
         <div className="flex-1 overflow-auto p-2">
           {isLoading && <p className="text-sm text-muted">{t('common.loading')}</p>}
           {!isLoading && items.length === 0 && (

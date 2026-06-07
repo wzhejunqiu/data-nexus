@@ -8,7 +8,6 @@ import (
 
 	"github.com/wzhejunqiu/data-nexus/internal/driver/export"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
-	"github.com/wzhejunqiu/data-nexus/internal/sqlutil"
 )
 
 type sqliteExportCursor struct {
@@ -24,17 +23,18 @@ type sqliteExportCursor struct {
 }
 
 func (d *Driver) OpenTableExport(ctx context.Context, tableName string, opts model.TableExportOptions) (export.TableExportCursor, error) {
-	if !sqlutil.IsSafeQuotedIdentifier(tableName) {
-		return nil, model.ErrTableNotFound(tableName)
-	}
-	if _, err := d.lookupTableType(ctx, tableName); err != nil {
-		return nil, err
-	}
-	schema, err := d.GetTableSchema(ctx, tableName)
+	ref, err := parseTableRef(tableName)
 	if err != nil {
 		return nil, err
 	}
-	withoutRowID, err := d.isWithoutRowID(ctx, tableName)
+	if _, err := d.lookupTableType(ctx, ref); err != nil {
+		return nil, err
+	}
+	schema, err := d.GetTableSchema(ctx, ref.Qualified)
+	if err != nil {
+		return nil, err
+	}
+	withoutRowID, err := d.isWithoutRowID(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
@@ -58,12 +58,18 @@ func (d *Driver) OpenTableExport(ctx context.Context, tableName string, opts mod
 	}, nil
 }
 
-func (d *Driver) isWithoutRowID(ctx context.Context, tableName string) (bool, error) {
+func (d *Driver) isWithoutRowID(ctx context.Context, ref tableRef) (bool, error) {
 	var createSQL sql.NullString
-	err := d.db.QueryRowContext(ctx,
-		`SELECT sql FROM sqlite_master WHERE name = ? AND type = 'table'`, tableName).Scan(&createSQL)
+	var err error
+	if ref.Schema == "main" {
+		err = d.db.QueryRowContext(ctx,
+			`SELECT sql FROM sqlite_master WHERE name = ? AND type = 'table'`, ref.BareName).Scan(&createSQL)
+	} else {
+		q := fmt.Sprintf(`SELECT sql FROM %s.sqlite_master WHERE name = ? AND type = 'table'`, ref.Schema)
+		err = d.db.QueryRowContext(ctx, q, ref.BareName).Scan(&createSQL)
+	}
 	if err == sql.ErrNoRows {
-		return false, model.ErrTableNotFound(tableName)
+		return false, model.ErrTableNotFound(ref.Qualified)
 	}
 	if err != nil {
 		return false, model.ErrSQL(err.Error())

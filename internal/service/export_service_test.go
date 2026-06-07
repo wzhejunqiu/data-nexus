@@ -33,7 +33,7 @@ func setupExportDB(t *testing.T, rowCount int) (*service.QueryService, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	qs := service.NewQueryService(mgr)
+	qs := service.NewQueryService(mgr, nil, nil)
 	_, err = qs.Execute(context.Background(), model.ExecuteQueryRequest{
 		ConnectionID: conn.ID,
 		SQL:          "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)",

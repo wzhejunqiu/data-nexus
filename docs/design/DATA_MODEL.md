@@ -211,7 +211,42 @@ type IndexInfo struct {
 }
 ```
 
-### 3.3 SQLite → 统一模型映射
+### 3.3 TableProfile（v0.3 列画像）
+
+```go
+type TableProfile struct {
+    TableName   string          `json:"tableName"`
+    SampledRows int64           `json:"sampledRows"`
+    TotalRows   *int64          `json:"totalRows"`
+    IsSampled   bool            `json:"isSampled"`
+    Columns     []ColumnProfile `json:"columns"`
+}
+
+type ColumnProfile struct {
+    Name             string       `json:"name"`
+    DistinctCount    *int64       `json:"distinctCount"`
+    NullPercent      *float64     `json:"nullPercent"`
+    MinValue         *string      `json:"minValue"`
+    MaxValue         *string      `json:"maxValue"`
+    TopValues        []ValueCount `json:"topValues"`
+    IsLowCardinality bool         `json:"isLowCardinality"`
+}
+```
+
+大表（>10,000 行）基于 `LIMIT 10000` 子查询采样。
+
+### 3.4 RowFilter（v0.3 结构化筛选）
+
+```go
+type RowFilter struct {
+    Column   string         `json:"column"`
+    Operator FilterOperator `json:"operator"`
+    Value    *string        `json:"value,omitempty"`
+    Values   []string       `json:"values,omitempty"`
+}
+```
+
+### 3.5 SQLite → 统一模型映射
 
 | 统一字段 | SQLite 来源 |
 |----------|-------------|
@@ -582,25 +617,49 @@ MySQL：`` `identifier` ``
 
 ---
 
-## 9. 会话状态（前端）
+## 9. SQL 执行历史（v0.3）
 
-```typescript
-interface AppState {
-  connection: Connection | null
-  selectedTable: string | null
-  activeTab: 'schema' | 'data' | 'sql'
-  queryHistory: QueryHistoryItem[]  // max 50
-  theme: 'light' | 'dark' | 'system'
-  pendingEdits: PendingEditsState | null  // v0.2 批量编辑
-  csvFormatDefaults: CSVFormatOptions   // v0.2 导入导出默认格式
-}
+持久化至 `~/.data-nexus/sql-global.db`（元数据 SQLite，与用户打开的 `.db` 分离）。由 `QueryService.Execute` 成功时自动写入；与 Canned Queries（`queries.json`）无关。
 
-interface QueryHistoryItem {
-  sql: string
-  executedAt: string
-  durationMs: number
-  success: boolean
+### 9.1 表 `sql_executions`
+
+| 列 | 类型 | 说明 |
+|----|------|------|
+| `id` | INTEGER PK | 自增 |
+| `connection_id` | TEXT | 执行时连接 ID |
+| `sql_text` | TEXT | 规范化后的 SQL |
+| `kind` | INTEGER | `0` = 只读查询（`result`），`1` = 写操作（`exec`） |
+| `effect_rows` | INTEGER | result → `rowCount`；exec → `rowsAffected` |
+| `duration_ms` | INTEGER | 耗时 |
+| `executed_at` | TEXT | UTC RFC3339 |
+
+### 9.2 Go 模型
+
+```go
+type SqlExecutionKind int
+
+const (
+    SqlExecutionResult SqlExecutionKind = 0
+    SqlExecutionExec   SqlExecutionKind = 1
+)
+
+type SqlExecutionRecord struct {
+    ID           int64
+    ConnectionID string
+    SQL          string
+    Kind         SqlExecutionKind  // JSON: "result" | "exec"
+    EffectRows   int64
+    DurationMs   int64
+    ExecutedAt   time.Time
 }
 ```
 
-Zustand store + TanStack Query 管理后端状态；通过 `frontend/src/lib/api/` 调用 Wails Service 绑定。连接列表由后端 `connections.json` 持久化，前端不单独存连接配置。
+### 9.3 前端
+
+SQL 编辑器历史下拉：`SqlExecutionService.ListQueryHistory(connectionId)` → `string[]`（按 `sql_text` 去重，最多 50 条）。TanStack Query key：`['query-history', connectionId]`；Execute 成功后 `invalidateQueries`。
+
+完整审计列表：`ListSqlExecutions(connectionId, limit?)` → `SqlExecutionList`（默认 50，上限 200；本次 UI 不展示）。
+
+### 9.4 其它会话状态
+
+`workspaceStore`（localStorage）仍持久化 Tab、筛选、排序等；见 v0.3 workspace 设计。连接列表由 `connections.json` 持久化。

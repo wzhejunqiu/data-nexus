@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/wzhejunqiu/data-nexus/internal/executionlog"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
 	"go.uber.org/zap"
@@ -33,7 +34,7 @@ func TestQueryServiceReadOnlyBlocksWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	qs := service.NewQueryService(mgr)
+	qs := service.NewQueryService(mgr, nil, nil)
 	_, err = qs.Execute(context.Background(), model.ExecuteQueryRequest{
 		ConnectionID: conn.ID,
 		SQL:          "CREATE TABLE t(id INTEGER)",
@@ -66,7 +67,7 @@ func TestQueryServiceSelectReturnsResult(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	qs := service.NewQueryService(mgr)
+	qs := service.NewQueryService(mgr, nil, nil)
 	res, err := qs.Execute(context.Background(), model.ExecuteQueryRequest{
 		ConnectionID: conn.ID,
 		SQL:          "SELECT 1 AS n",
@@ -98,7 +99,7 @@ func TestQueryServiceDescTableReturnsSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	qs := service.NewQueryService(mgr)
+	qs := service.NewQueryService(mgr, nil, nil)
 	_, err = qs.Execute(context.Background(), model.ExecuteQueryRequest{
 		ConnectionID: conn.ID,
 		SQL:          "CREATE TABLE orders (id INTEGER, name TEXT)",
@@ -138,7 +139,7 @@ func TestQueryServiceWithDeleteUsesExecPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	qs := service.NewQueryService(mgr)
+	qs := service.NewQueryService(mgr, nil, nil)
 	_, err = qs.Execute(context.Background(), model.ExecuteQueryRequest{
 		ConnectionID: conn.ID,
 		SQL:          "CREATE TABLE orders (id INTEGER)",
@@ -178,7 +179,7 @@ func TestQueryServiceClassifySQL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	qs := service.NewQueryService(mgr)
+	qs := service.NewQueryService(mgr, nil, nil)
 	kind, err := qs.ClassifySQL(context.Background(), conn.ID, "CREATE TABLE z(id INTEGER)")
 	if err != nil {
 		t.Fatal(err)
@@ -332,7 +333,7 @@ func TestQueryServiceInvalidDescReturnsSQLError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	qs := service.NewQueryService(mgr)
+	qs := service.NewQueryService(mgr, nil, nil)
 	_, err = qs.Execute(context.Background(), model.ExecuteQueryRequest{
 		ConnectionID: conn.ID,
 		SQL:          "desc SELECT * from orders limit 10;",
@@ -586,5 +587,100 @@ func TestQueryServiceUpdateCellsBatchRollback(t *testing.T) {
 	}
 	if data.Rows[0]["email"] != "a@example.com" {
 		t.Fatalf("expected rollback, row0 email=%v", data.Rows[0]["email"])
+	}
+}
+
+func TestQueryServiceExecuteRecordsExecution(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "app.db")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	execStore, err := executionlog.NewStore(model.ExecutionLogConfig{
+		Driver: model.ExecutionLogSQLite,
+		SQLite: &model.ExecutionLogSQLiteConfig{FilePath: filepath.Join(dir, "sql-global.db")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = execStore.Close() }()
+
+	qs := service.NewQueryService(mgr, execStore, zap.NewNop())
+	ctx := context.Background()
+
+	_, err = qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "SELECT 1 AS n",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	items, err := execStore.ListExecutions(ctx, conn.ID, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("got %d items", len(items))
+	}
+	if items[0].SQL != "SELECT 1 AS n" || items[0].Kind != model.SqlExecutionResult || items[0].EffectRows != 1 {
+		t.Fatalf("unexpected record: %+v", items[0])
+	}
+
+	_, err = qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE t(id INTEGER)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	items, err = execStore.ListExecutions(ctx, conn.ID, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("got %d items", len(items))
+	}
+	var hasResult, hasExec bool
+	for _, item := range items {
+		switch item.Kind {
+		case model.SqlExecutionResult:
+			hasResult = true
+		case model.SqlExecutionExec:
+			hasExec = true
+		}
+	}
+	if !hasResult || !hasExec {
+		t.Fatalf("expected result and exec records, got %+v", items)
+	}
+
+	_, err = qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "NOT VALID SQL",
+	})
+	if err == nil {
+		t.Fatal("expected SQL error")
+	}
+
+	items, err = execStore.ListExecutions(ctx, conn.ID, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("failed execution should not insert, got %d items", len(items))
 	}
 }

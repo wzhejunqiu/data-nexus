@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Column data profiling (`GetTableProfile`) with sampling for large tables and `ColumnProfile` UI in Schema tab
+- Filter Builder with backend `BrowseRows.filters[]` and「在 SQL 编辑器中编辑」hybrid flow
+- Canned Queries (`CannedQueryService`, `~/.data-nexus/queries.json`, sidebar `SavedQueries`)
+- Workspace state persistence (table filters, sort, tab) via `localStorage`
+- FTS table detection and conditional full-text search on data tab
+- Facet panel for low-cardinality columns
+- SQLite `ATTACH` / `DETACH` with sidebar schema grouping
+- SQL execution history persistence (`ExecutionLogStore`, `~/.data-nexus/sql-global.db`, `SqlExecutionService`); SQL editor history loaded per `connectionId` via React Query
+
 ## [0.2.0] - 2026-06-07
 
 ### Added

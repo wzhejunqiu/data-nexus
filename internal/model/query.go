@@ -48,3 +48,30 @@ const (
 	StatementQuery StatementKind = "query"
 	StatementWrite StatementKind = "write"
 )
+
+type CannedQuery struct {
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	SQL          string    `json:"sql"`
+	ConnectionID *string   `json:"connectionId,omitempty"`
+	Tags         []string  `json:"tags,omitempty"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
+}
+
+type CannedQueriesFile struct {
+	Version int           `json:"version"`
+	Items   []CannedQuery `json:"items"`
+}
+
+type SaveCannedQueryRequest struct {
+	ID           string   `json:"id,omitempty"`
+	Name         string   `json:"name"`
+	SQL          string   `json:"sql"`
+	ConnectionID *string  `json:"connectionId,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
+}
+
+type CannedQueryList struct {
+	Items []CannedQuery `json:"items"`
+}

@@ -9,14 +9,13 @@ import type {
 import { mapWailsError } from './errors'
 
 export const tableApi = {
-  browseRows: (req: BrowseRowsRequest) =>
-    (async () => {
-      try {
-        return (await BrowseRows(req)) as PaginatedTableData
-      } catch (err) {
-        throw mapWailsError(err)
-      }
-    })(),
+  browseRows: async (req: BrowseRowsRequest): Promise<PaginatedTableData> => {
+    try {
+      return (await BrowseRows(model.BrowseRowsRequest.createFrom(req))) as PaginatedTableData
+    } catch (err) {
+      throw mapWailsError(err)
+    }
+  },
   updateCellsBatch: async (req: UpdateCellsBatchRequest): Promise<UpdateCellsBatchResult> => {
     try {
       return (await UpdateCellsBatch(

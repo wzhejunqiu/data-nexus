@@ -14,33 +14,33 @@
 
 ### 列数据画像
 
-- [ ] `SchemaService.GetTableProfile(tableName)` — 采样统计
-- [ ] 每列：distinct 数、NULL 占比、min/max（数值/日期）、top-N 值（低基数）
-- [ ] 大表采样 — `LIMIT 10000` 或 TABLESAMPLE 策略
-- [ ] UI：表结构 Tab 下方「数据画像」区块
+- [x] `SchemaService.GetTableProfile(tableName)` — 采样统计
+- [x] 每列：distinct 数、NULL 占比、min/max（数值/日期）、top-N 值（低基数）
+- [x] 大表采样 — `LIMIT 10000` 或 TABLESAMPLE 策略
+- [x] UI：表结构 Tab 下方「数据画像」区块
 
 ### Filter Builder → SQL
 
-- [ ] 数据 Tab 可视化筛选 UI（列 / 操作符 / 值）
-- [ ] 生成 WHERE 子句，可「在 SQL 编辑器中编辑」
-- [ ] 后端 `BrowseRows` 扩展 `filters[]` 或前端生成 SQL
+- [x] 数据 Tab 可视化筛选 UI（列 / 操作符 / 值）
+- [x] 生成 WHERE 子句，可「在 SQL 编辑器中编辑」
+- [x] 后端 `BrowseRows` 扩展 `filters[]` 或前端生成 SQL
 
 ### 保存与分享
 
-- [ ] Canned Queries — 命名 SQL，侧边栏快捷入口，存 `~/.data-nexus/queries.json`
-- [ ] 应用内视图状态 — 当前表/筛选/排序序列化（localStorage 或配置文件）
+- [x] Canned Queries — 命名 SQL，侧边栏快捷入口，存 `~/.data-nexus/queries.json`
+- [x] 应用内视图状态 — 当前表/筛选/排序序列化（localStorage 或配置文件）
 
 ### FTS & Facet
 
-- [ ] 检测 FTS 虚拟表 — `sqlite_master` + 命名规则
-- [ ] 表页搜索框 — `?_search=` 等价逻辑
-- [ ] Facet 分面 — 低基数列可选开启（自动 suggest）
+- [x] 检测 FTS 虚拟表 — `sqlite_master` + 命名规则
+- [x] 表页搜索框 — `?_search=` 等价逻辑
+- [x] Facet 分面 — 低基数列可选开启（自动 suggest）
 
 ### SQLite ATTACH
 
-- [ ] `ConnectionService.Attach(filePath, alias)`
-- [ ] Sidebar 按 attached 库分组
-- [ ] `Detach(alias)`
+- [x] `ConnectionService.Attach(filePath, alias)`
+- [x] Sidebar 按 attached 库分组
+- [x] `Detach(alias)`
 
 ---
 
@@ -59,18 +59,18 @@
 
 ## 前端任务
 
-- [ ] `ColumnProfile` 组件
-- [ ] `FilterBuilder` 组件
-- [ ] `SavedQueries` 侧边栏区块
-- [ ] FTS 搜索框（条件渲染）
+- [x] `ColumnProfile` 组件
+- [x] `FilterBuilder` 组件
+- [x] `SavedQueries` 侧边栏区块
+- [x] FTS 搜索框（条件渲染）
 
 ---
 
 ## 完成标准
 
-- [ ] 选表后可看列画像（无需写 SQL）
-- [ ] Filter UI 生成可执行 SQL
-- [ ] tag `v0.3.0`
+- [x] 选表后可看列画像（无需写 SQL）
+- [x] Filter UI 生成可执行 SQL
+- [ ] tag `v0.3.0`（暂缓）
 
 ---
 

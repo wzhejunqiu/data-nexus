@@ -151,6 +151,23 @@ func TestBrowseTableEmptyTable(t *testing.T) {
 	}
 }
 
+func TestBrowseTableWithFilters(t *testing.T) {
+	drv := openTestDB(t)
+	defer func() { _ = drv.Close() }()
+
+	val := "a"
+	data, err := drv.BrowseTable(context.Background(), "items", model.BrowseOptions{
+		Page: 1, PageSize: 50,
+		Filters: []model.RowFilter{{Column: "name", Operator: model.FilterEq, Value: &val}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data.Pagination.TotalRows != 1 {
+		t.Fatalf("expected 1 filtered row, got %d", data.Pagination.TotalRows)
+	}
+}
+
 func TestQueryRowsZeroRows(t *testing.T) {
 	drv := openTestDB(t)
 	defer func() { _ = drv.Close() }()

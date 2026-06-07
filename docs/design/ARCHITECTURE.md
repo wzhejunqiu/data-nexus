@@ -406,6 +406,19 @@ func (m *ConnectionManager) Driver(connectionId string) (driver.Driver, error) {
 
 （与 v0.1 设计相同，见 [DATA_MODEL.md](./DATA_MODEL.md)）
 
+### 5.5.1 ExecutionLogStore（v0.3）
+
+与用户业务库 `driver.Driver` 分离：**执行日志**走独立可插拔存储 `internal/executionlog.Store`，默认 SQLite 文件 `~/.data-nexus/sql-global.db`。
+
+| 层 | 接口 | 用途 |
+|----|------|------|
+| 用户数据 | `driver.Driver` | 连接 `.db`，Browse / Execute |
+| 执行日志 | `executionlog.Store` | `QueryService.Execute` 成功后追加元数据；SQL 编辑器历史下拉 |
+
+- v0.3 仅实现 `executionlog/sqlite`；工厂 `executionlog.NewStore` 预留 MySQL 等后端
+- `QueryService` 注入 `Store`，`Insert` 失败只打 warn，不影响 Execute 返回
+- 前端通过 `SqlExecutionService.ListQueryHistory` 按 `connectionId` 读取（去重 50 条）
+
 ### 5.6 原生能力（DialogService · FileService）
 
 MVP 利用 Wails 桌面特性；v0.2 扩展 CSV 导入导出路径选择与落盘。

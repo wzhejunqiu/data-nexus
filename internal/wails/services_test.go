@@ -32,7 +32,7 @@ func newWailsTestEnv(t *testing.T) (*service.ConnectionManager, *service.QuerySe
 	if err != nil {
 		t.Fatal(err)
 	}
-	return mgr, service.NewQueryService(mgr), conn
+	return mgr, service.NewQueryService(mgr, nil, nil), conn
 }
 
 func TestConnectionServiceListAndOpen(t *testing.T) {

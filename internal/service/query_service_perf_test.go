@@ -27,7 +27,7 @@ func openPerfEnv(t *testing.T, rowCount int) (*service.QueryService, *model.Conn
 	if err != nil {
 		t.Fatal(err)
 	}
-	return service.NewQueryService(mgr), conn
+	return service.NewQueryService(mgr, nil, nil), conn
 }
 
 func TestPerfServiceBrowseRows100kUnder500ms(t *testing.T) {

@@ -25,5 +25,5 @@ func newTestEnv(t *testing.T) (*service.ConnectionManager, *service.QueryService
 	if err != nil {
 		t.Fatal(err)
 	}
-	return mgr, service.NewQueryService(mgr), conn
+	return mgr, service.NewQueryService(mgr, nil, nil), conn
 }

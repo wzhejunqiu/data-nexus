@@ -2,7 +2,6 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '@/test/render'
 import { SqlEditor } from './SqlEditor'
-import { useQueryHistoryStore } from '@/stores/queryHistoryStore'
 import { useStatusStore } from '@/stores/statusStore'
 
 vi.mock('@monaco-editor/react', () => ({
@@ -30,6 +29,13 @@ vi.mock('@/lib/api/query', () => ({
   },
 }))
 
+vi.mock('@/lib/api/queryHistory', () => ({
+  queryHistoryApi: {
+    list: vi.fn(),
+    listExecutions: vi.fn(),
+  },
+}))
+
 const openConn = {
   id: 'c1',
   name: 'app.db',
@@ -41,7 +47,6 @@ const openConn = {
 
 describe('SqlEditor', () => {
   beforeEach(() => {
-    useQueryHistoryStore.setState({ items: {} })
     useStatusStore.setState({ rowCount: null, durationMs: null, operation: null })
     vi.mocked(navigator.clipboard.writeText).mockClear()
     formatSqlMock.mockClear()
@@ -60,7 +65,9 @@ describe('SqlEditor', () => {
   it('runs SELECT and shows result', async () => {
     const { connectionApi } = await import('@/lib/api/connection')
     const { queryApi } = await import('@/lib/api/query')
+    const { queryHistoryApi } = await import('@/lib/api/queryHistory')
     vi.mocked(connectionApi.list).mockResolvedValue({ items: [openConn] })
+    vi.mocked(queryHistoryApi.list).mockResolvedValue([])
     vi.mocked(queryApi.classifySQL).mockResolvedValue('query')
     vi.mocked(queryApi.execute).mockResolvedValue({
       kind: 'result',
@@ -77,7 +84,7 @@ describe('SqlEditor', () => {
       expect(queryApi.execute).toHaveBeenCalled()
       expect(screen.getByText('1')).toBeInTheDocument()
     })
-    expect(useQueryHistoryStore.getState().items.c1).toContain('SELECT 1;')
+    expect(queryHistoryApi.list).toHaveBeenCalledWith('c1')
     expect(useStatusStore.getState().operation).toBe('query')
   })
 

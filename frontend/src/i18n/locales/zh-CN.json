@@ -41,6 +41,58 @@
     "copyColumn": "复制",
     "empty": "数据库中没有用户表或视图"
   },
+  "profile": {
+    "title": "数据画像",
+    "sampled": "基于 {{count}} 行采样",
+    "distinct": "Distinct",
+    "nullPercent": "NULL %",
+    "min": "最小",
+    "max": "最大",
+    "topValues": "高频值"
+  },
+  "filter": {
+    "title": "筛选",
+    "selectColumn": "列",
+    "value": "值",
+    "inPlaceholder": "a, b, c",
+    "add": "添加条件",
+    "remove": "删除",
+    "apply": "应用",
+    "clear": "清除",
+    "editInSql": "在 SQL 编辑器中编辑",
+    "op": {
+      "eq": "=",
+      "ne": "!=",
+      "gt": ">",
+      "gte": ">=",
+      "lt": "<",
+      "lte": "<=",
+      "like": "LIKE",
+      "is_null": "IS NULL",
+      "is_not_null": "IS NOT NULL",
+      "in": "IN"
+    }
+  },
+  "facet": {
+    "title": "分面"
+  },
+  "fts": {
+    "search": "全文搜索",
+    "placeholder": "搜索（FTS 语法）…"
+  },
+  "savedQueries": {
+    "title": "已保存查询",
+    "save": "保存",
+    "empty": "暂无保存的查询",
+    "namePrompt": "查询名称",
+    "saved": "查询已保存"
+  },
+  "attach": {
+    "attach": "Attach 数据库…",
+    "detach": "Detach",
+    "aliasPrompt": "附加数据库别名",
+    "mainDb": "主数据库"
+  },
   "data": {
     "selectTable": "从左侧选择一个表",
     "pageSize": "每页行数",

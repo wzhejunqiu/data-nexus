@@ -252,7 +252,7 @@ func TestImportServiceReadOnlyBlocksImport(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	qs := service.NewQueryService(mgr)
+	qs := service.NewQueryService(mgr, nil, nil)
 	ctx := context.Background()
 	is := service.NewImportService(qs)
 

@@ -20,6 +20,10 @@ vi.mock('@/lib/api/connection', () => ({
 vi.mock('@/lib/api/schema', () => ({
   schemaApi: {
     getTableSchema: vi.fn(),
+    detectFTS: vi.fn().mockResolvedValue({ enabled: false }),
+    getTableProfile: vi
+      .fn()
+      .mockResolvedValue({ tableName: 'items', columns: [], isSampled: false, sampledRows: 0 }),
   },
 }))
 
@@ -142,7 +146,7 @@ describe('DataGrid', () => {
     await waitFor(() => expect(screen.getByText('[BLOB 5 bytes]')).toBeTruthy())
     fireEvent.doubleClick(screen.getByText('[BLOB 5 bytes]'))
     expect(pushToast).toHaveBeenCalledWith(expect.stringMatching(/BLOB|blob/i), 'error')
-    expect(screen.queryByRole('textbox')).toBeNull()
+    expect(screen.queryByDisplayValue('[BLOB 5 bytes]')).toBeNull()
   })
 
   it('shows loading state', async () => {
@@ -195,7 +199,7 @@ describe('DataGrid', () => {
     fireEvent.keyDown(document, { key: 'Escape', code: 'Escape', keyCode: 27 })
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /保存|Save changes/i })).toBeNull()
-      expect(screen.queryByRole('textbox')).toBeNull()
+      expect(screen.queryByDisplayValue('bob')).toBeNull()
     })
     expect(screen.getByText('alice')).toBeTruthy()
   })

@@ -76,3 +76,21 @@ func (s *ConnectionService) SetRestoreOpenOnStartup(enabled bool) error {
 		return s.mgr.SetRestoreOpenOnStartup(enabled)
 	})
 }
+
+func (s *ConnectionService) Attach(connectionID string, filePath string, alias string) error {
+	return callVoid(s.log, "ConnectionService.Attach", func() error {
+		return s.mgr.AttachDatabase(context.Background(), connectionID, filePath, alias)
+	})
+}
+
+func (s *ConnectionService) Detach(connectionID string, alias string) error {
+	return callVoid(s.log, "ConnectionService.Detach", func() error {
+		return s.mgr.DetachDatabase(context.Background(), connectionID, alias)
+	})
+}
+
+func (s *ConnectionService) ListAttached(connectionID string) ([]model.AttachedDatabase, error) {
+	return call(s.log, "ConnectionService.ListAttached", func() ([]model.AttachedDatabase, error) {
+		return s.mgr.ListAttachedDatabases(context.Background(), connectionID)
+	})
+}

@@ -7,6 +7,8 @@ describe('workspaceStore', () => {
       activeConnectionId: null,
       selectedTable: null,
       activeTab: 'data',
+      pendingSql: null,
+      tableStates: {},
     })
   })
 
@@ -16,6 +18,18 @@ describe('workspaceStore', () => {
     expect(state.activeConnectionId).toBe('conn-1')
     expect(state.selectedTable).toBe('users')
     expect(state.activeTab).toBe('data')
+  })
+
+  it('persists table browse state per connection', () => {
+    useWorkspaceStore.getState().setTableState('c1', 'users', {
+      filters: [{ column: 'id', operator: 'eq', value: '1' }],
+      sort: 'id',
+      order: 'desc',
+    })
+    const s = useWorkspaceStore.getState().getTableState('c1', 'users')
+    expect(s.filters).toHaveLength(1)
+    expect(s.sort).toBe('id')
+    expect(s.order).toBe('desc')
   })
 
   it('setters update individual fields', () => {

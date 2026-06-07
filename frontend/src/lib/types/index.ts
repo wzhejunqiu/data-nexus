@@ -116,6 +116,25 @@ export interface PaginatedTableData {
   pagination: PaginationMeta
 }
 
+export type FilterOperator =
+  | 'eq'
+  | 'ne'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'like'
+  | 'is_null'
+  | 'is_not_null'
+  | 'in'
+
+export interface RowFilter {
+  column: string
+  operator: FilterOperator
+  value?: string | null
+  values?: string[]
+}
+
 export interface BrowseRowsRequest {
   connectionId: string
   tableName: string
@@ -123,6 +142,64 @@ export interface BrowseRowsRequest {
   pageSize: number
   sort: string
   order: 'asc' | 'desc'
+  filters?: RowFilter[]
+  search?: string
+}
+
+export interface ValueCount {
+  value: string
+  count: number
+}
+
+export interface ColumnProfile {
+  name: string
+  distinctCount?: number | null
+  nullPercent?: number | null
+  minValue?: string | null
+  maxValue?: string | null
+  topValues?: ValueCount[]
+  isLowCardinality: boolean
+}
+
+export interface TableProfile {
+  tableName: string
+  sampledRows: number
+  totalRows?: number | null
+  isSampled: boolean
+  columns: ColumnProfile[]
+}
+
+export interface FTSInfo {
+  enabled: boolean
+  ftsTableName?: string
+  contentTable?: string
+}
+
+export interface AttachedDatabase {
+  alias: string
+  filePath: string
+}
+
+export interface CannedQuery {
+  id: string
+  name: string
+  sql: string
+  connectionId?: string | null
+  tags?: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CannedQueryList {
+  items: CannedQuery[]
+}
+
+export interface SaveCannedQueryRequest {
+  id?: string
+  name: string
+  sql: string
+  connectionId?: string | null
+  tags?: string[]
 }
 
 export interface ExecuteQueryRequest {
@@ -144,6 +221,22 @@ export interface QueryResponse {
 }
 
 export type StatementKind = 'query' | 'write'
+
+export type SqlExecutionKind = 'result' | 'exec'
+
+export interface SqlExecutionRecord {
+  id?: number
+  connectionId: string
+  sql: string
+  kind: SqlExecutionKind
+  effectRows: number
+  durationMs: number
+  executedAt: string
+}
+
+export interface SqlExecutionList {
+  items: SqlExecutionRecord[]
+}
 
 export interface VersionInfo {
   version: string

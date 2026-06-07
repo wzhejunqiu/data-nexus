@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"gopkg.in/yaml.v3"
 )
 
@@ -96,6 +97,23 @@ func ConfigDir() string {
 
 func ConfigPath() string {
 	return filepath.Join(ConfigDir(), "config.yaml")
+}
+
+func QueriesPath() string {
+	return filepath.Join(ConfigDir(), "queries.json")
+}
+
+func SqlGlobalDBPath() string {
+	return filepath.Join(ConfigDir(), "sql-global.db")
+}
+
+func DefaultExecutionLogConfig() model.ExecutionLogConfig {
+	return model.ExecutionLogConfig{
+		Driver: model.ExecutionLogSQLite,
+		SQLite: &model.ExecutionLogSQLiteConfig{
+			FilePath: SqlGlobalDBPath(),
+		},
+	}
 }
 
 func ConnectionsPath() string {

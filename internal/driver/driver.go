@@ -16,7 +16,12 @@ type Driver interface {
 	ReadOnly() bool
 	ListTables(ctx context.Context) ([]model.TableInfo, error)
 	GetTableSchema(ctx context.Context, tableName string) (*model.TableSchema, error)
+	GetTableProfile(ctx context.Context, tableName string) (*model.TableProfile, error)
 	BrowseTable(ctx context.Context, tableName string, opts model.BrowseOptions) (*model.PaginatedTableData, error)
+	DetectFTSTable(ctx context.Context, tableName string) (*model.FTSInfo, error)
+	Attach(ctx context.Context, filePath, alias string) error
+	Detach(ctx context.Context, alias string) error
+	ListAttached(ctx context.Context) ([]model.AttachedDatabase, error)
 	OpenTableExport(ctx context.Context, tableName string, opts model.TableExportOptions) (export.TableExportCursor, error)
 	QueryRows(ctx context.Context, sql string, params []any, maxRows int) (*model.QueryResult, error)
 	Exec(ctx context.Context, sql string, params []any) (*model.ExecResult, error)

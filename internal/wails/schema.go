@@ -28,3 +28,15 @@ func (s *SchemaService) GetTableSchema(connectionID string, tableName string) (*
 		return s.query.GetTableSchema(context.Background(), connectionID, tableName)
 	})
 }
+
+func (s *SchemaService) GetTableProfile(connectionID string, tableName string) (*model.TableProfile, error) {
+	return call(s.log, "SchemaService.GetTableProfile", func() (*model.TableProfile, error) {
+		return s.query.GetTableProfile(context.Background(), connectionID, tableName)
+	})
+}
+
+func (s *SchemaService) DetectFTSTable(connectionID string, tableName string) (*model.FTSInfo, error) {
+	return call(s.log, "SchemaService.DetectFTSTable", func() (*model.FTSInfo, error) {
+		return s.query.DetectFTSTable(context.Background(), connectionID, tableName)
+	})
+}

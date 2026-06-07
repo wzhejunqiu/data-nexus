@@ -227,6 +227,52 @@ func (m *ConnectionManager) RestoreConnectionsOnStartup(ctx context.Context) err
 	return nil
 }
 
+func (m *ConnectionManager) AttachDatabase(ctx context.Context, connectionID, filePath, alias string) error {
+	if connectionID == "" {
+		return model.ErrInvalidRequest("connectionId is required")
+	}
+	if filePath == "" {
+		return model.ErrInvalidRequest("filePath is required")
+	}
+	if alias == "" {
+		return model.ErrInvalidRequest("alias is required")
+	}
+	req, err := normalizeConnectRequest(model.ConnectRequest{FilePath: filePath})
+	if err != nil {
+		return err
+	}
+	drv, err := m.Driver(connectionID)
+	if err != nil {
+		return err
+	}
+	return drv.Attach(ctx, req.FilePath, alias)
+}
+
+func (m *ConnectionManager) DetachDatabase(ctx context.Context, connectionID, alias string) error {
+	if connectionID == "" {
+		return model.ErrInvalidRequest("connectionId is required")
+	}
+	if alias == "" {
+		return model.ErrInvalidRequest("alias is required")
+	}
+	drv, err := m.Driver(connectionID)
+	if err != nil {
+		return err
+	}
+	return drv.Detach(ctx, alias)
+}
+
+func (m *ConnectionManager) ListAttachedDatabases(ctx context.Context, connectionID string) ([]model.AttachedDatabase, error) {
+	if connectionID == "" {
+		return nil, model.ErrInvalidRequest("connectionId is required")
+	}
+	drv, err := m.Driver(connectionID)
+	if err != nil {
+		return nil, err
+	}
+	return drv.ListAttached(ctx)
+}
+
 func (m *ConnectionManager) Driver(connectionID string) (driver.Driver, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

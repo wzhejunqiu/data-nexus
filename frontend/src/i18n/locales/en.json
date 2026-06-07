@@ -41,6 +41,58 @@
     "copyColumn": "Copy",
     "empty": "No user tables or views in this database"
   },
+  "profile": {
+    "title": "Data profile",
+    "sampled": "Based on {{count}} sampled rows",
+    "distinct": "Distinct",
+    "nullPercent": "NULL %",
+    "min": "Min",
+    "max": "Max",
+    "topValues": "Top values"
+  },
+  "filter": {
+    "title": "Filters",
+    "selectColumn": "Column",
+    "value": "Value",
+    "inPlaceholder": "a, b, c",
+    "add": "Add condition",
+    "remove": "Remove",
+    "apply": "Apply",
+    "clear": "Clear",
+    "editInSql": "Edit in SQL editor",
+    "op": {
+      "eq": "=",
+      "ne": "!=",
+      "gt": ">",
+      "gte": ">=",
+      "lt": "<",
+      "lte": "<=",
+      "like": "LIKE",
+      "is_null": "IS NULL",
+      "is_not_null": "IS NOT NULL",
+      "in": "IN"
+    }
+  },
+  "facet": {
+    "title": "Facets"
+  },
+  "fts": {
+    "search": "FTS search",
+    "placeholder": "Search (FTS syntax)…"
+  },
+  "savedQueries": {
+    "title": "Saved queries",
+    "save": "Save",
+    "empty": "No saved queries",
+    "namePrompt": "Query name",
+    "saved": "Query saved"
+  },
+  "attach": {
+    "attach": "Attach database…",
+    "detach": "Detach",
+    "aliasPrompt": "Alias for attached database",
+    "mainDb": "Main database"
+  },
   "data": {
     "selectTable": "Select a table from the sidebar",
     "pageSize": "Rows per page",

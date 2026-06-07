@@ -17,6 +17,11 @@ import { useExportStore } from '@/stores/exportStore'
 import { useImportStore } from '@/stores/importStore'
 import { BatchEditConfirmDialog } from './BatchEditConfirmDialog'
 import { Pagination } from './Pagination'
+import { FilterBuilder } from './FilterBuilder'
+import { FtsSearchBar } from './FtsSearchBar'
+import { FacetPanel } from './FacetPanel'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+import type { RowFilter } from '@/lib/types'
 import { connectionApi } from '@/lib/api/connection'
 import { formatError } from '@/lib/api/errors'
 import { schemaApi } from '@/lib/api/schema'
@@ -34,10 +39,17 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
   const qc = useQueryClient()
   const pushToast = useToastStore((s) => s.push)
   const setStatus = useStatusStore((s) => s.setStatus)
+  const getTableState = useWorkspaceStore((s) => s.getTableState)
+  const setTableState = useWorkspaceStore((s) => s.setTableState)
+  const saved = getTableState(connectionId, tableName)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
-  const [sort, setSort] = useState('')
-  const [order, setOrder] = useState<'asc' | 'desc'>('asc')
+  const [sort, setSort] = useState(saved.sort)
+  const [order, setOrder] = useState<'asc' | 'desc'>(saved.order)
+  const [filters, setFilters] = useState<RowFilter[]>(saved.filters)
+  const [search, setSearch] = useState(saved.search)
+  const [appliedFilters, setAppliedFilters] = useState<RowFilter[]>(saved.filters)
+  const [appliedSearch, setAppliedSearch] = useState(saved.search)
   const [pendingEdits, setPendingEdits] = useState<Map<string, PendingEdit>>(new Map())
   const [confirmOpen, setConfirmOpen] = useState(false)
   const openExport = useExportStore((s) => s.openExport)
@@ -55,6 +67,20 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
     queryFn: () => schemaApi.getTableSchema(connectionId, tableName),
   })
 
+  const { data: ftsInfo } = useQuery({
+    queryKey: ['fts', connectionId, tableName],
+    queryFn: () => schemaApi.detectFTS(connectionId, tableName.split('.').pop() ?? tableName),
+  })
+
+  useEffect(() => {
+    setTableState(connectionId, tableName, {
+      sort,
+      order,
+      filters: appliedFilters,
+      search: appliedSearch,
+    })
+  }, [connectionId, tableName, sort, order, appliedFilters, appliedSearch, setTableState])
+
   const pkColumns = useMemo(
     () => schema?.columns.filter((c) => c.primaryKey).map((c) => c.name) ?? [],
     [schema],
@@ -62,7 +88,17 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
   const isView = schema?.type === 'view'
 
   const { data, isLoading, error, isFetching } = useQuery({
-    queryKey: ['rows', connectionId, tableName, page, pageSize, sort, order],
+    queryKey: [
+      'rows',
+      connectionId,
+      tableName,
+      page,
+      pageSize,
+      sort,
+      order,
+      appliedFilters,
+      appliedSearch,
+    ],
     queryFn: () =>
       tableApi.browseRows({
         connectionId,
@@ -71,6 +107,8 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
         pageSize,
         sort,
         order,
+        filters: appliedFilters,
+        search: appliedSearch || undefined,
       }),
   })
 
@@ -158,8 +196,45 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
   if (error) return <p className="p-4 text-sm text-red-500">{formatError(t, error)}</p>
   if (!data) return null
 
+  const applyFilters = () => {
+    guardNavigation(() => {
+      setAppliedFilters(filters.filter((f) => f.column))
+      setAppliedSearch(search)
+      setPage(1)
+    })
+  }
+
+  const addFacetFilter = (filter: RowFilter) => {
+    const next = [
+      ...filters.filter((f) => !(f.column === filter.column && f.operator === 'eq')),
+      filter,
+    ]
+    setFilters(next)
+    setAppliedFilters(next)
+    setPage(1)
+  }
+
   return (
     <>
+      {schema && (
+        <>
+          <FacetPanel
+            connectionId={connectionId}
+            tableName={tableName}
+            filters={appliedFilters}
+            onAddFilter={addFacetFilter}
+          />
+          <FilterBuilder
+            tableName={tableName}
+            columns={schema.columns}
+            filters={filters}
+            sort={sort}
+            order={order}
+            onChange={setFilters}
+            onApply={applyFilters}
+          />
+        </>
+      )}
       <DataGridTable
         data={data}
         page={page}
@@ -195,6 +270,16 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
         pendingCount={pendingEdits.size}
         onExportCsv={openTableExport}
         onImport={() => openImport({ connectionId, defaultTable: tableName })}
+        ftsEnabled={ftsInfo?.enabled ?? false}
+        ftsBarKey={`${connectionId}:${tableName}`}
+        search={search}
+        onSearchChange={setSearch}
+        onSearchApply={() =>
+          guardNavigation(() => {
+            setAppliedSearch(search)
+            setPage(1)
+          })
+        }
       />
       <BatchEditConfirmDialog
         open={confirmOpen}
@@ -231,6 +316,11 @@ function DataGridTable({
   onSave,
   onExportCsv,
   onImport,
+  ftsEnabled,
+  ftsBarKey,
+  search,
+  onSearchChange,
+  onSearchApply,
 }: {
   data: PaginatedTableData
   page: number
@@ -255,6 +345,11 @@ function DataGridTable({
   onSave: () => void
   onExportCsv: () => void
   onImport: () => void
+  ftsEnabled: boolean
+  ftsBarKey: string
+  search: string
+  onSearchChange: (v: string) => void
+  onSearchApply: () => void
 }) {
   const { t } = useTranslation()
   const pushToast = useToastStore((s) => s.push)
@@ -467,6 +562,16 @@ function DataGridTable({
   return (
     <div className="flex h-full flex-col p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+        {ftsEnabled && (
+          <FtsSearchBar
+            key={ftsBarKey}
+            defaultValue={search}
+            onChange={(v) => {
+              onSearchChange(v)
+              onSearchApply()
+            }}
+          />
+        )}
         <label className="flex items-center gap-2">
           {t('data.pageSize')}
           <select

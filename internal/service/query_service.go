@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/wzhejunqiu/data-nexus/internal/driver/export"
+	"github.com/wzhejunqiu/data-nexus/internal/executionlog"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
+	"go.uber.org/zap"
 )
 
 // describeSQLRe matches MySQL-style DESC/DESCRIBE with a single table identifier.
@@ -29,11 +31,16 @@ func normalizeSQL(sql string) string {
 }
 
 type QueryService struct {
-	mgr *ConnectionManager
+	mgr     *ConnectionManager
+	execLog executionlog.Store
+	log     *zap.Logger
 }
 
-func NewQueryService(mgr *ConnectionManager) *QueryService {
-	return &QueryService{mgr: mgr}
+func NewQueryService(mgr *ConnectionManager, execLog executionlog.Store, log *zap.Logger) *QueryService {
+	if log == nil {
+		log = zap.NewNop()
+	}
+	return &QueryService{mgr: mgr, execLog: execLog, log: log}
 }
 
 func (s *QueryService) Execute(ctx context.Context, req model.ExecuteQueryRequest) (*model.QueryResponse, error) {
@@ -64,25 +71,39 @@ func (s *QueryService) Execute(ctx context.Context, req model.ExecuteQueryReques
 		if err != nil {
 			return nil, err
 		}
-		return &model.QueryResponse{
+		resp := &model.QueryResponse{
 			Kind:         "exec",
 			RowsAffected: execResult.RowsAffected,
 			LastInsertID: execResult.LastInsertID,
 			DurationMs:   execResult.Duration.Milliseconds(),
-		}, nil
+		}
+		s.recordExecution(ctx, req.ConnectionID, sqlText, resp)
+		return resp, nil
 	}
 	result, err := drv.QueryRows(ctx, sqlText, req.Params, maxRows)
 	if err != nil {
 		return nil, err
 	}
-	return &model.QueryResponse{
+	resp := &model.QueryResponse{
 		Kind:       "result",
 		Columns:    result.Columns,
 		Rows:       result.Rows,
 		RowCount:   result.RowCount,
 		Truncated:  result.Truncated,
 		DurationMs: result.Duration.Milliseconds(),
-	}, nil
+	}
+	s.recordExecution(ctx, req.ConnectionID, sqlText, resp)
+	return resp, nil
+}
+
+func (s *QueryService) recordExecution(ctx context.Context, connectionID, sqlText string, resp *model.QueryResponse) {
+	if s.execLog == nil {
+		return
+	}
+	record := model.NewSqlExecutionRecord(connectionID, sqlText, resp)
+	if err := s.execLog.Insert(ctx, record); err != nil {
+		s.log.Warn("execution log insert failed", zap.Error(err))
+	}
 }
 
 func (s *QueryService) ClassifySQL(ctx context.Context, connectionID, sql string) (model.StatementKind, error) {
@@ -113,6 +134,8 @@ func (s *QueryService) BrowseRows(ctx context.Context, req model.BrowseRowsReque
 		Sort:           req.Sort,
 		Order:          req.Order,
 		SkipTotalCount: req.SkipTotalCount,
+		Filters:        req.Filters,
+		Search:         req.Search,
 	}
 	if opts.Order == "" {
 		opts.Order = model.SortAsc
@@ -152,6 +175,43 @@ func (s *QueryService) GetTableSchema(ctx context.Context, connectionID, tableNa
 		return nil, err
 	}
 	return drv.GetTableSchema(ctx, tableName)
+}
+
+func (s *QueryService) GetTableProfile(ctx context.Context, connectionID, tableName string) (*model.TableProfile, error) {
+	if connectionID == "" {
+		return nil, model.ErrInvalidRequest("connectionId is required")
+	}
+	if tableName == "" {
+		return nil, model.ErrInvalidRequest("tableName is required")
+	}
+	drv, err := s.mgr.Driver(connectionID)
+	if err != nil {
+		return nil, err
+	}
+	return drv.GetTableProfile(ctx, tableName)
+}
+
+func (s *QueryService) DetectFTSTable(ctx context.Context, connectionID, tableName string) (*model.FTSInfo, error) {
+	if connectionID == "" {
+		return nil, model.ErrInvalidRequest("connectionId is required")
+	}
+	drv, err := s.mgr.Driver(connectionID)
+	if err != nil {
+		return nil, err
+	}
+	return drv.DetectFTSTable(ctx, tableName)
+}
+
+func (s *QueryService) AttachDatabase(ctx context.Context, connectionID, filePath, alias string) error {
+	return s.mgr.AttachDatabase(ctx, connectionID, filePath, alias)
+}
+
+func (s *QueryService) DetachDatabase(ctx context.Context, connectionID, alias string) error {
+	return s.mgr.DetachDatabase(ctx, connectionID, alias)
+}
+
+func (s *QueryService) ListAttachedDatabases(ctx context.Context, connectionID string) ([]model.AttachedDatabase, error) {
+	return s.mgr.ListAttachedDatabases(ctx, connectionID)
 }
 
 func (s *QueryService) UpdateCellsBatch(ctx context.Context, req model.UpdateCellsBatchRequest) (*model.UpdateCellsBatchResult, error) {

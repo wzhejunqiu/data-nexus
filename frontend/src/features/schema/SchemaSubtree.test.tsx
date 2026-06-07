@@ -10,12 +10,28 @@ vi.mock('@/lib/api/schema', () => ({
   },
 }))
 
+vi.mock('@/lib/api/connection', () => ({
+  connectionApi: {
+    listAttached: vi.fn().mockResolvedValue([]),
+    attach: vi.fn(),
+    detach: vi.fn(),
+  },
+}))
+
+vi.mock('@/lib/api/dialog', () => ({
+  dialogApi: {
+    openDatabaseFile: vi.fn(),
+  },
+}))
+
 describe('SchemaSubtree', () => {
   beforeEach(() => {
     useWorkspaceStore.setState({
       activeConnectionId: null,
       selectedTable: null,
       activeTab: 'data',
+      pendingSql: null,
+      tableStates: {},
     })
   })
 

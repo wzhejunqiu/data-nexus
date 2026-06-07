@@ -19,7 +19,11 @@ func (d *Driver) UpdateCells(ctx context.Context, tableName string, changes []mo
 	pkCols := primaryKeyColumns(schema)
 	useRowid := false
 	if len(pkCols) == 0 {
-		withoutRowID, err := d.isWithoutRowID(ctx, tableName)
+		ref, err := parseTableRef(tableName)
+		if err != nil {
+			return 0, err
+		}
+		withoutRowID, err := d.isWithoutRowID(ctx, ref)
 		if err != nil {
 			return 0, err
 		}

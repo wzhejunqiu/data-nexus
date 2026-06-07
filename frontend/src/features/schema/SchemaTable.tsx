@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { schemaApi } from '@/lib/api/schema'
 import { formatError } from '@/lib/api/errors'
 import { IndexList } from './IndexList'
+import { ColumnProfile } from './ColumnProfile'
 
 export function SchemaTable({
   connectionId,
@@ -60,6 +61,7 @@ export function SchemaTable({
         </tbody>
       </table>
       <IndexList indexes={data.indexes} />
+      <ColumnProfile connectionId={connectionId} tableName={tableName} />
     </div>
   )
 }

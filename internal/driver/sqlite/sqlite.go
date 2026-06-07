@@ -16,8 +16,9 @@ import (
 const maxRowsDefault = model.MaxQueryRows
 
 type Driver struct {
-	db       *sql.DB
-	readOnly bool
+	db          *sql.DB
+	readOnly    bool
+	attachedDBs *attachState
 }
 
 func New() *Driver {
@@ -80,8 +81,10 @@ func (d *Driver) Close() error {
 	if d.db == nil {
 		return nil
 	}
+	d.detachAll()
 	err := d.db.Close()
 	d.db = nil
+	d.attachedDBs = nil
 	return err
 }
 
@@ -93,11 +96,42 @@ func (d *Driver) Ping(ctx context.Context) error {
 }
 
 func (d *Driver) ListTables(ctx context.Context) ([]model.TableInfo, error) {
-	rows, err := d.db.QueryContext(ctx, `
-		SELECT name, type FROM sqlite_master
+	mainSchema := "main"
+	items, err := d.listTablesInSchema(ctx, mainSchema, &mainSchema)
+	if err != nil {
+		return nil, err
+	}
+	attached, err := d.ListAttached(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range attached {
+		alias := a.Alias
+		more, err := d.listTablesInSchema(ctx, alias, &alias)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, more...)
+	}
+	return items, nil
+}
+
+func (d *Driver) listTablesInSchema(ctx context.Context, schema string, schemaLabel *string) ([]model.TableInfo, error) {
+	var masterRef string
+	if schema == "main" {
+		masterRef = "sqlite_master"
+	} else {
+		if !sqlutil.IsSafeQuotedIdentifier(schema) {
+			return nil, model.ErrInvalidRequest("invalid schema")
+		}
+		masterRef = schema + ".sqlite_master"
+	}
+	query := fmt.Sprintf(`
+		SELECT name, type FROM %s
 		WHERE type IN ('table', 'view')
-		  AND name NOT LIKE 'sqlite_%'
-		ORDER BY name`)
+		  AND name NOT LIKE 'sqlite_%%'
+		ORDER BY name`, masterRef)
+	rows, err := d.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, model.ErrSQL(err.Error())
 	}
@@ -122,51 +156,73 @@ func (d *Driver) ListTables(ctx context.Context) ([]model.TableInfo, error) {
 
 	var items []model.TableInfo
 	for _, entry := range entries {
+		info := model.TableInfo{Name: entry.name, Schema: schemaLabel}
 		if entry.typ == "view" {
-			items = append(items, model.TableInfo{Name: entry.name, Type: model.TableTypeView})
+			info.Type = model.TableTypeView
+			items = append(items, info)
 			continue
 		}
+		var fromRef string
+		if schema == "main" {
+			fromRef = fmt.Sprintf("%q", entry.name)
+		} else {
+			fromRef = fmt.Sprintf("%s.%q", schema, entry.name)
+		}
 		var rowCount int64
-		countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %q", entry.name)
-		if err := d.db.QueryRowContext(ctx, countQuery).Scan(&rowCount); err != nil {
+		if err := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %s", fromRef)).Scan(&rowCount); err != nil {
 			return nil, model.ErrSQL(err.Error())
 		}
 		rc := rowCount
-		items = append(items, model.TableInfo{Name: entry.name, Type: model.TableTypeTable, RowCount: &rc})
+		info.Type = model.TableTypeTable
+		info.RowCount = &rc
+		items = append(items, info)
 	}
 	return items, nil
 }
 
 func (d *Driver) GetTableSchema(ctx context.Context, tableName string) (*model.TableSchema, error) {
-	if !sqlutil.IsSafeQuotedIdentifier(tableName) {
-		return nil, model.ErrTableNotFound(tableName)
-	}
-	tableType, err := d.lookupTableType(ctx, tableName)
+	ref, err := parseTableRef(tableName)
 	if err != nil {
 		return nil, err
 	}
-	cols, err := d.loadColumns(ctx, tableName)
+	tableType, err := d.lookupTableType(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
-	indexes, err := d.loadIndexes(ctx, tableName)
+	cols, err := d.loadColumns(ctx, ref)
 	if err != nil {
 		return nil, err
+	}
+	indexes, err := d.loadIndexes(ctx, ref)
+	if err != nil {
+		return nil, err
+	}
+	var schemaPtr *string
+	if ref.Schema != "main" {
+		s := ref.Schema
+		schemaPtr = &s
 	}
 	return &model.TableSchema{
-		Name:    tableName,
+		Name:    ref.BareName,
 		Type:    tableType,
+		Schema:  schemaPtr,
 		Columns: cols,
 		Indexes: indexes,
 	}, nil
 }
 
-func (d *Driver) lookupTableType(ctx context.Context, tableName string) (model.TableType, error) {
+func (d *Driver) lookupTableType(ctx context.Context, ref tableRef) (model.TableType, error) {
 	var typ string
-	err := d.db.QueryRowContext(ctx,
-		`SELECT type FROM sqlite_master WHERE name = ? AND type IN ('table','view')`, tableName).Scan(&typ)
+	var err error
+	if ref.Schema == "main" {
+		err = d.db.QueryRowContext(ctx,
+			`SELECT type FROM sqlite_master WHERE name = ? AND type IN ('table','view')`, ref.BareName).Scan(&typ)
+	} else {
+		q := fmt.Sprintf(`SELECT type FROM %s.sqlite_master WHERE name = ? AND type IN ('table','view')`, ref.Schema)
+		err = d.db.QueryRowContext(ctx, q, ref.BareName).Scan(&typ)
+	}
 	if err == sql.ErrNoRows {
-		return "", model.ErrTableNotFound(tableName)
+		return "", model.ErrTableNotFound(ref.Qualified)
 	}
 	if err != nil {
 		return "", model.ErrSQL(err.Error())
@@ -177,8 +233,15 @@ func (d *Driver) lookupTableType(ctx context.Context, tableName string) (model.T
 	return model.TableTypeTable, nil
 }
 
-func (d *Driver) loadColumns(ctx context.Context, tableName string) ([]model.ColumnInfo, error) {
-	query := fmt.Sprintf("PRAGMA table_info(%q)", tableName)
+func pragmaTableRef(schema string) string {
+	if schema == "main" {
+		return ""
+	}
+	return schema + "."
+}
+
+func (d *Driver) loadColumns(ctx context.Context, ref tableRef) ([]model.ColumnInfo, error) {
+	query := fmt.Sprintf("PRAGMA %stable_info(%q)", pragmaTableRef(ref.Schema), ref.BareName)
 	rows, err := d.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, model.ErrSQL(err.Error())
@@ -211,8 +274,8 @@ func (d *Driver) loadColumns(ctx context.Context, tableName string) ([]model.Col
 	return cols, rows.Err()
 }
 
-func (d *Driver) loadIndexes(ctx context.Context, tableName string) ([]model.IndexInfo, error) {
-	query := fmt.Sprintf("PRAGMA index_list(%q)", tableName)
+func (d *Driver) loadIndexes(ctx context.Context, ref tableRef) ([]model.IndexInfo, error) {
+	query := fmt.Sprintf("PRAGMA %sindex_list(%q)", pragmaTableRef(ref.Schema), ref.BareName)
 	rows, err := d.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, model.ErrSQL(err.Error())
@@ -306,10 +369,11 @@ func orderClauseForBrowse(opts model.BrowseOptions, order string) (string, error
 }
 
 func (d *Driver) BrowseTable(ctx context.Context, tableName string, opts model.BrowseOptions) (*model.PaginatedTableData, error) {
-	if !sqlutil.IsSafeQuotedIdentifier(tableName) {
-		return nil, model.ErrTableNotFound(tableName)
+	ref, err := parseTableRef(tableName)
+	if err != nil {
+		return nil, err
 	}
-	if _, err := d.lookupTableType(ctx, tableName); err != nil {
+	if _, err := d.lookupTableType(ctx, ref); err != nil {
 		return nil, err
 	}
 	page := opts.Page
@@ -325,10 +389,16 @@ func (d *Driver) BrowseTable(ctx context.Context, tableName string, opts model.B
 		pageSize = maxPageSize
 	}
 
+	where, whereArgs, err := d.buildBrowseWhere(ctx, ref, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	var total int64
 	totalPages := 1
 	if !opts.SkipTotalCount {
-		if err := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %q", tableName)).Scan(&total); err != nil {
+		countQ := fmt.Sprintf("SELECT COUNT(*) FROM %s%s", ref.FromRef, where)
+		if err := d.db.QueryRowContext(ctx, countQ, whereArgs...).Scan(&total); err != nil {
 			return nil, model.ErrSQL(err.Error())
 		}
 		totalPages = int(math.Ceil(float64(total) / float64(pageSize)))
@@ -346,25 +416,26 @@ func (d *Driver) BrowseTable(ctx context.Context, tableName string, opts model.B
 		return nil, err
 	}
 
-	schema, err := d.GetTableSchema(ctx, tableName)
+	schema, err := d.GetTableSchema(ctx, ref.Qualified)
 	if err != nil {
 		return nil, err
 	}
 	pkCols := primaryKeyColumns(schema)
-	selectFrom := fmt.Sprintf("SELECT * FROM %q", tableName)
+	selectFrom := fmt.Sprintf("SELECT * FROM %s", ref.FromRef)
 	if len(pkCols) == 0 {
-		withoutRowID, err := d.isWithoutRowID(ctx, tableName)
+		withoutRowID, err := d.isWithoutRowID(ctx, ref)
 		if err != nil {
 			return nil, err
 		}
 		if !withoutRowID {
-			selectFrom = fmt.Sprintf("SELECT rowid, * FROM %q", tableName)
+			selectFrom = fmt.Sprintf("SELECT rowid, * FROM %s", ref.FromRef)
 		}
 	}
 
 	offset := (page - 1) * pageSize
-	query := fmt.Sprintf("%s%s LIMIT ? OFFSET ?", selectFrom, sortCol)
-	rows, err := d.db.QueryContext(ctx, query, pageSize, offset)
+	query := fmt.Sprintf("%s%s%s LIMIT ? OFFSET ?", selectFrom, where, sortCol)
+	queryArgs := append(append([]any{}, whereArgs...), pageSize, offset)
+	rows, err := d.db.QueryContext(ctx, query, queryArgs...)
 	if err != nil {
 		return nil, model.ErrSQL(err.Error())
 	}

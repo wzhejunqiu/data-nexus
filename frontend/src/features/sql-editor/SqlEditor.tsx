@@ -1,6 +1,6 @@
 import Editor, { type OnMount } from '@monaco-editor/react'
 import type { editor, languages, Position } from 'monaco-editor'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
@@ -12,13 +12,14 @@ import { formatError } from '@/lib/api/errors'
 import { connectionTypeToSqlDialect } from '@/lib/sql/dialect'
 import { formatSql } from '@/lib/sql/format'
 import { queryApi } from '@/lib/api/query'
+import { queryHistoryApi } from '@/lib/api/queryHistory'
 import { schemaApi } from '@/lib/api/schema'
 import type { QueryResponse } from '@/lib/types'
 import { loadCSVFormatPreference } from '@/lib/types/csv'
 import { formatCell, rowsToCSV } from '@/lib/utils'
-import { useQueryHistoryStore } from '@/stores/queryHistoryStore'
 import { resolveTheme, useThemeStore } from '@/stores/themeStore'
 import { useStatusStore } from '@/stores/statusStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { ConfirmDialog } from './ConfirmDialog'
 import { ExplainTree, isExplainResult } from './ExplainTree'
 import { QueryHistory } from './QueryHistory'
@@ -77,6 +78,15 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const monacoTheme = resolveTheme(themeMode) === 'dark' ? 'vs-dark' : 'vs'
   const setStatus = useStatusStore((s) => s.setStatus)
   const [sql, setSql] = useState('SELECT 1;')
+
+  useEffect(() => {
+    return useWorkspaceStore.subscribe((state, prev) => {
+      const pending = state.pendingSql
+      if (!pending || pending === prev.pendingSql) return
+      setSql(pending)
+      useWorkspaceStore.getState().setPendingSql(null)
+    })
+  }, [])
   const [result, setResult] = useState<QueryResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -84,10 +94,7 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const openExport = useExportStore((s) => s.openExport)
   const [editorHeight, setEditorHeight] = useState(MIN_EDITOR_LINES * EDITOR_LINE_HEIGHT)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
-  const addHistory = useQueryHistoryStore((s) => s.add)
-  const history = useQueryHistoryStore((s) =>
-    connectionId ? (s.items[connectionId] ?? EMPTY_HISTORY) : EMPTY_HISTORY,
-  )
+  const queryClient = useQueryClient()
 
   const { data: connections } = useQuery({
     queryKey: ['connections'],
@@ -104,6 +111,13 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
     enabled: !!activeConn,
   })
 
+  const { data: historyData } = useQuery({
+    queryKey: ['query-history', activeConn],
+    queryFn: () => queryHistoryApi.list(activeConn),
+    enabled: !!activeConn,
+  })
+  const history = historyData ?? EMPTY_HISTORY
+
   const schemaCache = useRef<Map<string, string[]>>(new Map())
 
   const activeConnItem = openConnections.find((c) => c.id === activeConn)
@@ -114,14 +128,14 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
     const res = await queryApi.execute({ connectionId: activeConn, sql, maxRows: 10000 })
     setError(null)
     setResult(res)
-    addHistory(activeConn, sql)
+    await queryClient.invalidateQueries({ queryKey: ['query-history', activeConn] })
     if (res.kind === 'result') {
       setStatus('query', res.rowCount ?? res.rows?.length ?? 0, res.durationMs)
     } else {
       setStatus('exec', res.rowsAffected ?? 0, res.durationMs)
     }
     return res
-  }, [activeConn, sql, addHistory, setStatus, t])
+  }, [activeConn, sql, queryClient, setStatus, t])
 
   const execute = useMutation({
     mutationFn: runQuery,

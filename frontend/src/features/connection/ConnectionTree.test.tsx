@@ -9,6 +9,10 @@ vi.mock('@/features/schema/SchemaSubtree', () => ({
   SchemaSubtree: () => <div data-testid="schema-subtree" />,
 }))
 
+vi.mock('@/features/saved-queries/SavedQueries', () => ({
+  SavedQueries: () => null,
+}))
+
 vi.mock('@/lib/api/connection', () => ({
   connectionApi: {
     list: vi.fn(),

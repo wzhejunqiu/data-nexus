@@ -1,7 +1,10 @@
 import {
+  Attach,
   CloseConnection,
   CreateConnection,
+  Detach,
   GetRestoreOpenOnStartup,
+  ListAttached,
   ListConnections,
   OpenConnection,
   OpenConnectionFromFile,
@@ -12,6 +15,7 @@ import {
 } from '../../../wailsjs/go/wails/ConnectionService'
 import { model } from '../../../wailsjs/go/models'
 import type {
+  AttachedDatabase,
   ConnectRequest,
   Connection,
   ConnectionListView,
@@ -49,4 +53,9 @@ export const connectionApi = {
     ),
   getRestoreOpenOnStartup: () => wrap(() => GetRestoreOpenOnStartup() as Promise<boolean>),
   setRestoreOpenOnStartup: (enabled: boolean) => wrap(() => SetRestoreOpenOnStartup(enabled)),
+  attach: (connectionId: string, filePath: string, alias: string) =>
+    wrap(() => Attach(connectionId, filePath, alias)),
+  detach: (connectionId: string, alias: string) => wrap(() => Detach(connectionId, alias)),
+  listAttached: (connectionId: string) =>
+    wrap(() => ListAttached(connectionId) as Promise<AttachedDatabase[]>),
 }

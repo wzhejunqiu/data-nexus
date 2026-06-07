@@ -10,6 +10,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 	"github.com/wzhejunqiu/data-nexus/internal/config"
+	"github.com/wzhejunqiu/data-nexus/internal/executionlog"
 	"github.com/wzhejunqiu/data-nexus/internal/logger"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
@@ -35,8 +36,19 @@ func main() {
 	if err != nil {
 		log.Fatal("connection store", zap.Error(err))
 	}
+	queryStore, err := service.NewQueryStore("")
+	if err != nil {
+		log.Fatal("query store", zap.Error(err))
+	}
 	mgr := service.NewConnectionManager(store, log)
-	querySvc := service.NewQueryService(mgr)
+	execLog, err := executionlog.NewStore(config.DefaultExecutionLogConfig())
+	if err != nil {
+		log.Fatal("execution log store", zap.Error(err))
+	}
+	defer func() { _ = execLog.Close() }()
+	querySvc := service.NewQueryService(mgr, execLog, log)
+	sqlExecutionSvc := service.NewSqlExecutionService(execLog)
+	cannedQuerySvc := service.NewCannedQueryService(queryStore)
 	exportSvc := service.NewExportService(querySvc)
 	importSvc := service.NewImportService(querySvc)
 
@@ -49,6 +61,8 @@ func main() {
 	configWails := wailssvc.NewConfigService(logMgr, log)
 	exportWails := wailssvc.NewExportService(exportSvc, dialogWails, log)
 	importWails := wailssvc.NewImportService(importSvc, log)
+	cannedQueryWails := wailssvc.NewCannedQueryService(cannedQuerySvc, log)
+	sqlExecutionWails := wailssvc.NewSqlExecutionService(sqlExecutionSvc, log)
 	appWails := wailssvc.NewAppService(log)
 
 	app := NewApp(log, connWails, dialogWails, exportWails, appWails, mgr, cli.DBPath)
@@ -105,6 +119,8 @@ func main() {
 			configWails,
 			exportWails,
 			importWails,
+			cannedQueryWails,
+			sqlExecutionWails,
 			appWails,
 		},
 	})

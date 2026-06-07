@@ -73,3 +73,8 @@ type ConnectionsFile struct {
 	OpenConnectionIDs    []string          `json:"openConnectionIds"`
 	Items                []SavedConnection `json:"items"`
 }
+
+type AttachedDatabase struct {
+	Alias    string `json:"alias"`
+	FilePath string `json:"filePath"`
+}
