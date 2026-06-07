@@ -89,9 +89,7 @@ function SchemaGroup({
                 type="button"
                 aria-current={isSelected ? 'true' : undefined}
                 className={`flex w-full items-center justify-between gap-2 truncate rounded px-2 py-1 text-left text-xs transition-colors ${
-                  isSelected
-                    ? 'bg-accent/20 text-accent hover:bg-accent/30'
-                    : 'hover:bg-muted/40'
+                  isSelected ? 'bg-accent/20 text-accent hover:bg-accent/30' : 'hover:bg-muted/40'
                 }`}
                 onClick={() => onSelect(item.name)}
               >

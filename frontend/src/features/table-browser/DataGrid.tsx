@@ -29,12 +29,6 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
   const [sort, setSort] = useState('')
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
 
-  useEffect(() => {
-    setPage(1)
-    setSort('')
-    setOrder('asc')
-  }, [connectionId, tableName])
-
   const { data, isLoading, error, isFetching } = useQuery({
     queryKey: ['rows', connectionId, tableName, page, pageSize, sort, order],
     queryFn: () =>
