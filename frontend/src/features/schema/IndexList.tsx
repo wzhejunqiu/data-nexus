@@ -3,9 +3,9 @@ import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import type { IndexInfo } from '@/lib/types'
 
-export function IndexList({ indexes }: { indexes: IndexInfo[] }) {
+export function IndexList({ indexes }: { indexes: IndexInfo[] | null | undefined }) {
   const { t } = useTranslation()
-  if (indexes.length === 0) return null
+  if (!indexes?.length) return null
   return (
     <div>
       <h4 className="mb-2 text-sm font-semibold">{t('schema.indexes')}</h4>

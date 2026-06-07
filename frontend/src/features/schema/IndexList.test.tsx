@@ -9,6 +9,11 @@ describe('IndexList', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  it('returns null when indexes is null', () => {
+    const { container } = renderWithProviders(<IndexList indexes={null} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it('renders unique marker', () => {
     renderWithProviders(
       <IndexList

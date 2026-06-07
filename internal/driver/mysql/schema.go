@@ -222,7 +222,7 @@ func (d *Driver) loadIndexes(ctx context.Context, ref tableRef) ([]model.IndexIn
 		return nil, model.ErrSQL(err.Error())
 	}
 
-	var indexes []model.IndexInfo
+	indexes := make([]model.IndexInfo, 0)
 	for _, name := range order {
 		entry := byName[name]
 		indexes = append(indexes, model.IndexInfo{

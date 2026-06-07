@@ -306,7 +306,7 @@ func (d *Driver) loadIndexes(ctx context.Context, ref tableRef) ([]model.IndexIn
 	}
 	_ = rows.Close()
 
-	var indexes []model.IndexInfo
+	indexes := make([]model.IndexInfo, 0)
 	for _, entry := range entries {
 		cols, err := d.loadIndexColumns(ctx, entry.name)
 		if err != nil {
