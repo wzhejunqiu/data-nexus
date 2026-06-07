@@ -1,7 +1,7 @@
 # Data Nexus — 连接与主界面交互（Navicat 模式）
 
 > 版本: v0.5 · 最后更新: 2026-06-08  
-> **v0.5–v0.8 实施:** [phase-v0.5.md](../implementation/phase-v0.5.md) · [phase-v0.6.md](../implementation/phase-v0.6.md) · [phase-v0.7.md](../implementation/phase-v0.7.md) · [phase-v0.8.md](../implementation/phase-v0.8.md)
+> **v0.5–v0.8 实施:** [phase-v0.5.md](../implementation/phase-v0.5.md) · [phase-v0.5.1.md](../implementation/phase-v0.5.1.md) · [phase-v0.6.md](../implementation/phase-v0.6.md) · [phase-v0.7.md](../implementation/phase-v0.7.md) · [phase-v0.8.md](../implementation/phase-v0.8.md)
 
 ---
 

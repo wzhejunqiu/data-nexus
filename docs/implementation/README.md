@@ -22,6 +22,7 @@
 | v0.4 | [phase-v0.4-multi-connection.md](./phase-v0.4-multi-connection.md) | PostgreSQL / MySQL（以 **v0.4.0** 发布） | ✅ 已验收（待 tag） |
 | | [phase-v0.4-manual-checklist.md](./phase-v0.4-manual-checklist.md) | v0.4 手动验收清单 | ✅ |
 | v0.5 | [phase-v0.5.md](./phase-v0.5.md) | 桌面 UI 重构（MenuBar、连接右键、SQL 历史） | |
+| v0.5.1 | [phase-v0.5.1.md](./phase-v0.5.1.md) | macOS ⌘, 设置；快捷键可配置 | |
 | v0.6 | [phase-v0.6.md](./phase-v0.6.md) | 纯 Headless REST（`--api`） | |
 | v0.7 | [phase-v0.7.md](./phase-v0.7.md) | Server 模式（`--server` 浏览器 UI） | |
 | v0.8 | [phase-v0.8.md](./phase-v0.8.md) | ER 图（v0.8.0）· 插件（v0.8.1）· 驱动深化（v0.8.2） | |
@@ -43,5 +44,5 @@
 ```
 Phase 0 ✓ → Phase 1 ✓ → Phase 2 ✓ → Phase 3 ✓ → Phase 4 ✓ → tag v0.1.0
                                                           ↓
-                                                v0.2 ✓ → v0.3 ✓ → v0.4 ✓ → tag v0.4.0 → v0.5 → v0.6 → v0.7 → v0.8
+                                                v0.2 ✓ → v0.3 ✓ → v0.4 ✓ → tag v0.4.0 → v0.5 → v0.5.1 → v0.6 → v0.7 → v0.8
 ```

@@ -1,8 +1,8 @@
 # v0.5 — 桌面 UI 重构
 
-> **预估:** 5–8 天 · **前置:** v0.4 · **下一版本:** [phase-v0.6.md](./phase-v0.6.md)
+> **预估:** 5–8 天 · **前置:** v0.4 · **下一版本:** [phase-v0.5.1.md](./phase-v0.5.1.md)
 
-> **v0.5–v0.7 总览:** v0.5 桌面 UI → v0.6 `--api` 纯 REST → v0.7 `--server` 浏览器 UI
+> **v0.5.x 总览:** v0.5.0 桌面 UI 重构 → **v0.5.1 快捷键** → v0.6 `--api` → …
 
 实施时 **以本文档为主清单**。交互细节见 [UI_UX.md](../design/UI_UX.md)、[CONNECTION_UX.md](../design/CONNECTION_UX.md)。
 
@@ -130,5 +130,5 @@ Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 | [UI_UX.md](../design/UI_UX.md) | MenuBar、两栏布局 |
 | [CONNECTION_UX.md §5](../design/CONNECTION_UX.md) | 右键菜单 |
 | [API.md §14](../design/API.md#14-sqlexecutionservicev03) | `ListAllSqlExecutions` |
-| [phase-v0.6.md](./phase-v0.6.md) | 下一版本：纯 REST |
+| [phase-v0.5.1.md](./phase-v0.5.1.md) | 下一版本：快捷键与 macOS ⌘, |
 | [phase-v0.4-multi-connection.md](./phase-v0.4-multi-connection.md) | 上一版本 |

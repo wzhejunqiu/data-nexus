@@ -1,7 +1,7 @@
 # Data Nexus — UI/UX 设计
 
 > 版本: v0.5 · 状态: 草案 · 最后更新: 2026-06-08  
-> **v0.5–v0.8 实施:** [phase-v0.5.md](../implementation/phase-v0.5.md) · [phase-v0.6.md](../implementation/phase-v0.6.md) · [phase-v0.7.md](../implementation/phase-v0.7.md) · [phase-v0.8.md](../implementation/phase-v0.8.md)
+> **v0.5–v0.8 实施:** [phase-v0.5.md](../implementation/phase-v0.5.md) · [phase-v0.5.1.md](../implementation/phase-v0.5.1.md) · [phase-v0.6.md](../implementation/phase-v0.6.md) · [phase-v0.7.md](../implementation/phase-v0.7.md) · [phase-v0.8.md](../implementation/phase-v0.8.md)
 
 ---
 
@@ -174,7 +174,7 @@ MVP 采用单页应用；**无 Welcome 页**，启动即进入主工作台。见
 | 项 | 行为 | 快捷键 |
 |----|------|--------|
 | SQL 执行历史… | `SqlExecutionHistoryDialog`（跨连接） | — |
-| 设置… | `SettingsDialog`（含主题、语言、日志、启动恢复连接） | `Cmd/Ctrl+,` |
+| 设置… | `SettingsDialog`（含主题、语言、日志、启动恢复、**快捷键 v0.5.1**） | `Cmd/Ctrl+,` **固定** |
 
 **帮助**
 
@@ -313,6 +313,8 @@ VIEWS (2)
 
 - 保存调用 `ConfigService.UpdateConfig`
 - 日志热更新；无效值 inline 校验
+
+**v0.5.1 快捷键分区：** 见 [phase-v0.5.1.md](../implementation/phase-v0.5.1.md)。`⌘,` / `Ctrl+,` 固定打开设置，不可改绑；其余 MenuBar / SQL 快捷键可在设置页录制修改。
 
 ### 4.8 全局 SQL 执行历史（v0.5）
 

@@ -59,4 +59,4 @@
 
 ## 下一阶段
 
-[phase-v0.5.md](./phase-v0.5.md) → … → [phase-v0.8.md](./phase-v0.8.md)
+[phase-v0.5.md](./phase-v0.5.md) → [phase-v0.5.1.md](./phase-v0.5.1.md) → … → [phase-v0.8.md](./phase-v0.8.md)

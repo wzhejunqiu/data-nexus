@@ -1,6 +1,6 @@
 # v0.6 — 纯 Headless REST（`--api`）
 
-> **预估:** 5–8 天 · **前置:** [v0.5](./phase-v0.5.md) · **下一版本:** [phase-v0.7.md](./phase-v0.7.md)
+> **预估:** 5–8 天 · **前置:** [v0.5.1](./phase-v0.5.1.md) · **下一版本:** [phase-v0.7.md](./phase-v0.7.md)
 
 > **v0.5–v0.7 总览:** v0.5 桌面 UI → **v0.6 `--api`** → v0.7 `--server` 浏览器 UI
 
@@ -98,5 +98,5 @@ curl -s -X POST "http://127.0.0.1:8080/api/v1/connections/{id}/query" \
 |------|------|
 | [ARCHITECTURE.md §2.4–§2.5](../design/ARCHITECTURE.md) | 三运行时、server 包结构 |
 | [API.md §10](../design/API.md#10-http-rest-映射v05) | REST 表与 CLI |
-| [phase-v0.5.md](./phase-v0.5.md) | 上一版本 |
+| [phase-v0.5.1.md](./phase-v0.5.1.md) | 上一版本 |
 | [phase-v0.7.md](./phase-v0.7.md) | 下一版本 |

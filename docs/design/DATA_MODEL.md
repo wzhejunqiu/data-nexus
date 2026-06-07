@@ -152,6 +152,14 @@ log:
     max_backups: 5
     max_age_days: 30
     compress: true
+shortcuts:                 # v0.5.1，缺省使用内置默认
+  newConnection: "Meta+N"    # macOS；Windows/Linux 为 Control+N
+  openSQLite: "Meta+O"
+  closeConnection: "Meta+W"
+  openSqlHistory: ""         # 空表示无默认
+  runQuery: "Meta+Enter"
+  formatSql: "Shift+Alt+KeyF"
+  # openSettings (⌘,/Ctrl+,) 不持久化，固定不可改
 ```
 
 ```go
@@ -167,6 +175,16 @@ type LogFileConfig struct {
     MaxBackups int    `yaml:"max_backups"`  // default: 5
     MaxAgeDays int    `yaml:"max_age_days"` // default: 30
     Compress   bool   `yaml:"compress"`     // default: true
+}
+
+// v0.5.1
+type ShortcutBindings struct {
+    NewConnection   string `yaml:"newConnection"`
+    OpenSQLite      string `yaml:"openSQLite"`
+    CloseConnection string `yaml:"closeConnection"`
+    OpenSqlHistory  string `yaml:"openSqlHistory"`
+    RunQuery        string `yaml:"runQuery"`
+    FormatSql       string `yaml:"formatSql"`
 }
 ```
 

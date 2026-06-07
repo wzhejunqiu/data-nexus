@@ -34,6 +34,7 @@ Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ �
 | v0.3 | [phase-v0.3-exploration.md](./implementation/phase-v0.3-exploration.md) | Filter→SQL、列画像 | ✅ 已完成 |
 | v0.4 | [phase-v0.4-multi-connection.md](./implementation/phase-v0.4-multi-connection.md) | PostgreSQL / MySQL（发布 **v0.4.0**） | ✅ 已验收，待 tag |
 | v0.5 | [phase-v0.5.md](./implementation/phase-v0.5.md) | 桌面 UI 重构（MenuBar、连接右键） | |
+| v0.5.1 | [phase-v0.5.1.md](./implementation/phase-v0.5.1.md) | macOS ⌘, 设置；快捷键可配置 | |
 | v0.6 | [phase-v0.6.md](./implementation/phase-v0.6.md) | 纯 Headless REST（`--api`） | |
 | v0.7 | [phase-v0.7.md](./implementation/phase-v0.7.md) | `--server` 浏览器 UI | |
 | v0.8 | [phase-v0.8.md](./implementation/phase-v0.8.md) | ER 图 · 插件 · 驱动深化（v0.8.0–v0.8.2） | |
@@ -56,6 +57,7 @@ Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ �
 | 2026-06-07 | 只读模式纳入 MVP P0 | sqlite-web/Tabulita 标配，降低误操作风险 |
 | 2026-06-07 | 采用 Wails v2 桌面端 | 原生文件对话框、单二进制、对标 TablePlus；弃 HTTP embed 方案 |
 | 2026-06-07 | MVP 不做 headless REST | Bridge 足够；`internal/service` 保留便于 v0.5 `--server` |
+| 2026-06-08 | v0.5.1 快捷键 | macOS ⌘, 固定打开设置；其余快捷键在设置页可配置 |
 | 2026-06-08 | v0.5–v0.7 拆分 | v0.5 桌面 UI；v0.6 `--api`；v0.7 `--server` |
 | 2026-06-08 | v0.8 平台能力 | v0.8.0 ER 图；v0.8.1 插件；v0.8.2 驱动深化 |
 | 2026-06-07 | 日志框架用 zap | 默认 INFO；dev 控制台、release 文件；用户 YAML/CLI 可配置 |
@@ -67,4 +69,4 @@ Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ �
 
 > 开放问题决策后追加到此表。
 
-**推荐实施顺序：** Phase 0–4 ✓ → v0.2 ✓ → v0.3 ✓ → v0.4 ✓ → **tag v0.4.0** → **v0.5** → **v0.6** → **v0.7** → **v0.8**
+**推荐实施顺序：** Phase 0–4 ✓ → v0.2 ✓ → v0.3 ✓ → v0.4 ✓ → **tag v0.4.0** → **v0.5** → **v0.5.1** → **v0.6** → **v0.7** → **v0.8**
