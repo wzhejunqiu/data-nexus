@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { schemaApi } from '@/lib/api/schema'
+import { formatError } from '@/lib/api/errors'
+import { IndexList } from './IndexList'
 
 export function SchemaTable({
   connectionId,
@@ -16,7 +18,7 @@ export function SchemaTable({
   })
 
   if (isLoading) return <p className="p-4 text-sm text-muted">{t('common.loading')}</p>
-  if (error) return <p className="p-4 text-sm text-red-500">{(error as Error).message}</p>
+  if (error) return <p className="p-4 text-sm text-red-500">{formatError(t, error)}</p>
   if (!data) return null
 
   const copy = (text: string) => navigator.clipboard.writeText(text)
@@ -57,18 +59,7 @@ export function SchemaTable({
           ))}
         </tbody>
       </table>
-      {data.indexes.length > 0 && (
-        <div>
-          <h4 className="mb-2 text-sm font-semibold">{t('schema.indexes')}</h4>
-          <ul className="space-y-1 text-sm">
-            {data.indexes.map((idx) => (
-              <li key={idx.name} className="font-mono text-xs">
-                {idx.name} ({idx.columns.join(', ')}) {idx.unique ? '[unique]' : ''}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <IndexList indexes={data.indexes} />
     </div>
   )
 }

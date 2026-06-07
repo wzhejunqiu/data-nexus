@@ -44,10 +44,27 @@ make check        # 上述 + 测试构建
 
 用户配置：`~/.data-nexus/config.yaml`（示例见 [internal/config/config.yaml.example](internal/config/config.yaml.example)）
 
+Release 构建默认日志路径（`log.output: auto`）：
+
+- macOS: `~/Library/Logs/data-nexus/data-nexus.log`
+- Windows: `%LOCALAPPDATA%\data-nexus\logs\data-nexus.log`
+- Linux: `~/.local/share/data-nexus/logs/data-nexus.log`
+
 ```bash
 ./build/bin/data-nexus.app/Contents/MacOS/data-nexus --log-level debug
 ./build/bin/data-nexus.app/Contents/MacOS/data-nexus --db /path/to/app.db
 ```
+
+## 发布
+
+MVP 版本 **v0.1.0**。打 tag 前请完成 [手动测试清单](docs/implementation/phase-4-manual-checklist.md)：
+
+```bash
+git tag -a v0.1.0 -m "MVP: SQLite desktop manager"
+git push origin v0.1.0
+```
+
+推送 `v*` tag 后 [Release workflow](.github/workflows/release.yml) 会构建并上传三平台产物。
 
 ## 文档
 

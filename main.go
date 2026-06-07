@@ -6,7 +6,9 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 	"github.com/wzhejunqiu/data-nexus/internal/config"
 	"github.com/wzhejunqiu/data-nexus/internal/logger"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
@@ -22,8 +24,7 @@ func main() {
 	cli := config.ParseFlags()
 	cfg := config.ApplyCLI(config.Load(), cli)
 
-	devMode := true
-	log, err := logger.New(cfg.Log, devMode)
+	log, err := logger.New(cfg.Log, config.IsDevMode())
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +44,7 @@ func main() {
 	dialogWails := wailssvc.NewDialogService(log)
 	appWails := wailssvc.NewAppService(log)
 
-	app := NewApp(log, connWails, dialogWails, mgr, cli.DBPath)
+	app := NewApp(log, connWails, dialogWails, appWails, mgr, cli.DBPath)
 	app.SetOpenDatabaseHandler(func() {
 		path, err := dialogWails.OpenDatabaseFile()
 		if err != nil {
@@ -71,9 +72,17 @@ func main() {
 		OnStartup:        app.startup,
 		OnShutdown:       app.shutdown,
 		Menu:             app.ApplicationMenu(),
+		DragAndDrop: &options.DragAndDrop{
+			EnableFileDrop:     true,
+			DisableWebViewDrop: true,
+		},
 		Mac: &mac.Options{
 			TitleBar: mac.TitleBarDefault(),
 		},
+		Linux: &linux.Options{
+			ProgramName: "Data Nexus",
+		},
+		Windows: &windows.Options{},
 		Bind: []interface{}{
 			connWails,
 			schemaWails,

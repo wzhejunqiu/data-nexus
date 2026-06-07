@@ -1,5 +1,8 @@
 version: "2"
 
+run:
+  relative-path-mode: gomod
+
 linters:
   default: none
   enable:
@@ -8,6 +11,9 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+  exclusions:
+    paths:
+      - frontend/node_modules
 
 formatters:
   enable:

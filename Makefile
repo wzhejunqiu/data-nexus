@@ -28,12 +28,15 @@ embed-stub:
 	@mkdir -p frontend/dist
 	@test -f frontend/dist/index.html || printf '%s\n' '<!doctype html><html><head></head><body></body></html>' > frontend/dist/index.html
 
+lint-frontend:
+	cd frontend && npm run lint
+
 ci-test: generate
-	cd frontend && npm ci && npm run format:check && npm test && npm run build
+	cd frontend && npm ci && npm run format:check && npm run lint && npm test && npm run build
 	go test ./...
 
 lint: embed-stub
-	golangci-lint run ./...
+	golangci-lint run ./internal/... .
 
 vuln-check:
 	go run golang.org/x/vuln/cmd/govulncheck@latest ./...

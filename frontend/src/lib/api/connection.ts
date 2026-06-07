@@ -1,6 +1,7 @@
 import {
   CloseConnection,
   CreateConnection,
+  GetRestoreOpenOnStartup,
   ListConnections,
   OpenConnection,
   OpenConnectionFromFile,
@@ -29,5 +30,6 @@ export const connectionApi = {
   remove: (id: string) => wrap(() => RemoveConnection(id)),
   rename: (id: string, name: string) =>
     wrap(() => RenameConnection(id, name) as Promise<SavedConnection>),
+  getRestoreOpenOnStartup: () => wrap(() => GetRestoreOpenOnStartup() as Promise<boolean>),
   setRestoreOpenOnStartup: (enabled: boolean) => wrap(() => SetRestoreOpenOnStartup(enabled)),
 }

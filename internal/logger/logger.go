@@ -2,6 +2,7 @@ package logger
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/wzhejunqiu/data-nexus/internal/config"
@@ -36,7 +37,7 @@ func New(cfg config.LogConfig, devMode bool) (*zap.Logger, error) {
 		if path == "" {
 			path = config.DefaultLogFilePath()
 		}
-		if err := os.MkdirAll(config.ConfigDir(), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			return nil, err
 		}
 		w := zapcore.AddSync(&lumberjack.Logger{

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"gopkg.in/yaml.v3"
 )
@@ -121,5 +122,25 @@ func ApplyCLI(cfg Config, cli CLIOverrides) Config {
 }
 
 func DefaultLogFilePath() string {
-	return filepath.Join(ConfigDir(), "data-nexus.log")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(ConfigDir(), "data-nexus.log")
+	}
+	switch runtime.GOOS {
+	case "darwin":
+		return filepath.Join(home, "Library", "Logs", "data-nexus", "data-nexus.log")
+	case "windows":
+		localAppData := os.Getenv("LOCALAPPDATA")
+		if localAppData == "" {
+			localAppData = filepath.Join(home, "AppData", "Local")
+		}
+		return filepath.Join(localAppData, "data-nexus", "logs", "data-nexus.log")
+	default:
+		return filepath.Join(home, ".local", "share", "data-nexus", "logs", "data-nexus.log")
+	}
+}
+
+// IsDevMode returns true when running under wails dev (WAILS_DEV set).
+func IsDevMode() bool {
+	return os.Getenv("WAILS_DEV") != ""
 }

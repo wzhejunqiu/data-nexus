@@ -12,6 +12,8 @@
     "readOnly": "Read-only",
     "rename": "Rename",
     "restoreOnStartup": "Restore open connections on startup",
+    "pathHint": "Enter a path or browse for a SQLite file",
+    "browse": "Browse…",
     "confirmRemove": "Remove connection \"{{name}}\"?",
     "confirmRemoveOpen": "Connection is open. Close and remove \"{{name}}\"?",
     "tables": "TABLES",
@@ -21,7 +23,8 @@
   "tabs": {
     "schema": "Schema",
     "data": "Data",
-    "sql": "SQL"
+    "sql": "SQL",
+    "activeConnection": "Connection"
   },
   "schema": {
     "column": "Column",
@@ -49,7 +52,28 @@
     "pragma": "PRAGMA shortcuts",
     "copyCsv": "Copy as CSV",
     "rowsAffected": "Rows affected: {{count}}",
+    "rowCount": "{{count}} rows returned",
+    "duration": "{{ms}} ms",
+    "noConnection": "Select a connection first"
+  },
+  "status": {
+    "rows": "{{count}} rows",
     "duration": "{{ms}} ms"
+  },
+  "errors": {
+    "INVALID_REQUEST": "Invalid request",
+    "INVALID_PATH": "Invalid file path",
+    "CONNECTION_NOT_FOUND": "Connection not found or not open",
+    "CONNECTION_ALREADY_OPEN": "Connection is already open",
+    "CONNECTION_FAILED": "Failed to open database",
+    "DATABASE_LOCKED": "Database is locked",
+    "TABLE_NOT_FOUND": "Table or view not found",
+    "SQL_ERROR": "SQL execution failed",
+    "RESULT_TOO_LARGE": "Result set exceeds row limit",
+    "READ_ONLY": "Write operation rejected in read-only mode",
+    "DIALOG_CANCELLED": "Cancelled",
+    "SAVED_NOT_FOUND": "Saved connection not found",
+    "INTERNAL_ERROR": "Internal error"
   },
   "common": {
     "cancel": "Cancel",

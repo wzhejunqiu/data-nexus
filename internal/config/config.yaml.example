@@ -1,8 +1,12 @@
 # ~/.data-nexus/config.yaml
 log:
   level: info
-  output: auto
+  output: auto  # auto: wails dev -> console; release build -> file
   file:
+    # Empty uses platform default:
+    #   macOS:   ~/Library/Logs/data-nexus/data-nexus.log
+    #   Windows: %LOCALAPPDATA%\data-nexus\logs\data-nexus.log
+    #   Linux:   ~/.local/share/data-nexus/logs/data-nexus.log
     path: ""
     max_size_mb: 10
     max_backups: 5

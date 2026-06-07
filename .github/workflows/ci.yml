@@ -43,7 +43,7 @@ jobs:
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.12.2
-          args: ./...
+          args: ./internal/... .
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -59,6 +59,10 @@ jobs:
       - name: Prettier check
         working-directory: frontend
         run: npm run format:check
+
+      - name: ESLint
+        working-directory: frontend
+        run: npm run lint
 
   security:
     name: Vulnerability scan

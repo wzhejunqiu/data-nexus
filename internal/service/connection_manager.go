@@ -85,6 +85,15 @@ func (m *ConnectionManager) OpenConnection(ctx context.Context, connectionID str
 		return nil, model.ErrSavedNotFound(connectionID)
 	}
 
+	if saved.Config.SQLite != nil {
+		if _, err := os.Stat(saved.Config.SQLite.FilePath); err != nil {
+			if os.IsNotExist(err) {
+				return nil, model.ErrConnectionFailed("database file does not exist")
+			}
+			return nil, model.ErrConnectionFailed(err.Error())
+		}
+	}
+
 	drv, err := driver.NewDriver(saved.Type)
 	if err != nil {
 		return nil, err
@@ -157,6 +166,10 @@ func (m *ConnectionManager) RenameConnection(connectionID, name string) (*model.
 		return nil, model.ErrInternal(err.Error())
 	}
 	return item, nil
+}
+
+func (m *ConnectionManager) GetRestoreOpenOnStartup() bool {
+	return m.store.RestoreOpenOnStartup()
 }
 
 func (m *ConnectionManager) SetRestoreOpenOnStartup(enabled bool) error {

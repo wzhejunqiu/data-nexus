@@ -3,7 +3,10 @@ import { initReactI18next } from 'react-i18next'
 import en from './locales/en.json'
 import zhCN from './locales/zh-CN.json'
 
-const saved = localStorage.getItem('data-nexus-lang') ?? 'zh-CN'
+const saved =
+  typeof localStorage !== 'undefined'
+    ? (localStorage.getItem('data-nexus-lang') ?? 'zh-CN')
+    : 'zh-CN'
 
 i18n.use(initReactI18next).init({
   resources: {

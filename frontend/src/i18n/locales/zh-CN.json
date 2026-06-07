@@ -12,6 +12,8 @@
     "readOnly": "只读",
     "rename": "重命名",
     "restoreOnStartup": "启动时恢复已打开连接",
+    "pathHint": "输入路径或点击浏览选择 SQLite 文件",
+    "browse": "浏览…",
     "confirmRemove": "删除连接「{{name}}」？",
     "confirmRemoveOpen": "连接已打开，是否关闭并删除「{{name}}」？",
     "tables": "表",
@@ -21,7 +23,8 @@
   "tabs": {
     "schema": "表结构",
     "data": "数据",
-    "sql": "SQL"
+    "sql": "SQL",
+    "activeConnection": "连接"
   },
   "schema": {
     "column": "列名",
@@ -49,7 +52,28 @@
     "pragma": "PRAGMA 快捷",
     "copyCsv": "复制为 CSV",
     "rowsAffected": "影响行数：{{count}}",
+    "rowCount": "返回 {{count}} 行",
+    "duration": "{{ms}} ms",
+    "noConnection": "请先选择连接"
+  },
+  "status": {
+    "rows": "{{count}} 行",
     "duration": "{{ms}} ms"
+  },
+  "errors": {
+    "INVALID_REQUEST": "请求参数无效",
+    "INVALID_PATH": "文件路径无效",
+    "CONNECTION_NOT_FOUND": "连接不存在或未打开",
+    "CONNECTION_ALREADY_OPEN": "连接已打开",
+    "CONNECTION_FAILED": "无法打开数据库",
+    "DATABASE_LOCKED": "数据库被锁定",
+    "TABLE_NOT_FOUND": "表或视图不存在",
+    "SQL_ERROR": "SQL 执行失败",
+    "RESULT_TOO_LARGE": "结果集超过行数上限",
+    "READ_ONLY": "只读模式下拒绝写操作",
+    "DIALOG_CANCELLED": "已取消",
+    "SAVED_NOT_FOUND": "已保存连接不存在",
+    "INTERNAL_ERROR": "内部错误"
   },
   "common": {
     "cancel": "取消",

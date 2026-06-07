@@ -35,6 +35,13 @@ body {
   color: hsl(var(--foreground));
 }
 
+.font-mono,
+code,
+pre,
+.font-mono td {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
 .text-muted {
   color: hsl(var(--foreground) / 0.65);
 }

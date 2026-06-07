@@ -1,13 +1,18 @@
-import Editor from '@monaco-editor/react'
+import Editor, { type OnMount } from '@monaco-editor/react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { connectionApi } from '@/lib/api/connection'
+import { formatError } from '@/lib/api/errors'
 import { queryApi } from '@/lib/api/query'
 import type { QueryResponse } from '@/lib/types'
 import { formatCell, isWriteSQL, rowsToCSV } from '@/lib/utils'
 import { useQueryHistoryStore } from '@/stores/queryHistoryStore'
+import { resolveTheme, useThemeStore } from '@/stores/themeStore'
+import { useStatusStore } from '@/stores/statusStore'
+import { ConfirmDialog } from './ConfirmDialog'
+import { QueryHistory } from './QueryHistory'
 
 const PRAGMAS = [
   'PRAGMA table_info(sqlite_master);',
@@ -18,9 +23,14 @@ const PRAGMAS = [
 
 export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const { t } = useTranslation()
+  const themeMode = useThemeStore((s) => s.mode)
+  const monacoTheme = resolveTheme(themeMode) === 'dark' ? 'vs-dark' : 'vs'
+  const setStatus = useStatusStore((s) => s.setStatus)
   const [sql, setSql] = useState('SELECT 1;')
   const [result, setResult] = useState<QueryResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingRun, setPendingRun] = useState(false)
   const addHistory = useQueryHistoryStore((s) => s.add)
   const history = useQueryHistoryStore((s) => (connectionId ? (s.items[connectionId] ?? []) : []))
 
@@ -30,43 +40,65 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   })
 
   const openConnections = connections?.items.filter((c) => c.status === 'open') ?? []
-  const [activeConn, setActiveConn] = useState(connectionId ?? '')
-
-  useEffect(() => {
-    if (connectionId) setActiveConn(connectionId)
-  }, [connectionId])
+  const [selectedConn, setSelectedConn] = useState('')
+  const activeConn = connectionId || selectedConn
 
   const activeConnItem = openConnections.find((c) => c.id === activeConn)
   const connReadOnly = activeConnItem?.config.sqlite?.readOnly ?? false
 
+  const runQuery = useCallback(async () => {
+    if (!activeConn) throw new Error(t('sql.noConnection'))
+    const res = await queryApi.execute({ connectionId: activeConn, sql, maxRows: 1000 })
+    setError(null)
+    setResult(res)
+    addHistory(activeConn, sql)
+    if (res.kind === 'result') {
+      setStatus('query', res.rowCount ?? res.rows?.length ?? 0, res.durationMs)
+    } else {
+      setStatus('exec', res.rowsAffected ?? 0, res.durationMs)
+    }
+    return res
+  }, [activeConn, sql, addHistory, setStatus, t])
+
   const execute = useMutation({
-    mutationFn: async () => {
-      if (!activeConn) throw new Error('no connection')
-      if (connReadOnly && isWriteSQL(sql)) throw new Error(t('sql.readOnlyBlocked'))
-      if (isWriteSQL(sql) && !window.confirm(t('sql.confirmWrite'))) {
-        throw new Error('cancelled')
-      }
-      return queryApi.execute({ connectionId: activeConn, sql, maxRows: 1000 })
-    },
-    onSuccess: (res) => {
-      setError(null)
-      setResult(res)
-      addHistory(activeConn, sql)
-    },
+    mutationFn: runQuery,
     onError: (err) => {
-      if ((err as Error).message === 'cancelled') return
-      setError((err as Error).message)
+      setError(formatError(t, err))
       setResult(null)
     },
   })
 
+  const handleRunRef = useRef<() => void>(() => {})
+
+  const handleRun = () => {
+    if (!activeConn) return
+    if (connReadOnly && isWriteSQL(sql)) {
+      setError(t('sql.readOnlyBlocked'))
+      return
+    }
+    if (isWriteSQL(sql)) {
+      setConfirmOpen(true)
+      setPendingRun(true)
+      return
+    }
+    execute.mutate()
+  }
+
+  useEffect(() => {
+    handleRunRef.current = handleRun
+  })
+
+  const handleEditorMount: OnMount = (editor, monaco) => {
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+      handleRunRef.current()
+    })
+  }
+
+  const resultColumns = useMemo(() => result?.columns?.map((c) => c.name) ?? [], [result])
+
   const copyCsv = () => {
     if (!result?.columns || !result.rows) return
-    const csv = rowsToCSV(
-      result.columns.map((c) => c.name),
-      result.rows,
-    )
-    navigator.clipboard.writeText(csv)
+    navigator.clipboard.writeText(rowsToCSV(resultColumns, result.rows))
   }
 
   return (
@@ -77,7 +109,7 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
           <select
             className="ml-2 rounded border border-border bg-transparent px-2 py-1 text-sm"
             value={activeConn}
-            onChange={(e) => setActiveConn(e.target.value)}
+            onChange={(e) => setSelectedConn(e.target.value)}
           >
             <option value="">—</option>
             {openConnections.map((c) => (
@@ -87,23 +119,10 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
             ))}
           </select>
         </label>
-        <Button onClick={() => execute.mutate()} disabled={!activeConn || execute.isPending}>
+        <Button onClick={handleRun} disabled={!activeConn || execute.isPending}>
           {t('sql.run')} (⌘↵)
         </Button>
-        {history.length > 0 && (
-          <select
-            className="rounded border border-border bg-transparent px-2 py-1 text-sm"
-            onChange={(e) => e.target.value && setSql(e.target.value)}
-            defaultValue=""
-          >
-            <option value="">{t('sql.history')}</option>
-            {history.map((h) => (
-              <option key={h} value={h}>
-                {h.slice(0, 60)}
-              </option>
-            ))}
-          </select>
-        )}
+        <QueryHistory history={history} onSelect={setSql} />
         <select
           className="rounded border border-border bg-transparent px-2 py-1 text-sm"
           onChange={(e) => e.target.value && setSql(e.target.value)}
@@ -117,21 +136,14 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
           ))}
         </select>
       </div>
-      <div
-        className="overflow-hidden rounded border border-border"
-        onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-            e.preventDefault()
-            execute.mutate()
-          }
-        }}
-      >
+      <div className="overflow-hidden rounded border border-border">
         <Editor
           height="180px"
           defaultLanguage="sql"
-          theme="vs-dark"
+          theme={monacoTheme}
           value={sql}
           onChange={(v) => setSql(v ?? '')}
+          onMount={handleEditorMount}
           options={{ minimap: { enabled: false }, fontSize: 13, lineNumbers: 'on' }}
         />
       </div>
@@ -142,6 +154,11 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
             <span>{t('sql.duration', { ms: result.durationMs })}</span>
             {result.kind === 'exec' && (
               <span>{t('sql.rowsAffected', { count: result.rowsAffected ?? 0 })}</span>
+            )}
+            {result.kind === 'result' && (
+              <span>
+                {t('sql.rowCount', { count: result.rowCount ?? result.rows?.length ?? 0 })}
+              </span>
             )}
             {result.kind === 'result' && result.columns && (
               <Button size="sm" variant="outline" onClick={copyCsv}>
@@ -177,6 +194,19 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        message={t('sql.confirmWrite')}
+        onOpenChange={(open) => {
+          setConfirmOpen(open)
+          if (!open) setPendingRun(false)
+        }}
+        onConfirm={() => {
+          setConfirmOpen(false)
+          if (pendingRun) execute.mutate()
+          setPendingRun(false)
+        }}
+      />
     </div>
   )
 }

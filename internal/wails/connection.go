@@ -59,6 +59,12 @@ func (s *ConnectionService) RenameConnection(connectionID string, name string) (
 	})
 }
 
+func (s *ConnectionService) GetRestoreOpenOnStartup() (bool, error) {
+	return call(s.log, "ConnectionService.GetRestoreOpenOnStartup", func() (bool, error) {
+		return s.mgr.GetRestoreOpenOnStartup(), nil
+	})
+}
+
 func (s *ConnectionService) SetRestoreOpenOnStartup(enabled bool) error {
 	return callVoid(s.log, "ConnectionService.SetRestoreOpenOnStartup", func() error {
 		return s.mgr.SetRestoreOpenOnStartup(enabled)

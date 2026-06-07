@@ -86,3 +86,84 @@ func TestConnectionManagerMultipleOpen(t *testing.T) {
 	}
 	mgr.CloseAll()
 }
+
+func TestConnectionManagerPersistOpenConnections(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "app.db")
+	f, err := os.Create(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.PersistOpenConnections(); err != nil {
+		t.Fatal(err)
+	}
+	ids := store.OpenConnectionIDs()
+	if len(ids) != 1 || ids[0] != conn.ID {
+		t.Fatalf("unexpected open ids: %v", ids)
+	}
+}
+
+func TestConnectionManagerRemoveOpen(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "app.db")
+	f, err := os.Create(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.RemoveConnection(context.Background(), conn.ID); err != nil {
+		t.Fatal(err)
+	}
+	list := mgr.ListConnections()
+	if len(list.Items) != 0 {
+		t.Fatalf("expected empty list, got %+v", list.Items)
+	}
+}
+
+func TestConnectionManagerCreateWithoutOpen(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "app.db")
+	f, err := os.Create(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	saved, err := mgr.CreateConnection(context.Background(), model.ConnectRequest{FilePath: dbPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	list := mgr.ListConnections()
+	if len(list.Items) != 1 || list.Items[0].Status != model.ConnectionStatusClosed {
+		t.Fatalf("unexpected list: %+v", list)
+	}
+	if _, err := mgr.OpenConnection(context.Background(), saved.ID); err != nil {
+		t.Fatal(err)
+	}
+}

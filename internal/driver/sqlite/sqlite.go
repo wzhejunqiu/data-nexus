@@ -91,19 +91,38 @@ func (d *Driver) ListTables(ctx context.Context) ([]model.TableInfo, error) {
 	}
 	defer func() { _ = rows.Close() }()
 
-	var items []model.TableInfo
+	type tableEntry struct {
+		name string
+		typ  string
+	}
+	var entries []tableEntry
 	for rows.Next() {
 		var name, typ string
 		if err := rows.Scan(&name, &typ); err != nil {
 			return nil, model.ErrSQL(err.Error())
 		}
-		t := model.TableTypeTable
-		if typ == "view" {
-			t = model.TableTypeView
-		}
-		items = append(items, model.TableInfo{Name: name, Type: t})
+		entries = append(entries, tableEntry{name: name, typ: typ})
 	}
-	return items, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, model.ErrSQL(err.Error())
+	}
+	_ = rows.Close()
+
+	var items []model.TableInfo
+	for _, entry := range entries {
+		if entry.typ == "view" {
+			items = append(items, model.TableInfo{Name: entry.name, Type: model.TableTypeView})
+			continue
+		}
+		var rowCount int64
+		countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %q", entry.name)
+		if err := d.db.QueryRowContext(ctx, countQuery).Scan(&rowCount); err != nil {
+			return nil, model.ErrSQL(err.Error())
+		}
+		rc := rowCount
+		items = append(items, model.TableInfo{Name: entry.name, Type: model.TableTypeTable, RowCount: &rc})
+	}
+	return items, nil
 }
 
 func (d *Driver) GetTableSchema(ctx context.Context, tableName string) (*model.TableSchema, error) {
@@ -188,25 +207,60 @@ func (d *Driver) loadIndexes(ctx context.Context, tableName string) ([]model.Ind
 	}
 	defer func() { _ = rows.Close() }()
 
-	var indexes []model.IndexInfo
+	type indexEntry struct {
+		name    string
+		unique  bool
+		primary bool
+	}
+	var entries []indexEntry
 	for rows.Next() {
-		var seq, unique, origin, partial int
+		var seq, unique, partial int
 		var name string
-		if err := rows.Scan(&seq, &name, &unique, &origin, &partial); err != nil {
+		var originRaw any
+		if err := rows.Scan(&seq, &name, &unique, &originRaw, &partial); err != nil {
 			return nil, model.ErrSQL(err.Error())
 		}
-		cols, err := d.loadIndexColumns(ctx, name)
+		entries = append(entries, indexEntry{
+			name:    name,
+			unique:  unique == 1,
+			primary: indexOriginIsPrimary(originRaw),
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, model.ErrSQL(err.Error())
+	}
+	_ = rows.Close()
+
+	var indexes []model.IndexInfo
+	for _, entry := range entries {
+		cols, err := d.loadIndexColumns(ctx, entry.name)
 		if err != nil {
 			return nil, err
 		}
 		indexes = append(indexes, model.IndexInfo{
-			Name:    name,
+			Name:    entry.name,
 			Columns: cols,
-			Unique:  unique == 1,
-			Primary: origin == 1,
+			Unique:  entry.unique,
+			Primary: entry.primary,
 		})
 	}
-	return indexes, rows.Err()
+	return indexes, nil
+}
+
+func indexOriginIsPrimary(origin any) bool {
+	switch v := origin.(type) {
+	case int64:
+		return v == 1
+	case int:
+		return v == 1
+	case string:
+		return v == "pk" || v == "u"
+	case []byte:
+		s := string(v)
+		return s == "pk" || s == "u"
+	default:
+		return false
+	}
 }
 
 func (d *Driver) loadIndexColumns(ctx context.Context, indexName string) ([]string, error) {
@@ -350,12 +404,10 @@ func (d *Driver) QueryRows(ctx context.Context, sqlText string, params []any, ma
 	}
 
 	var resultRows []map[string]any
-	truncated := false
 	count := 0
 	for rows.Next() {
 		if count >= maxRows {
-			truncated = true
-			break
+			return nil, model.ErrResultTooLarge()
 		}
 		values := make([]any, len(columns))
 		ptrs := make([]any, len(columns))
@@ -379,7 +431,7 @@ func (d *Driver) QueryRows(ctx context.Context, sqlText string, params []any, ma
 		Columns:   meta,
 		Rows:      resultRows,
 		RowCount:  count,
-		Truncated: truncated,
+		Truncated: false,
 		Duration:  time.Since(start),
 	}, rows.Err()
 }
