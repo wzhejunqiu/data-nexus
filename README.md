@@ -40,6 +40,7 @@
 
 - **多连接**：像 Navicat 一样同时管理多个 **SQLite / PostgreSQL / MySQL** 连接
 - **远程连接**：host/port/database/user/password、SSL/TLS、**测试连接**；密码存 Keychain 或本地 Vault（见 [docs/design/SECRETS.md](docs/design/SECRETS.md)）
+- **MySQL**：推荐 8.0+；5.7 best-effort 兼容。MySQL 8 默认 `caching_sha2_password` 时建议开启 TLS，或改用 `mysql_native_password`
 - **SQLite 专属**：ATTACH / DETACH 附加库并按库分组浏览
 - **表浏览**：查看列定义、索引，分页浏览数据，支持列排序
 - **行内编辑**：多单元格编辑、待提交栏、批量提交（事务回滚）

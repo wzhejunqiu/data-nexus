@@ -2,6 +2,7 @@ package postgres_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -106,7 +107,7 @@ func TestIntegrationPostgresExportCursor(t *testing.T) {
 	}
 	_, _ = drv.Exec(ctx, `DELETE FROM integration_export`, nil)
 	for i := 1; i <= 5; i++ {
-		if _, err := drv.Exec(ctx, `INSERT INTO integration_export(label) VALUES ($1)`, []any{i}); err != nil {
+		if _, err := drv.Exec(ctx, `INSERT INTO integration_export(label) VALUES ($1)`, []any{fmt.Sprintf("%d", i)}); err != nil {
 			t.Fatal(err)
 		}
 	}

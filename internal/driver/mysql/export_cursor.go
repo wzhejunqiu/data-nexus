@@ -159,20 +159,9 @@ func (c *mysqlExportCursor) buildKeysetQuery() (string, []any, error) {
 	var whereClause string
 	var args []any
 	if c.started && len(c.lastKey) > 0 {
-		if len(c.key.Columns) == 1 {
-			whereClause = fmt.Sprintf(" WHERE %s > ?", quoteIdent(c.key.Columns[0]))
-			args = append(args, c.lastKey[0])
-		} else {
-			quotedCols := make([]string, len(c.key.Columns))
-			placeholders := make([]string, len(c.key.Columns))
-			for i, col := range c.key.Columns {
-				quotedCols[i] = quoteIdent(col)
-				placeholders[i] = "?"
-			}
-			whereClause = fmt.Sprintf(" WHERE (%s) > (%s)",
-				strings.Join(quotedCols, ", "), strings.Join(placeholders, ", "))
-			args = append(args, c.lastKey...)
-		}
+		clause, keyArgs := remote.BuildLexicographicKeysetWhere(c.key.Columns, quoteIdent, "?", c.lastKey)
+		whereClause = " WHERE " + clause
+		args = append(args, keyArgs...)
 	}
 
 	query := fmt.Sprintf("SELECT * FROM %s%s%s LIMIT ?", c.fromRef, whereClause, orderClause)

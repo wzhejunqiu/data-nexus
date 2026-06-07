@@ -598,6 +598,9 @@ func SerializeCellValue(v any, colType string) any {
 | 导出分页 | keyset，batch=1000 | 同左 | 同左 |
 | 导出行数上限 | 无 | 无 | 无 |
 | CSV 格式选项 | `CSVFormatOptions` 共用 | 同左 | 同左 |
+| 最低版本 | 3.15+（row value） | 9.4+ | **best-effort 5.7**，推荐 **8.0+** |
+
+**MySQL 版本说明：** 驱动生成的 SQL（浏览、schema、导出）按 5.7 兼容编写；用户自行执行的 CTE、窗口函数等需 MySQL 8.0+。MySQL 8 默认 `caching_sha2_password` 认证建议开启 TLS，或改用 `mysql_native_password`。
 
 **抽象策略:**
 - `TableInfo.Schema` 在 SQLite 为 `null`，Postgres 为 `"public"` 等

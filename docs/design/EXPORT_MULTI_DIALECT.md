@@ -48,10 +48,10 @@ sequenceDiagram
 
 | 方言 | 方式 | 说明 |
 |------|------|------|
-| 全部 | **Keyset（seek）** | `WHERE (k1,k2) > (?,?) ORDER BY … LIMIT n`；禁止大表 `OFFSET` |
+| 全部 | **Keyset（seek）** | 禁止大表 `OFFSET`；复合键用确定性全序 |
 | SQLite | row value `(a,b) > (?,?)` | 3.15+，与 `modernc.org/sqlite` 兼容 |
-| PostgreSQL | 同上 + schema 限定 | `"public"."users"` |
-| MySQL | 8.0+ row constructor | `` `db`.`users` `` 反引号 |
+| PostgreSQL | row value `(a,b) > ($1,$2)` + schema 限定 | `"public"."users"` |
+| MySQL | lexicographic OR keyset | `` (`k1` > ?) OR (`k1` = ? AND `k2` > ?) ``；兼容 5.7+ |
 
 默认 batch size：**1000** 行。
 

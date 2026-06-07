@@ -86,11 +86,6 @@ INSERT INTO users (email, name, role, score, is_active, created_at) VALUES
     ('eve@example.com',   'Eve Liu',    'user',  55.0, 0, '2025-01-06 12:00:00');
 
 INSERT INTO users (email, name, role, score, is_active, created_at)
-WITH RECURSIVE nums AS (
-    SELECT 6 AS n
-    UNION ALL
-    SELECT n + 1 FROM nums WHERE n < 60
-)
 SELECT
     CONCAT('user', n, '@example.com'),
     CONCAT('User ', n),
@@ -98,17 +93,19 @@ SELECT
     ROUND(20 + MOD(n * 137, 800) / 10, 1),
     IF(n % 7 = 0, 0, 1),
     DATE_ADD('2025-02-01', INTERVAL n HOUR)
-FROM nums;
+FROM (
+    SELECT ones.n + tens.n * 10 + 6 AS n
+    FROM
+        (SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+         UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) ones,
+        (SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5) tens
+) nums
+WHERE n BETWEEN 6 AND 60;
 
 INSERT INTO tags (name) VALUES
     ('postgres'), ('mysql'), ('go'), ('react'), ('wails'), ('database');
 
 INSERT INTO posts (user_id, title, body, published, view_count, created_at)
-WITH RECURSIVE nums AS (
-    SELECT 1 AS n
-    UNION ALL
-    SELECT n + 1 FROM nums WHERE n < 120
-)
 SELECT
     MOD(n - 1, 60) + 1,
     CONCAT('Post #', n, ': Sample title'),
@@ -116,7 +113,16 @@ SELECT
     IF(n % 3 = 0, 0, 1),
     MOD(n * 17, 500),
     DATE_ADD('2025-03-01', INTERVAL n HOUR)
-FROM nums;
+FROM (
+    SELECT ones.n + tens.n * 10 + hundreds.n * 100 + 1 AS n
+    FROM
+        (SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+         UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) ones,
+        (SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+         UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) tens,
+        (SELECT 0 AS n UNION ALL SELECT 1) hundreds
+) nums
+WHERE n <= 120;
 
 INSERT INTO post_tags (post_id, tag_id)
 SELECT p.id, t.id

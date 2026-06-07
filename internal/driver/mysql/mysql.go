@@ -35,9 +35,14 @@ func (d *Driver) Connect(ctx context.Context, cfg model.DriverConfig) error {
 	d.readOnly = my.ReadOnly
 	d.database = my.Database
 
-	params := []string{"parseTime=true", "allowNativePasswords=true"}
+	params := []string{
+		"parseTime=true",
+		"allowNativePasswords=true",
+		"charset=utf8mb4",
+		"collation=utf8mb4_unicode_ci",
+	}
 	if my.TLS {
-		params = append(params, "tls=true")
+		params = append(params, "tls=skip-verify")
 	}
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?%s",
 		my.User, my.Password, my.Host, my.NormalizedPort(), my.Database, strings.Join(params, "&"))

@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/wzhejunqiu/data-nexus/internal/model"
@@ -56,5 +57,54 @@ func TestQuoteDouble(t *testing.T) {
 func TestQuoteBacktick(t *testing.T) {
 	if got := QuoteBacktick("a`b"); got != "`a``b`" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestBuildLexicographicKeysetWhere(t *testing.T) {
+	quote := QuoteBacktick
+	cases := []struct {
+		name    string
+		cols    []string
+		lastKey []any
+		want    string
+		wantArg []any
+	}{
+		{
+			name:    "single column",
+			cols:    []string{"id"},
+			lastKey: []any{int64(10)},
+			want:    "`id` > ?",
+			wantArg: []any{int64(10)},
+		},
+		{
+			name:    "two columns",
+			cols:    []string{"k1", "k2"},
+			lastKey: []any{int64(1), int64(2)},
+			want:    "(`k1` > ?) OR (`k1` = ? AND `k2` > ?)",
+			wantArg: []any{int64(1), int64(1), int64(2)},
+		},
+		{
+			name:    "three columns",
+			cols:    []string{"a", "b", "c"},
+			lastKey: []any{"x", "y", "z"},
+			want:    "(`a` > ?) OR (`a` = ? AND `b` > ?) OR (`a` = ? AND `b` = ? AND `c` > ?)",
+			wantArg: []any{"x", "x", "y", "x", "y", "z"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, args := BuildLexicographicKeysetWhere(tc.cols, quote, "?", tc.lastKey)
+			if got != tc.want {
+				t.Fatalf("clause: got %q want %q", got, tc.want)
+			}
+			if len(args) != len(tc.wantArg) {
+				t.Fatalf("args len: got %d want %d", len(args), len(tc.wantArg))
+			}
+			for i := range args {
+				if fmt.Sprint(args[i]) != fmt.Sprint(tc.wantArg[i]) {
+					t.Fatalf("args[%d]: got %v want %v", i, args[i], tc.wantArg[i])
+				}
+			}
+		})
 	}
 }
