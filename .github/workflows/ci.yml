@@ -36,6 +36,9 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare embed assets for lint
+        run: make embed-stub
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:

@@ -18,11 +18,15 @@ fmt-check:
 fmt:
 	gofmt -w .
 
+embed-stub:
+	@mkdir -p frontend/dist
+	@test -f frontend/dist/index.html || printf '%s\n' '<!doctype html><html><head></head><body></body></html>' > frontend/dist/index.html
+
 ci-test: generate
 	cd frontend && npm ci && npm run format:check && npm test && npm run build
 	go test ./...
 
-lint:
+lint: embed-stub
 	golangci-lint run ./...
 
 vuln-check:
