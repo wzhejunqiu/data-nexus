@@ -15,8 +15,9 @@ import { appApi } from '@/lib/api/app'
 import { connectionApi } from '@/lib/api/connection'
 import { useExportStore } from '@/stores/exportStore'
 import { useImportStore } from '@/stores/importStore'
+import { setAppLanguage, isAppLanguage } from '@/i18n/language'
 import { useStatusStore } from '@/stores/statusStore'
-import { resolveTheme, useThemeStore } from '@/stores/themeStore'
+import { applyThemeMode, isThemeMode } from '@/stores/themeStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 
 export function AppShell() {
@@ -72,17 +73,14 @@ export function AppShell() {
         }
       }),
       EventsOn('app:theme', (mode: string) => {
-        if (mode === 'light' || mode === 'dark' || mode === 'system') {
-          useThemeStore.getState().setMode(mode as 'light' | 'dark' | 'system')
-          document.documentElement.classList.toggle(
-            'dark',
-            resolveTheme(mode as 'light' | 'dark' | 'system') === 'dark',
-          )
+        if (isThemeMode(mode)) {
+          applyThemeMode(mode)
         }
       }),
       EventsOn('app:language', (lang: string) => {
-        i18n.changeLanguage(lang)
-        localStorage.setItem('data-nexus-lang', lang)
+        if (isAppLanguage(lang)) {
+          setAppLanguage(lang)
+        }
       }),
     ]
     return () => unsubs.forEach((u) => u())

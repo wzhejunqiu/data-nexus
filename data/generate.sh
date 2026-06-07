@@ -21,6 +21,8 @@ build_db "$DATA_DIR/demo.sql"     "$DATA_DIR/demo.db"
 build_db "$DATA_DIR/staging.sql"  "$DATA_DIR/staging.sqlite3"
 build_db "$DATA_DIR/analytics.sql" "$DATA_DIR/analytics.db"
 build_db "$DATA_DIR/large.sql"    "$DATA_DIR/large.db"
+build_db "$DATA_DIR/blob.sql"     "$DATA_DIR/blob.db"
 
 echo "done — open with: make dev -- --db $DATA_DIR/demo.db"
 echo "       large db:  make dev -- --db $DATA_DIR/large.db"
+echo "       blob db:   make dev -- --db $DATA_DIR/blob.db"

@@ -179,6 +179,8 @@
   "settings": {
     "title": "设置",
     "save": "保存",
+    "language": "界面语言",
+    "theme": "主题",
     "savedRestart": "配置已保存，重启应用后日志设置生效",
     "savedLevelApplied": "日志级别已更新。",
     "savedRestartRequired": "配置已保存，输出路径与轮转参数需重启应用后生效。",

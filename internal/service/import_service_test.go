@@ -10,6 +10,7 @@ import (
 
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
+	"go.uber.org/zap"
 )
 
 func TestImportServiceAppend(t *testing.T) {
@@ -226,6 +227,50 @@ func TestImportServiceLargeCSV(t *testing.T) {
 	}
 	if res.RowsInserted != rowCount {
 		t.Fatalf("expected %d inserts, got %d", rowCount, res.RowsInserted)
+	}
+}
+
+func TestImportServiceReadOnlyBlocksImport(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ro.db")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{
+		FilePath: path,
+		ReadOnly: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	qs := service.NewQueryService(mgr)
+	ctx := context.Background()
+	is := service.NewImportService(qs)
+
+	csvPath := writeTempCSV(t, "name\nalice\n")
+	_, err = is.ImportCSV(ctx, model.ImportCSVRequest{
+		ConnectionID: conn.ID,
+		TargetTable:  "dest",
+		Mode:         "append",
+		ColumnMap:    map[string]string{"name": "name"},
+		FilePath:     csvPath,
+		Format:       model.DefaultCSVFormat(),
+	})
+	if err == nil {
+		t.Fatal("expected read-only error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "READ_ONLY" {
+		t.Fatalf("expected READ_ONLY, got %v", err)
 	}
 }
 

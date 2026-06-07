@@ -6,6 +6,14 @@ import { Dialog } from '@/components/ui/Dialog'
 import { useToastStore } from '@/components/ui/Toast'
 import { configApi, type AppConfig } from '@/lib/api/config'
 import { formatError } from '@/lib/api/errors'
+import { APP_LANGUAGES, getAppLanguage, setAppLanguage, type AppLanguage } from '@/i18n/language'
+import {
+  THEME_MODES,
+  applyThemeMode,
+  isThemeMode,
+  useThemeStore,
+  type ThemeMode,
+} from '@/stores/themeStore'
 
 const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const
 const LOG_OUTPUTS = ['auto', 'console', 'file', 'both'] as const
@@ -56,6 +64,8 @@ function SettingsForm({
   const pushToast = useToastStore((s) => s.push)
   const [form, setForm] = useState(initial)
   const [touched, setTouched] = useState(false)
+  const [lang, setLang] = useState<AppLanguage>(() => getAppLanguage())
+  const themeMode = useThemeStore((s) => s.mode)
 
   const errors = useMemo(() => validateSettingsForm(form), [form])
   const hasErrors = Object.keys(errors).length > 0
@@ -106,6 +116,44 @@ function SettingsForm({
             {t('settings.configPath')}: <code>{configPath}</code>
           </p>
         )}
+        <label className="flex flex-col gap-1">
+          {t('settings.language')}
+          <select
+            className="rounded border border-border bg-transparent px-2 py-1"
+            value={lang}
+            onChange={(e) => {
+              const next = e.target.value
+              if (!APP_LANGUAGES.includes(next as AppLanguage)) return
+              const value = next as AppLanguage
+              setLang(value)
+              setAppLanguage(value)
+            }}
+          >
+            {APP_LANGUAGES.map((code) => (
+              <option key={code} value={code}>
+                {code === 'zh-CN' ? t('language.zh') : t('language.en')}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          {t('settings.theme')}
+          <select
+            className="rounded border border-border bg-transparent px-2 py-1"
+            value={themeMode}
+            onChange={(e) => {
+              const next = e.target.value
+              if (!isThemeMode(next)) return
+              applyThemeMode(next as ThemeMode)
+            }}
+          >
+            {THEME_MODES.map((mode) => (
+              <option key={mode} value={mode}>
+                {t(`theme.${mode}`)}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="flex flex-col gap-1">
           {t('settings.logLevel')}
           <select

@@ -2,6 +2,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '@/test/render'
 import { SettingsDialogContainer } from './SettingsDialog'
+import i18n from '@/i18n'
+import { useThemeStore } from '@/stores/themeStore'
 
 const updateConfig = vi.fn()
 const pushToast = vi.fn()
@@ -36,6 +38,10 @@ describe('SettingsDialog', () => {
     vi.clearAllMocks()
     pushToast.mockClear()
     updateConfig.mockResolvedValue(undefined)
+    localStorage.setItem('data-nexus-lang', 'zh-CN')
+    void i18n.changeLanguage('zh-CN')
+    useThemeStore.setState({ mode: 'system' })
+    document.documentElement.classList.remove('dark')
   })
 
   afterEach(() => {
@@ -71,5 +77,37 @@ describe('SettingsDialog', () => {
     await waitFor(() => {
       expect(updateConfig).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('switches UI language immediately from settings', async () => {
+    renderWithProviders(<SettingsDialogContainer open onOpenChange={() => {}} />)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/界面语言|UI language/i)).toBeTruthy()
+    })
+
+    const select = screen.getByLabelText(/界面语言|UI language/i) as HTMLSelectElement
+    fireEvent.change(select, { target: { value: 'en' } })
+
+    await waitFor(() => {
+      expect(i18n.language).toBe('en')
+    })
+    expect(localStorage.getItem('data-nexus-lang')).toBe('en')
+  })
+
+  it('switches theme immediately from settings', async () => {
+    renderWithProviders(<SettingsDialogContainer open onOpenChange={() => {}} />)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/主题|Theme/i)).toBeTruthy()
+    })
+
+    const select = screen.getByLabelText(/主题|Theme/i) as HTMLSelectElement
+    fireEvent.change(select, { target: { value: 'dark' } })
+
+    await waitFor(() => {
+      expect(useThemeStore.getState().mode).toBe('dark')
+    })
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 })

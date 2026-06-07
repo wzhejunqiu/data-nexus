@@ -120,7 +120,29 @@ describe('DataGrid', () => {
       expect(cell.className).toContain('bg-muted/50')
     })
     expect(screen.getByText('[BLOB 5 bytes]')).toBeTruthy()
+    const blobCell = screen.getByText('[BLOB 5 bytes]')
+    expect(blobCell.className).toContain('cursor-not-allowed')
     expect(screen.getByText('ok')).toBeTruthy()
+  })
+
+  it('shows toast when double-clicking BLOB cell', async () => {
+    await setupMocks()
+    const { tableApi } = await import('@/lib/api/table')
+    vi.mocked(tableApi.browseRows).mockResolvedValue({
+      columns: [
+        { name: 'id', dataType: 'INTEGER' },
+        { name: 'data', dataType: 'BLOB' },
+      ],
+      rows: [{ id: 1, data: { type: 'blob', size: 5 } }],
+      pagination: { page: 1, pageSize: 50, totalRows: 1, totalPages: 1 },
+    })
+
+    renderGrid()
+
+    await waitFor(() => expect(screen.getByText('[BLOB 5 bytes]')).toBeTruthy())
+    fireEvent.doubleClick(screen.getByText('[BLOB 5 bytes]'))
+    expect(pushToast).toHaveBeenCalledWith(expect.stringMatching(/BLOB|blob/i), 'error')
+    expect(screen.queryByRole('textbox')).toBeNull()
   })
 
   it('shows loading state', async () => {
@@ -176,5 +198,15 @@ describe('DataGrid', () => {
       expect(screen.queryByRole('textbox')).toBeNull()
     })
     expect(screen.getByText('alice')).toBeTruthy()
+  })
+
+  it('shows save button after pending edit', async () => {
+    await setupMocks()
+    renderGrid()
+    await waitFor(() => expect(screen.getByText('alice')).toBeTruthy())
+    fireEvent.doubleClick(screen.getByText('alice'))
+    fireEvent.change(screen.getByDisplayValue('alice'), { target: { value: 'bob' } })
+    fireEvent.blur(screen.getByDisplayValue('bob'))
+    expect(await screen.findByRole('button', { name: /保存更改|Save changes/i })).toBeTruthy()
   })
 })

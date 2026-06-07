@@ -29,11 +29,11 @@ import {
   isBlobValue,
   valuesEqual,
 } from '@/lib/utils'
+import { isBatchOverLimit, MAX_BATCH_EDITS } from '@/lib/editBatch'
 import { useStatusStore } from '@/stores/statusStore'
 
 const PAGE_SIZES = [25, 50, 100, 200]
 const VIRTUAL_ROW_THRESHOLD = 200
-const MAX_BATCH = 200
 
 export function DataGrid({ connectionId, tableName }: { connectionId: string; tableName: string }) {
   const { t } = useTranslation()
@@ -192,8 +192,8 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
         onCommitEdit={commitEdit}
         onDiscard={() => setPendingEdits(new Map())}
         onSave={() => {
-          if (pendingEdits.size > MAX_BATCH) {
-            pushToast(t('edit.batchLimit', { max: MAX_BATCH }), 'error')
+          if (isBatchOverLimit(pendingEdits.size)) {
+            pushToast(t('edit.batchLimit', { max: MAX_BATCH_EDITS }), 'error')
             return
           }
           setConfirmOpen(true)
@@ -407,11 +407,23 @@ function DataGridTable({
           }
 
           const isNull = displayVal === null || displayVal === undefined
+          const isBlobCol = blobCols.has(col.name)
           return (
             <span
-              className={isDirty ? 'border-l-2 border-amber-500 pl-1' : undefined}
+              className={[
+                isDirty ? 'border-l-2 border-amber-500 pl-1' : undefined,
+                isBlobCol && canEdit ? 'opacity-60 cursor-not-allowed' : undefined,
+              ]
+                .filter(Boolean)
+                .join(' ') || undefined}
               onDoubleClick={() => startEdit(rowIdx, col.name, row.original)}
-              title={canEdit ? t('edit.doubleClick') : undefined}
+              title={
+                isBlobCol && canEdit
+                  ? t('edit.noBlob')
+                  : canEdit
+                    ? t('edit.doubleClick')
+                    : undefined
+              }
             >
               {isNull ? (
                 <NullCell label={t('data.null')} />
@@ -424,7 +436,7 @@ function DataGridTable({
           )
         },
       })),
-    [data.columns, pendingEdits, editing, editValue, canEdit, getPK, t, submitting, finishEdit, cancelEdit],
+    [data.columns, pendingEdits, editing, editValue, canEdit, blobCols, getPK, t, submitting, finishEdit, cancelEdit],
   )
 
   const table = useReactTable({

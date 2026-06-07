@@ -179,6 +179,8 @@
   "settings": {
     "title": "Settings",
     "save": "Save",
+    "language": "UI language",
+    "theme": "Theme",
     "savedRestart": "Settings saved. Restart the app for log changes to take effect.",
     "savedLevelApplied": "Log level updated.",
     "savedRestartRequired": "Settings saved. Restart the app for output path and rotation changes.",

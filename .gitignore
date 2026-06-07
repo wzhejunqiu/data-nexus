@@ -32,3 +32,4 @@ frontend/package.json.md5
 data/*.db
 data/*.sqlite
 data/*.sqlite3
+data/*.db-*

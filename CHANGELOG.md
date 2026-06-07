@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Monaco SQL autocomplete for tables/columns, SQL formatting (`sql-formatter`), EXPLAIN query plan tree
 - Settings dialog for `~/.data-nexus/config.yaml` (log level, output, file path)
 - `FileService`, `ExportService`, `ImportService`, `ConfigService` Wails bindings
-- Double-click `.db` file association via NSIS installer + positional CLI args
+- Positional CLI args and drag-and-drop to open `.db` files (installer does **not** register file association)
 - `DialogService.SaveFile`, `OpenCSVFile`
 
 ### Changed
