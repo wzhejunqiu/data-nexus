@@ -1,4 +1,4 @@
-.PHONY: dev build test lint generate ci-test fmt-check fmt vuln-check check
+.PHONY: dev build test lint generate ci-test fmt-check fmt vuln-check check embed-stub
 
 dev:
 	wails dev
@@ -9,7 +9,7 @@ build:
 test:
 	go test ./...
 
-generate:
+generate: embed-stub
 	wails generate module
 
 fmt-check:
