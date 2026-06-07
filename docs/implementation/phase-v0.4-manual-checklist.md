@@ -1,4 +1,4 @@
-# v1.0 手动验收清单
+# v0.4 手动验收清单
 
 > PostgreSQL / MySQL 远程连接 · 最后更新: 2026-06-07
 
@@ -40,7 +40,7 @@ make test-integration
 ## 导出
 
 - [ ] 有主键的 PG/MySQL 表可整表 CSV 导出
-- [ ] 无主键表返回 `EXPORT_NO_STABLE_KEY`
+- [ ] 无主键表可流式整表 CSV 导出（行序不保证）
 
 ## 编辑连接
 

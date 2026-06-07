@@ -7,6 +7,7 @@ import { useToastStore } from '@/components/ui/Toast'
 import { connectionApi } from '@/lib/api/connection'
 import type { TFunction } from 'i18next'
 import { formatError } from '@/lib/api/errors'
+import { isVaultLockedError } from '@/lib/api/secrets'
 import type { PostgresConfig, MySQLConfig } from '@/lib/types'
 
 const defaultPostgres = (): PostgresConfig => ({
@@ -93,7 +94,7 @@ export function RemoteConnectionForm({
       onSaved(saved.id)
     },
     onError: (err) => {
-      if (isVaultError(err)) {
+      if (isVaultLockedError(err)) {
         const code = (err as { code?: string }).code ?? ''
         onNeedVault(code === 'SECRETS_VAULT_NOT_INITIALIZED' ? 'init' : 'unlock', () =>
           save.mutate(),
@@ -188,14 +189,6 @@ export function RemoteConnectionForm({
       </div>
     </div>
   )
-}
-
-function isVaultError(err: unknown): boolean {
-  if (err && typeof err === 'object' && 'code' in err) {
-    const code = String((err as { code: string }).code)
-    return code === 'SECRETS_VAULT_LOCKED' || code === 'SECRETS_VAULT_NOT_INITIALIZED'
-  }
-  return false
 }
 
 function formatConnectionError(t: TFunction, err: unknown): string {

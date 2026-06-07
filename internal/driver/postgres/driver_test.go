@@ -187,10 +187,13 @@ func TestUpdateCells(t *testing.T) {
 
 func TestOpenTableExport(t *testing.T) {
 	drv, mock := newMockDriver(t)
-	expectPGSchemaWithLookups(mock, 2)
+	mock.ExpectQuery(`SELECT table_type`).
+		WithArgs("public", "users").
+		WillReturnRows(sqlmock.NewRows([]string{"table_type"}).AddRow("BASE TABLE"))
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "public"."users" LIMIT 0`)).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}))
-	mock.ExpectQuery(`SELECT \* FROM`).
+	mock.ExpectExec(`BEGIN READ ONLY`).WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "public"."users"`)).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(int64(1), "a"))
 
 	cursor, err := drv.OpenTableExport(context.Background(), "users", model.TableExportOptions{BatchSize: 5})

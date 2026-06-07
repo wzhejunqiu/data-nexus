@@ -8,7 +8,7 @@
 
 v1.0 完成远程 SQL 库驱动后，v1.x 聚焦 **非桌面 UI** 能力与 **平台级** 扩展。
 
-> **说明:** PostgreSQL / MySQL Driver、连接表单、Schema/SQL 闭环见 [phase-v1.0-multi-connection.md](./phase-v1.0-multi-connection.md)。
+> **说明:** PostgreSQL / MySQL Driver、连接表单、Schema/SQL 闭环见 [phase-v0.4-multi-connection.md](./phase-v0.4-multi-connection.md)。
 
 ---
 

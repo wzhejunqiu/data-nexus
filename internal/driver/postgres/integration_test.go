@@ -204,3 +204,48 @@ func TestIntegrationPostgresExportCompositePK(t *testing.T) {
 		t.Fatalf("expected 5 rows exported, got %d", total)
 	}
 }
+
+func TestIntegrationPostgresExportNoPKStreaming(t *testing.T) {
+	cfg := testPostgresConfig(t)
+	ctx := context.Background()
+
+	drv := postgres.New()
+	if err := drv.Connect(ctx, cfg); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	_, err := drv.Exec(ctx, `CREATE TABLE IF NOT EXISTS integration_no_pk (
+		label TEXT NOT NULL
+	)`, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = drv.Exec(ctx, `DELETE FROM integration_no_pk`, nil)
+	for i := 1; i <= 5; i++ {
+		if _, err := drv.Exec(ctx, `INSERT INTO integration_no_pk(label) VALUES ($1)`, []any{fmt.Sprintf("%d", i)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cursor, err := drv.OpenTableExport(ctx, "integration_no_pk", model.TableExportOptions{BatchSize: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cursor.Close() }()
+
+	total := 0
+	for {
+		batch, err := cursor.NextBatch(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		total += len(batch.Rows)
+		if !batch.HasMore {
+			break
+		}
+	}
+	if total != 5 {
+		t.Fatalf("expected 5 rows exported, got %d", total)
+	}
+}

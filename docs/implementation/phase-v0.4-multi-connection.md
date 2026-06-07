@@ -1,4 +1,4 @@
-# v1.0 — 远程数据库（PostgreSQL / MySQL）
+# v0.4 — 远程数据库（PostgreSQL / MySQL）
 
 > **预估:** 10-14 天 · **前置:** v0.3 · **参考:** [ROADMAP](../ROADMAP.md)
 
@@ -42,7 +42,7 @@
 
 ---
 
-## 非目标（v1.0）
+## 非目标（v0.4）
 
 - Headless REST（可并行规划 v1.x）
 - Redis / Mongo 等非 SQL 引擎
@@ -51,9 +51,9 @@
 
 ## 完成标准
 
-- [ ] 同时打开 SQLite + PostgreSQL（或 MySQL）各至少 1 个（见 [phase-v1.0-manual-checklist.md](./phase-v1.0-manual-checklist.md)）
+- [ ] 同时打开 SQLite + PostgreSQL（或 MySQL）各至少 1 个（见 [phase-v0.4-manual-checklist.md](./phase-v0.4-manual-checklist.md)）
 - [ ] Schema 浏览与 SQL 执行在两种远程库上可用
-- [ ] tag `v1.0.0`
+- [ ] tag `v0.4.0`
 
 ---
 

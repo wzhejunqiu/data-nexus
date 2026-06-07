@@ -2,7 +2,7 @@
 
 一款轻量级 **桌面端数据库管理工具**，支持 **SQLite、PostgreSQL、MySQL**，可同时打开多个连接，浏览表结构、分页查看数据、执行 SQL。
 
-当前版本：**v0.3.0**（v1.0 远程数据库功能开发中）。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本：**v0.4.0**。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 下载
 
@@ -10,10 +10,10 @@
 
 | 平台 | 文件名 |
 |------|--------|
-| Windows (64-bit) | `data-nexus-v0.3.0-windows-amd64-installer.exe` |
-| Windows (ARM64) | `data-nexus-v0.3.0-windows-arm64-installer.exe` |
-| Linux (64-bit) | `data-nexus-v0.3.0-linux-amd64.zip` |
-| Linux (ARM64) | `data-nexus-v0.3.0-linux-arm64.zip` |
+| Windows (64-bit) | `data-nexus-v0.4.0-windows-amd64-installer.exe` |
+| Windows (ARM64) | `data-nexus-v0.4.0-windows-arm64-installer.exe` |
+| Linux (64-bit) | `data-nexus-v0.4.0-linux-amd64.zip` |
+| Linux (ARM64) | `data-nexus-v0.4.0-linux-arm64.zip` |
 
 > macOS 预构建包暂未发布（待配置代码签名与公证后开启）。macOS 用户可 [从源码构建](#参与开发)。
 

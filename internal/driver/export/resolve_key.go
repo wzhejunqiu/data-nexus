@@ -7,6 +7,7 @@ import (
 )
 
 // ResolveStableRowKey picks a deterministic ORDER BY key for full-table export.
+// Note: v0.4+ table CSV export uses streaming SELECT * and does not call this helper.
 // UNIQUE index fallback is intentionally omitted (Phase 2); prefer explicit error over guessed order.
 func ResolveStableRowKey(schema *model.TableSchema, dialect model.DriverType, withoutRowID bool) (model.StableRowKey, error) {
 	for _, idx := range schema.Indexes {

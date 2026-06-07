@@ -1,6 +1,6 @@
 # 整表 CSV 导出 — 多方言差异设计
 
-> **状态:** Phase 1–3（SQLite / PostgreSQL / MySQL PK keyset 导出）已实现。  
+> **状态:** v0.4.0 — SQLite / PostgreSQL / MySQL **统一流式单查询**导出已实现。  
 > **相关:** [DATA_MODEL.md §7](./DATA_MODEL.md#7-多数据库差异矩阵设计参考) · [API.md §11](./API.md#11-exportservicev02)
 
 ---
@@ -8,8 +8,8 @@
 ## 1. 设计原则
 
 - **上层方言无关：** [`ExportTableToFile`](../../internal/service/export_service.go) 只消费 `TableExportCursor`，不感知 SQL 方言。
-- **下层方言负责：** 稳定键解析、quoted identifier、keyset SQL、类型序列化、只读事务策略。
-- **Browse ≠ Export：** UI 分页可无序；整表导出**必须**有确定性全序，二者不共用 `BrowseTable` 路径。
+- **下层方言负责：** quoted identifier、`SELECT *` 流式扫描、类型序列化、只读事务策略（PG）。
+- **Browse ≠ Export：** UI 分页可无序；整表导出走独立 `OpenTableExport` 路径，**不保证行序**（快照内行集合完整）。
 
 ```mermaid
 sequenceDiagram
@@ -20,7 +20,7 @@ sequenceDiagram
 
   E->>Q: OpenTableExport(connId, table, opts)
   Q->>D: OpenTableExport(ctx, table, opts)
-  D->>C: new cursor (ResolveStableRowKey + keyset SQL)
+  D->>C: NewStreamingCursor(SELECT *)
   loop NextBatch
     E->>C: NextBatch(ctx)
     C-->>E: rows, hasMore
@@ -29,31 +29,30 @@ sequenceDiagram
 
 ---
 
-## 2. 稳定排序键策略
+## 2. 扫描策略（v0.4+）
 
-| 优先级 | 来源 | SQLite | PostgreSQL | MySQL |
-|--------|------|--------|------------|-------|
-| 1 | PRIMARY KEY（复合键按 catalog 列序） | ✓ | ✓ | ✓ |
-| 2 | UNIQUE NOT NULL 索引 | Phase 2 可选 | Phase 2 可选 | Phase 2 可选 |
-| 3 | 隐式 fallback | `rowid` | **无** → 报错 | **无** → 报错 |
-| 4 | WITHOUT ROWID 且无 1/2 | `EXPORT_NO_STABLE_KEY` | N/A | N/A |
+| 方言 | SQL | 行序 | 无 PK 表 |
+|------|-----|------|----------|
+| SQLite | `SELECT * FROM "table"` | 不保证 | 允许 |
+| PostgreSQL | `SELECT * FROM "schema"."table"` | 不保证 | 允许 |
+| MySQL | ``SELECT * FROM `table` `` | 不保证 | 允许 |
 
-**产品策略：** MySQL/PG **禁止**猜测顺序；SQLite 允许 `rowid` 作为实现细节。SQLite `WITHOUT ROWID` 表若无 PK 则拒绝导出（SQLite DDL 通常要求 PK，但解析层仍显式检测）。
+实现：[`internal/driver/export/streaming_cursor.go`](../../internal/driver/export/streaming_cursor.go)
 
-实现：[`internal/driver/export/resolve_key.go`](../../internal/driver/export/resolve_key.go)
+[`resolve_key.go`](../../internal/driver/export/resolve_key.go) 保留供将来 keyset/UPSERT 等场景；**整表导出不使用**。
 
 ---
 
-## 3. 分页策略
+## 3. 分批读取
 
-| 方言 | 方式 | 说明 |
-|------|------|------|
-| 全部 | **Keyset（seek）** | 禁止大表 `OFFSET`；复合键用确定性全序 |
-| SQLite | row value `(a,b) > (?,?)` | 3.15+，与 `modernc.org/sqlite` 兼容 |
-| PostgreSQL | row value `(a,b) > ($1,$2)` + schema 限定 | `"public"."users"` |
-| MySQL | lexicographic OR keyset | `` (`k1` > ?) OR (`k1` = ? AND `k2` > ?) ``；兼容 5.7+ |
+| 项 | 说明 |
+|----|------|
+| 方式 | 单次 `QueryContext`，`NextBatch` 从 `sql.Rows` 读最多 `batchSize` 行 |
+| 默认 batch | **1000** 行 |
+| 内存 | 仅当前 batch 驻留内存 |
+| 终止 | EOF 或 `context` 取消 → `EXPORT_CANCELLED` |
 
-默认 batch size：**1000** 行。
+~~Keyset（seek）分页~~ 已于 v0.4.0 移除。
 
 ---
 
@@ -107,7 +106,7 @@ sequenceDiagram
 
 | Code | 场景 |
 |------|------|
-| `EXPORT_NO_STABLE_KEY` | 无法确定稳定排序键 |
+| `EXPORT_NO_STABLE_KEY` | 历史错误码；v0.4+ 整表导出不触发 |
 | `EXPORT_CANCELLED` | 用户取消 |
 | `TABLE_NOT_FOUND` | 表/视图不存在 |
 | `SQL_ERROR` | 方言 SQL 失败 |

@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/Input'
 import { useToastStore } from '@/components/ui/Toast'
 import { connectionApi } from '@/lib/api/connection'
 import { formatError } from '@/lib/api/errors'
+import { isVaultLockedError } from '@/lib/api/secrets'
 import { connectionSubtitle } from '@/lib/connectionDisplay'
 import type { ConnectionListItem } from '@/lib/types'
+import { VaultDialog, type VaultDialogMode } from './VaultDialog'
 
 function EditConnectionForm({
   item,
@@ -44,6 +46,9 @@ function EditConnectionForm({
     readOnly: item.config.mysql?.readOnly ?? false,
   }))
   const [newPassword, setNewPassword] = useState('')
+  const [vaultOpen, setVaultOpen] = useState(false)
+  const [vaultMode, setVaultMode] = useState<VaultDialogMode>('unlock')
+  const [vaultRetry, setVaultRetry] = useState<(() => void) | null>(null)
 
   const save = useMutation({
     mutationFn: async () => {
@@ -72,125 +77,142 @@ function EditConnectionForm({
         qc.invalidateQueries({ queryKey: ['tables', item.id] })
       }
     },
-    onError: (err) => pushToast(formatError(t, err), 'error'),
+    onError: (err) => {
+      if (isVaultLockedError(err)) {
+        const code = (err as { code?: string }).code ?? ''
+        setVaultMode(code === 'SECRETS_VAULT_NOT_INITIALIZED' ? 'init' : 'unlock')
+        setVaultRetry(() => () => save.mutate())
+        setVaultOpen(true)
+        return
+      }
+      pushToast(formatError(t, err), 'error')
+    },
   })
 
   const subtitle = connectionSubtitle(item)
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t('connection.edit')}
-      footer={
-        <>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('common.cancel')}
-          </Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            {t('common.confirm')}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-3">
-        <p className="truncate text-xs text-muted" title={subtitle}>
-          {subtitle}
-        </p>
-        {item.type === 'sqlite' && (
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={t('connection.edit')}
+        footer={
           <>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={readOnly}
-                onChange={(e) => {
-                  const next = e.target.checked
-                  setReadOnly(next)
-                  if (next) setWal(false)
-                }}
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+              {t('common.confirm')}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="truncate text-xs text-muted" title={subtitle}>
+            {subtitle}
+          </p>
+          {item.type === 'sqlite' && (
+            <>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={readOnly}
+                  onChange={(e) => {
+                    const next = e.target.checked
+                    setReadOnly(next)
+                    if (next) setWal(false)
+                  }}
+                />
+                {t('connection.readOnly')}
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={wal}
+                  disabled={readOnly}
+                  onChange={(e) => setWal(e.target.checked)}
+                />
+                {t('connection.wal')}
+              </label>
+            </>
+          )}
+          {item.type === 'postgres' && (
+            <>
+              <Input
+                value={postgres.host}
+                onChange={(e) => setPostgres((p) => ({ ...p, host: e.target.value }))}
+                placeholder={t('connection.host')}
               />
-              {t('connection.readOnly')}
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={wal}
-                disabled={readOnly}
-                onChange={(e) => setWal(e.target.checked)}
+              <Input
+                type="number"
+                value={postgres.port}
+                onChange={(e) => setPostgres((p) => ({ ...p, port: Number(e.target.value) }))}
+                placeholder={t('connection.port')}
               />
-              {t('connection.wal')}
-            </label>
-          </>
-        )}
-        {item.type === 'postgres' && (
-          <>
-            <Input
-              value={postgres.host}
-              onChange={(e) => setPostgres((p) => ({ ...p, host: e.target.value }))}
-              placeholder={t('connection.host')}
-            />
-            <Input
-              type="number"
-              value={postgres.port}
-              onChange={(e) => setPostgres((p) => ({ ...p, port: Number(e.target.value) }))}
-              placeholder={t('connection.port')}
-            />
-            <Input
-              value={postgres.database}
-              onChange={(e) => setPostgres((p) => ({ ...p, database: e.target.value }))}
-              placeholder={t('connection.database')}
-            />
-            <Input
-              value={postgres.user}
-              onChange={(e) => setPostgres((p) => ({ ...p, user: e.target.value }))}
-              placeholder={t('connection.user')}
-            />
-            <Input
-              value={postgres.schema}
-              onChange={(e) => setPostgres((p) => ({ ...p, schema: e.target.value }))}
-              placeholder={t('connection.schema')}
-            />
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder={t('connection.passwordOptional')}
-            />
-          </>
-        )}
-        {item.type === 'mysql' && (
-          <>
-            <Input
-              value={mysql.host}
-              onChange={(e) => setMySQL((m) => ({ ...m, host: e.target.value }))}
-              placeholder={t('connection.host')}
-            />
-            <Input
-              type="number"
-              value={mysql.port}
-              onChange={(e) => setMySQL((m) => ({ ...m, port: Number(e.target.value) }))}
-              placeholder={t('connection.port')}
-            />
-            <Input
-              value={mysql.database}
-              onChange={(e) => setMySQL((m) => ({ ...m, database: e.target.value }))}
-              placeholder={t('connection.database')}
-            />
-            <Input
-              value={mysql.user}
-              onChange={(e) => setMySQL((m) => ({ ...m, user: e.target.value }))}
-              placeholder={t('connection.user')}
-            />
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder={t('connection.passwordOptional')}
-            />
-          </>
-        )}
-      </div>
-    </Dialog>
+              <Input
+                value={postgres.database}
+                onChange={(e) => setPostgres((p) => ({ ...p, database: e.target.value }))}
+                placeholder={t('connection.database')}
+              />
+              <Input
+                value={postgres.user}
+                onChange={(e) => setPostgres((p) => ({ ...p, user: e.target.value }))}
+                placeholder={t('connection.user')}
+              />
+              <Input
+                value={postgres.schema}
+                onChange={(e) => setPostgres((p) => ({ ...p, schema: e.target.value }))}
+                placeholder={t('connection.schema')}
+              />
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder={t('connection.passwordOptional')}
+              />
+            </>
+          )}
+          {item.type === 'mysql' && (
+            <>
+              <Input
+                value={mysql.host}
+                onChange={(e) => setMySQL((m) => ({ ...m, host: e.target.value }))}
+                placeholder={t('connection.host')}
+              />
+              <Input
+                type="number"
+                value={mysql.port}
+                onChange={(e) => setMySQL((m) => ({ ...m, port: Number(e.target.value) }))}
+                placeholder={t('connection.port')}
+              />
+              <Input
+                value={mysql.database}
+                onChange={(e) => setMySQL((m) => ({ ...m, database: e.target.value }))}
+                placeholder={t('connection.database')}
+              />
+              <Input
+                value={mysql.user}
+                onChange={(e) => setMySQL((m) => ({ ...m, user: e.target.value }))}
+                placeholder={t('connection.user')}
+              />
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder={t('connection.passwordOptional')}
+              />
+            </>
+          )}
+        </div>
+      </Dialog>
+      <VaultDialog
+        open={vaultOpen}
+        mode={vaultMode}
+        onOpenChange={setVaultOpen}
+        onSuccess={() => vaultRetry?.()}
+      />
+    </>
   )
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/wzhejunqiu/data-nexus/internal/model"
@@ -246,6 +247,34 @@ func TestConnectionStoreUpsertRemote(t *testing.T) {
 	}
 	if mysqlItem.Name != "root@mysql.example.com/shop" {
 		t.Fatalf("unexpected mysql display name %q", mysqlItem.Name)
+	}
+
+	pwReq := model.RemoteConnectRequest{
+		Type:     model.DriverTypePostgres,
+		Password: "secret",
+		Postgres: &model.PostgresConfig{
+			Host:     "secure.example.com",
+			Port:     5432,
+			Database: "app",
+			User:     "admin",
+		},
+	}
+	pwItem, err := store.UpsertRemote(pwReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pwItem.Config.Postgres != nil && pwItem.Config.Postgres.Password != "" {
+		t.Fatal("password must not be stored in connection config")
+	}
+	if err := store.Save(); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), `"password"`) {
+		t.Fatalf("connections.json must not contain password field: %s", raw)
 	}
 }
 

@@ -76,4 +76,4 @@
 
 ## 下一阶段
 
-[phase-v1.0-multi-connection.md](./phase-v1.0-multi-connection.md)
+[phase-v0.4-multi-connection.md](./phase-v0.4-multi-connection.md)

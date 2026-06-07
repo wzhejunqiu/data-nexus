@@ -32,7 +32,7 @@ Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ �
 |------|----------|------|
 | v0.2 | [phase-v0.2-enhancements.md](./implementation/phase-v0.2-enhancements.md) | 体验增强 |
 | v0.3 | [phase-v0.3-exploration.md](./implementation/phase-v0.3-exploration.md) | Filter→SQL、列画像 |
-| v1.0 | [phase-v1.0-multi-connection.md](./implementation/phase-v1.0-multi-connection.md) | PostgreSQL / MySQL |
+| v0.4 | [phase-v0.4-multi-connection.md](./implementation/phase-v0.4-multi-connection.md) | PostgreSQL / MySQL（发布 **v0.4.0**） |
 | v1.x | [phase-v1.x-multi-database.md](./implementation/phase-v1.x-multi-database.md) | Headless REST、ER 等 |
 
 ---

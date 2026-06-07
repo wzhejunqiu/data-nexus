@@ -592,10 +592,10 @@ func SerializeCellValue(v any, colType string) any {
 | 自增 ID | ROWID / INTEGER PK | SERIAL / IDENTITY | AUTO_INCREMENT |
 | 类型系统 | 动态 | 丰富 | 丰富 |
 | 只读连接 | `?mode=ro` | `default_transaction_read_only` | `READ ONLY` |
-| 整表 CSV 导出 | `OpenTableExport` + keyset | Phase 2 | Phase 3 |
-| 稳定排序键 | PK → `rowid` | PK 必须 | PK 必须 |
-| 无主键表导出 | 允许（rowid） | 拒绝 | 拒绝 |
-| 导出分页 | keyset，batch=1000 | 同左 | 同左 |
+| 整表 CSV 导出 | `OpenTableExport` 流式 | 同左 | 同左 |
+| 扫描方式 | `SELECT *` 单查询 | 同左 | 同左 |
+| 无主键表导出 | 允许（无序） | 允许（无序） | 允许（无序） |
+| 导出分批 | NextBatch，batch=1000 | 同左 | 同左 |
 | 导出行数上限 | 无 | 无 | 无 |
 | CSV 格式选项 | `CSVFormatOptions` 共用 | 同左 | 同左 |
 | 最低版本 | 3.15+（row value） | 9.4+ | **best-effort 5.7**，推荐 **8.0+** |

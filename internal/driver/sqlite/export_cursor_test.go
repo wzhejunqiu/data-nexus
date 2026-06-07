@@ -44,7 +44,7 @@ func openExportTestDB(t *testing.T, total int) *sqlite.Driver {
 	return drv
 }
 
-func TestExportCursorKeysetPagination(t *testing.T) {
+func TestExportCursorStreaming(t *testing.T) {
 	const total = 2500
 	drv := openExportTestDB(t, total)
 	defer func() { _ = drv.Close() }()
@@ -101,7 +101,7 @@ func TestExportCursorEmptyTable(t *testing.T) {
 	}
 }
 
-func TestExportCursorNoPKUsesRowid(t *testing.T) {
+func TestExportCursorNoPKStreaming(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "rowid.db")
 	db, err := sql.Open("sqlite", path)

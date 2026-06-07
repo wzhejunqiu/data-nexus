@@ -237,10 +237,12 @@ func TestUpdateCellsNoPrimaryKey(t *testing.T) {
 
 func TestOpenTableExport(t *testing.T) {
 	drv, mock := newMockDriver(t)
-	expectSchemaWithLookups(mock, 2)
+	mock.ExpectQuery(`SELECT TABLE_TYPE FROM information_schema.TABLES`).
+		WithArgs("testdb", "users").
+		WillReturnRows(sqlmock.NewRows([]string{"TABLE_TYPE"}).AddRow("BASE TABLE"))
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` LIMIT 0")).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}))
-	mock.ExpectQuery(`SELECT \* FROM`).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users`")).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(int64(1), "a"))
 
 	cursor, err := drv.OpenTableExport(context.Background(), "users", model.TableExportOptions{BatchSize: 10})

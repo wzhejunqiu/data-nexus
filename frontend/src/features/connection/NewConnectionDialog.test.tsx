@@ -5,6 +5,7 @@ import { NewConnectionDialog } from './NewConnectionDialog'
 vi.mock('@/lib/api/connection', () => ({
   connectionApi: {
     openFromFile: vi.fn(),
+    createRemote: vi.fn(),
   },
 }))
 
@@ -15,8 +16,20 @@ vi.mock('@/lib/api/dialog', () => ({
 }))
 
 vi.mock('@tanstack/react-query', () => ({
-  useMutation: ({ mutationFn }: { mutationFn: () => Promise<unknown> }) => ({
-    mutate: () => mutationFn(),
+  useMutation: ({
+    mutationFn,
+    onError,
+    onSuccess,
+  }: {
+    mutationFn: () => Promise<unknown>
+    onError?: (err: unknown) => void
+    onSuccess?: (data: unknown) => void
+  }) => ({
+    mutate: () => {
+      void mutationFn()
+        .then((data) => onSuccess?.(data))
+        .catch((err) => onError?.(err))
+    },
     isPending: false,
   }),
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
@@ -32,6 +45,24 @@ const pushToast = vi.fn()
 vi.mock('@/components/ui/Toast', () => ({
   useToastStore: (selector: (s: { push: typeof pushToast }) => unknown) =>
     selector({ push: pushToast }),
+}))
+
+vi.mock('@/lib/api/secrets', () => ({
+  secretsApi: {
+    initVault: vi.fn(),
+    unlockVault: vi.fn(),
+  },
+  isVaultLockedError: (err: unknown) =>
+    err &&
+    typeof err === 'object' &&
+    ((err as { code?: string }).code === 'SECRETS_VAULT_LOCKED' ||
+      (err as { code?: string }).code === 'SECRETS_VAULT_NOT_INITIALIZED'),
+  isVaultWrongPasswordError: () => false,
+}))
+
+vi.mock('@/stores/workspaceStore', () => ({
+  useWorkspaceStore: (selector: (s: { setActiveConnectionId: () => void }) => unknown) =>
+    selector({ setActiveConnectionId: vi.fn() }),
 }))
 
 describe('NewConnectionDialog', () => {
@@ -124,6 +155,46 @@ describe('NewConnectionDialog', () => {
 
     await waitFor(() => {
       expect(pushToast).toHaveBeenCalled()
+    })
+  })
+
+  it('shows remote form when postgres tab is selected', () => {
+    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
+    fireEvent.click(screen.getByRole('button', { name: 'connection.type.postgres' }))
+    expect(screen.getByRole('button', { name: 'connection.test' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'connection.saveAndOpen' })).toBeInTheDocument()
+  })
+
+  it('shows remote form when mysql tab is selected', () => {
+    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
+    fireEvent.click(screen.getByRole('button', { name: 'connection.type.mysql' }))
+    expect(screen.getByRole('button', { name: 'connection.test' })).toBeInTheDocument()
+  })
+
+  it('opens vault dialog and retries createRemote on vault locked', async () => {
+    const { connectionApi } = await import('@/lib/api/connection')
+    const { secretsApi } = await import('@/lib/api/secrets')
+    vi.mocked(connectionApi.createRemote)
+      .mockRejectedValueOnce({ code: 'SECRETS_VAULT_LOCKED', message: 'locked' })
+      .mockResolvedValueOnce({ id: 'remote-1' } as never)
+    vi.mocked(secretsApi.unlockVault).mockResolvedValue(undefined)
+
+    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
+    fireEvent.click(screen.getByRole('button', { name: 'connection.type.postgres' }))
+    fireEvent.click(screen.getByRole('button', { name: 'connection.saveAndOpen' }))
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('vault.masterPassword')).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByPlaceholderText('vault.masterPassword'), {
+      target: { value: 'password123' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'vault.unlockAction' }))
+
+    await waitFor(() => {
+      expect(secretsApi.unlockVault).toHaveBeenCalledWith('password123')
+      expect(connectionApi.createRemote).toHaveBeenCalledTimes(2)
     })
   })
 })

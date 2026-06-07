@@ -7,20 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-07
+
 ### Added
 
-- PostgreSQL and MySQL drivers (`internal/driver/postgres`, `internal/driver/mysql`) with schema browse, data grid, SQL, profiling, and PK-based table export
+- PostgreSQL and MySQL drivers (`internal/driver/postgres`, `internal/driver/mysql`) with schema browse, data grid, SQL, profiling, and table CSV export
 - Remote connection form in `NewConnectionDialog` (SQLite / PostgreSQL / MySQL tabs) with **Test connection**
 - Secrets storage: OS Keychain preferred, RSA/AES file vault fallback with user master password ([docs/design/SECRETS.md](docs/design/SECRETS.md))
-- `SecretsService` Wails bindings and on-demand `VaultDialog`
+- `SecretsService` Wails bindings and on-demand `VaultDialog` (including edit-connection save retry)
 - `CreateRemoteConnection`, `TestConnection`, `UpdateConnectionPostgresSettings`, `UpdateConnectionMySQLSettings`
 - PostgreSQL schema / MySQL database switcher in connection tree sidebar
-- `docker-compose.test.yml` and CI Postgres/MySQL service containers for integration tests
+- In-process driver integration tests (`go-mysql-server` + `embedded-postgres`; `make test-integration`)
 
 ### Changed
 
+- **整表 CSV 导出**：SQLite / PostgreSQL / MySQL 统一为流式单查询（`SELECT *` + `NextBatch` 读 `sql.Rows`），移除 keyset 分页；无 PK 表亦可导出（行序不保证）
 - Connection tree shows type badge (SQL/PG/MY) and remote connection subtitle
 - Attach database UI limited to SQLite connections
+- Product version bumped to 0.4.0
 
 ## [0.3.0] - 2026-06-07
 
