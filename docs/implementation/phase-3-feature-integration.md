@@ -101,7 +101,7 @@ frontend/src/features/sql-editor/
 - [x] StatusBar — 行数、耗时、版本（`AppService.GetVersion`）
 - [x] 窗口标题 — `Data Nexus — {filename}`
 - [x] CLI `--db` 启动时 `OpenConnectionFromFile` 并 upsert 到连接列表
-- [x] `wails build` 可构建（main/PR CI 仅 `smoke-build` linux/amd64；四平台 Release 产物（macOS 延后）在打 `v*` tag 时由 [release.yml](../../.github/workflows/release.yml) 构建）
+- [x] `wails build` 可构建（main/PR CI 仅 `smoke-build` linux/amd64；四平台 Release 产物（macOS 延后）由手动触发的 [release.yml](../../.github/workflows/release.yml) 构建）
 - [x] release 模式日志写文件（非控制台，`logger.New` + `IsDevMode`）
 
 ### 性能抽查

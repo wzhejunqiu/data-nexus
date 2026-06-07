@@ -1,16 +1,42 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version tag (e.g. v0.1.0)"
+        required: true
+        type: string
+      draft:
+        description: "Create as draft release"
+        required: false
+        type: boolean
+        default: false
+      prerelease:
+        description: "Mark as pre-release"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 jobs:
+  validate:
+    name: Validate inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check version tag format
+        run: |
+          version='${{ inputs.version }}'
+          if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::version must look like v0.1.0 or v0.1.0-beta.1"
+            exit 1
+          fi
+
   ci:
     name: CI
+    needs: validate
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
@@ -57,8 +83,8 @@ jobs:
             nsis-arch: arm64
     runs-on: ${{ matrix.os }}
     env:
-      VERSION: ${{ github.ref_name }}
-      PACKAGE: data-nexus-${{ github.ref_name }}-${{ matrix.name }}.zip
+      VERSION: ${{ inputs.version }}
+      PACKAGE: data-nexus-${{ inputs.version }}-${{ matrix.name }}.zip
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -156,7 +182,12 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.version }}
+          target_commitish: ${{ github.sha }}
           generate_release_notes: true
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
           files: dist/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

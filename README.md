@@ -97,7 +97,7 @@ make build    # 构建当前平台产物
 make test     # 运行测试
 ```
 
-**CI：** push/PR 到 `main` 时运行测试与 `linux/amd64` smoke build（见 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)）。四个平台的 Release 产物（Linux ×2 + Windows ×2；macOS 待签名后开启）仅在推送 `v*` tag 时构建（见 [`.github/workflows/release.yml`](.github/workflows/release.yml)）。
+**CI：** push/PR 到 `main` 时运行测试与 `linux/amd64` smoke build（见 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)）。四个平台的 Release 产物（Linux ×2 + Windows ×2；macOS 待签名后开启）通过 GitHub Actions **手动触发** Release workflow 构建（见 [`.github/workflows/release.yml`](.github/workflows/release.yml)）。
 
 设计与架构文档见 [docs/](docs/) 目录。
 

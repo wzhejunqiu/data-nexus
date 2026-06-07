@@ -538,7 +538,7 @@ wails build -platform linux/amd64
 | 触发 | Workflow | 桌面构建范围 |
 |------|----------|--------------|
 | push/PR → `main` | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) | 仅 `smoke-build`：`linux/amd64` |
-| push tag `v*` | [`.github/workflows/release.yml`](../../.github/workflows/release.yml) | 先跑 CI，再矩阵构建 **四平台**（Linux zip ×2 + Windows NSIS ×2；macOS 矩阵暂禁用）并发布 Release |
+| 手动触发 Release workflow | [`.github/workflows/release.yml`](../../.github/workflows/release.yml) | 先跑 CI，再矩阵构建 **四平台**（Linux zip ×2 + Windows NSIS ×2；macOS 矩阵暂禁用）并创建 tag + GitHub Release |
 
 > **注意：** main 分支 CI **不会**额外构建 macOS / Windows；全平台产物仅在打版本 tag 时生成。发布前手动 smoke test 见 [phase-4-release.md](../implementation/phase-4-release.md)。
 

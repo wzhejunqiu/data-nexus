@@ -93,9 +93,9 @@ cd frontend && npm test
 
 [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) 在每次 push/PR 时运行：format、security、test，以及 **`smoke-build`（仅 `linux/amd64`）**。不在 main 上构建 macOS / Windows 产物。
 
-#### Release（打 tag）
+#### Release（手动触发）
 
-推送 `v*` tag 时，[`.github/workflows/release.yml`](../../.github/workflows/release.yml) 先复用 CI，再矩阵构建 **四个平台** 并上传 GitHub Release：
+在 GitHub **Actions → Release → Run workflow** 中填写版本号（如 `v0.1.0`），[`.github/workflows/release.yml`](../../.github/workflows/release.yml) 会先复用 CI，再矩阵构建 **四个平台** 并创建 GitHub Release（含 tag，无需本地打 tag）：
 
 | 产物                                    | platform                          |
 | --------------------------------------- | --------------------------------- |
@@ -114,7 +114,7 @@ wails build -platform windows/amd64
 wails build -platform linux/amd64
 ```
 
-- [ ] 打 tag 后 Release workflow 四平台构建全部成功
+- [ ] 手动触发 Release workflow 后四平台构建全部成功
 - [x] macOS 本机 `wails build` smoke test（Release 暂无 macOS 产物）
 - [x] Windows `.exe` smoke test（本机或 Release 产物）
 - [x] Linux binary smoke test（CI `smoke-build` linux/amd64）
@@ -122,11 +122,15 @@ wails build -platform linux/amd64
 
 ### Git
 
+Release workflow 会在发布时自动创建 `v*` tag（指向触发时所选分支的 HEAD）。本地打 tag 为可选：
+
 ```bash
+# 可选：与 workflow 输入的版本号一致
 git tag -a v0.1.0 -m "MVP: SQLite desktop manager"
+git push origin v0.1.0
 ```
 
-- [ ] tag `v0.1.0` 打在 release commit
+- [ ] Release workflow 已成功创建 `v0.1.0` tag 与 GitHub Release
 - [x] CHANGELOG 或 Release Notes（可选）
 
 ---
@@ -135,5 +139,5 @@ git tag -a v0.1.0 -m "MVP: SQLite desktop manager"
 
 - [x] 手动测试清单 100% 通过
 - [x] Go 测试覆盖率达标
-- [ ] v0.1.0 tag 已打
+- [ ] v0.1.0 Release 已发布（含 tag）
 - [ ] 进入 [phase-v0.2-enhancements.md](./phase-v0.2-enhancements.md)（按需）
