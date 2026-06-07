@@ -23,6 +23,8 @@ type mockRuntime struct {
 	filePath    string
 	fileErr     error
 	fileFilters int
+	savePath    string
+	saveErr     error
 }
 
 func (m *mockRuntime) WindowSetTitle(_ context.Context, title string) {
@@ -54,6 +56,17 @@ func (m *mockRuntime) OpenFileDialog(_ context.Context, opts wailsruntime.OpenDi
 		return "", m.fileErr
 	}
 	return m.filePath, nil
+}
+
+func (m *mockRuntime) SaveFileDialog(_ context.Context, opts wailsruntime.SaveDialogOptions) (string, error) {
+	m.fileFilters = len(opts.Filters)
+	if m.saveErr != nil {
+		return "", m.saveErr
+	}
+	if m.savePath != "" {
+		return m.savePath, nil
+	}
+	return "/tmp/export.csv", nil
 }
 
 func newAppWithMock(t *testing.T) (*wailssvc.AppService, *mockRuntime) {

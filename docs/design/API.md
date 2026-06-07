@@ -44,7 +44,15 @@ interface AppError {
 | `RESULT_TOO_LARGE` | 结果集超过行数上限 |
 | `READ_ONLY` | 只读模式下拒绝写操作 |
 | `DIALOG_CANCELLED` | 用户取消文件对话框 |
+| `EXPORT_CANCELLED` | 用户取消 CSV 全表导出 |
+| `EXPORT_NO_STABLE_KEY` | 表无法确定稳定排序键，无法整表导出 |
 | `SAVED_NOT_FOUND` | 已保存连接 ID 不存在 |
+| `BATCH_TOO_LARGE` | 批量编辑超过 200 条变更上限 |
+| `INVALID_CSV` | CSV 解析或格式校验失败 |
+| `IMPORT_FAILED` | CSV 导入执行失败 |
+| `EXPORT_FAILED` | CSV 导出失败 |
+| `PRIMARY_KEY_REQUIRED` | update 导入模式需要主键列 |
+| `FILE_WRITE_FAILED` | 写入文件失败 |
 | `INTERNAL_ERROR` | 未预期错误 |
 
 ---
@@ -70,6 +78,37 @@ func (s *DialogService) SaveFile(defaultName string, filters []FileFilter) (stri
 ```
 
 用于 CSV 导出等场景。
+
+**Filters 默认:** `*.csv`
+
+### 2.3 OpenCSVFile（v0.2）
+
+```go
+func (s *DialogService) OpenCSVFile() (string, error)
+```
+
+**返回:** 用户选择的 CSV 绝对路径；取消时返回 `DIALOG_CANCELLED`。
+
+**Filters:** `*.csv`
+
+用于 CSV 导入向导的文件选择入口。
+
+### 2.4 WriteTextFile — FileService（v0.2）
+
+> **职责分离:** 对话框选路径（DialogService）与文件写入（FileService）分开，便于 headless 模式复用同一写入逻辑。
+
+```go
+func (s *FileService) WriteTextFile(path string, content string) error
+```
+
+| 参数 | 约束 |
+|------|------|
+| `path` | 非空绝对路径；须为用户通过 `SaveFile` 或 CLI 显式提供的合法路径 |
+| `content` | UTF-8 文本；ExportService 生成的 CSV 字符串 |
+
+**Errors:** `INVALID_PATH`, `FILE_WRITE_FAILED`
+
+**典型流程:** `SaveFile` → 获得路径 → `ExportService.ExportTable` 生成内容 → `WriteTextFile` 落盘。
 
 ---
 
@@ -291,6 +330,55 @@ func (s *TableService) BrowseRows(req BrowseRowsRequest) (*PaginatedTableData, e
 | TEXT | string |
 | BLOB | `{ "type": "blob", "size": 1024 }` |
 
+### 6.2 UpdateCellsBatch（v0.2）
+
+```go
+func (s *TableService) UpdateCellsBatch(req UpdateCellsBatchRequest) (*UpdateCellsBatchResult, error)
+```
+
+在同一数据库事务内批量更新单元格。**全部成功或全部回滚**（all-or-nothing）。
+
+**UpdateCellsBatchRequest:**
+
+```json
+{
+  "connectionId": "01HX...",
+  "tableName": "users",
+  "changes": [
+    {
+      "rowKey": { "id": 1 },
+      "column": "email",
+      "oldValue": "a@example.com",
+      "newValue": "new@example.com"
+    }
+  ]
+}
+```
+
+| 字段 | 约束 |
+|------|------|
+| `changes` | 1–200 条；超出 → `BATCH_TOO_LARGE` |
+| `rowKey` | 主键列名→值 map；表无主键时可用 `{ "rowid": 42 }` |
+| `column` | 合法标识符；BLOB 列拒绝编辑 |
+| `oldValue` / `newValue` | 与 BrowseRows 序列化规则一致；`null` 表示 NULL |
+
+**返回:**
+
+```json
+{
+  "updatedCount": 3,
+  "durationMs": 8
+}
+```
+
+**Errors:** `CONNECTION_NOT_FOUND`, `TABLE_NOT_FOUND`, `READ_ONLY`, `BATCH_TOO_LARGE`, `SQL_ERROR`
+
+**事务语义:**
+- Driver 层 `BEGIN` → 逐条 `UPDATE ... WHERE pk = ? AND column = oldValue`（乐观校验）→ `COMMIT`
+- 任一条失败 → `ROLLBACK`，返回 `SQL_ERROR`，`updatedCount` 不返回部分成功
+
+**前端配合:** UI 维护 `pendingEdits` 集合，用户确认后一次性提交；见 [UI_UX.md §4.5.1](./UI_UX.md#451-行内编辑与批量提交)。
+
 ---
 
 ## 7. QueryService
@@ -362,7 +450,7 @@ func (s *AppService) GetVersion() (*VersionInfo, error)
 
 ## 9. 前端调用规范
 
-### 8.1 封装层
+### 9.1 封装层
 
 所有 UI 组件 **不直接** import `wailsjs`，统一经 `frontend/src/lib/api/`：
 
@@ -373,10 +461,14 @@ export * from './schema'
 export * from './table'
 export * from './query'
 export * from './dialog'
+export * from './file'
+export * from './export'
+export * from './import'
+export * from './config'
 export * from './errors'
 ```
 
-### 8.2 TanStack Query 集成
+### 9.2 TanStack Query 集成
 
 ```typescript
 export function useTables() {
@@ -388,7 +480,7 @@ export function useTables() {
 }
 ```
 
-### 8.3 类型来源
+### 9.3 类型来源
 
 - 领域类型：手写 `frontend/src/lib/types/`（与 Go model 对齐）
 - 绑定入口：`wailsjs/go/wails/*`（`wails dev` 自动生成）
@@ -399,9 +491,217 @@ export function useTables() {
 
 | Service 方法 | 等价 REST |
 |--------------|-----------|
-| `ConnectionService.Connect` | `POST /api/v1/connection` |
-| `SchemaService.ListTables` | `GET /api/v1/schema/tables` |
-| `TableService.BrowseRows` | `GET /api/v1/tables/{name}/rows` |
-| `QueryService.Execute` | `POST /api/v1/query` |
+| `ConnectionService.OpenConnection` | `POST /api/v1/connections/{id}/open` |
+| `ConnectionService.CreateConnection` | `POST /api/v1/connections` |
+| `SchemaService.ListTables` | `GET /api/v1/connections/{id}/schema/tables` |
+| `TableService.BrowseRows` | `GET /api/v1/connections/{id}/tables/{name}/rows` |
+| `TableService.UpdateCellsBatch` | `PATCH /api/v1/connections/{id}/tables/{name}/cells` |
+| `QueryService.Execute` | `POST /api/v1/connections/{id}/query` |
+| `ExportService.ExportTable` | `POST /api/v1/connections/{id}/tables/{name}/export` |
+| `ExportService.ExportQueryResult` | `POST /api/v1/export/query-result` |
+| `ImportService.PreviewImport` | `POST /api/v1/import/preview` |
+| `ImportService.ImportCSV` | `POST /api/v1/connections/{id}/import` |
+| `ConfigService.GetConfig` | `GET /api/v1/config` |
+| `ConfigService.UpdateConfig` | `PATCH /api/v1/config` |
+| `FileService.WriteTextFile` | `PUT /api/v1/files`（headless 受路径白名单约束） |
 
 启用 `--server` 时由 chi router 包装同一 `internal/service` 层。
+
+---
+
+## 11. ExportService（v0.2）
+
+CSV 导出；与 ImportService 共用 [CSVFormatOptions](./DATA_MODEL.md#51-csvformatoptions)。
+
+### 11.1 ExportTable
+
+```go
+func (s *ExportService) ExportTable(req ExportTableRequest) (*ExportResult, error)
+```
+
+**ExportTableRequest:**
+
+```json
+{
+  "connectionId": "01HX...",
+  "tableName": "users",
+  "scope": "page",
+  "page": 1,
+  "pageSize": 50,
+  "sort": "id",
+  "order": "asc",
+  "format": {
+    "delimiter": ",",
+    "quoteChar": "\"",
+    "includeHeader": true,
+    "nullValue": "",
+    "encoding": "utf-8"
+  },
+  "outputPath": "/Users/dev/users.csv"
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `scope` | `page` — 当前页（配合 page/pageSize/sort/order）；`all` — 全表 |
+| `format` | `CSVFormatOptions`；省略时使用应用默认 |
+| `outputPath` | 可选；若提供则调用 `FileService.WriteTextFile` 落盘；否则仅返回 `content` |
+
+**返回:**
+
+```json
+{
+  "content": "id,email\n1,a@example.com\n",
+  "rowCount": 1,
+  "filePath": "/Users/dev/users.csv",
+  "durationMs": 15
+}
+```
+
+**Errors:** `CONNECTION_NOT_FOUND`, `TABLE_NOT_FOUND`, `EXPORT_FAILED`, `EXPORT_CANCELLED`, `EXPORT_NO_STABLE_KEY`
+
+**全表导出（`ExportTableCSV`）补充:**
+
+- 请求增加 `exportId`（前端生成 UUID）、`defaultPath`（SaveFile 后传入）。
+- 无行数硬上限；后端通过 Driver `OpenTableExport` 打开 `TableExportCursor`，按稳定键 **keyset 分页**（`WHERE key > lastKey ORDER BY … LIMIT 1000`）流式写盘，保证顺序稳定、不丢不重。
+- SQLite：稳定键为 PK，无主键时 fallback 到 `rowid`；`WITHOUT ROWID` 且无 PK → `EXPORT_NO_STABLE_KEY`。
+- PostgreSQL / MySQL（Phase 2/3）：必须 PK，无主键 → `EXPORT_NO_STABLE_KEY`。详见 [EXPORT_MULTI_DIALECT.md](./EXPORT_MULTI_DIALECT.md)。
+- 进度事件 `export:progress`：`{ exportId, exported }`（Wails `EventsEmit`）；不预先 `COUNT(*)`，进度仅展示已导出行数。
+- 取消：`ExportService.CancelExportTableCSV(exportId)`，删除未完成文件，返回 `EXPORT_CANCELLED`。
+- SQL 查询结果导出仍受 `MaxQueryRows`（10,000）约束，可能返回 `RESULT_TOO_LARGE`。
+
+### 11.2 ExportQueryResult
+
+```go
+func (s *ExportService) ExportQueryResult(req ExportQueryResultRequest) (*ExportResult, error)
+```
+
+将 `QueryService.Execute` 返回的结果集（已在内存中）序列化为 CSV。请求体含 `columns`、`rows` 与 `format`；可选 `outputPath`。
+
+**典型 UI 流程:** 用户执行 SELECT → 结果 Tab 点击「导出 CSV」→ `SaveFile` 选路径 → `ExportQueryResult` + `WriteTextFile`。
+
+---
+
+## 12. ImportService（v0.2）
+
+CSV 导入；解析与 ExportService 对称。
+
+### 12.1 PreviewImport
+
+```go
+func (s *ImportService) PreviewImport(req PreviewImportRequest) (*ImportPreview, error)
+```
+
+**PreviewImportRequest:**
+
+```json
+{
+  "filePath": "/Users/dev/import.csv",
+  "format": { "delimiter": ",", "quoteChar": "\"", "includeHeader": true },
+  "previewRows": 20
+}
+```
+
+**返回:**
+
+```json
+{
+  "columns": [
+    { "name": "id", "inferredType": "INTEGER", "sampleValues": ["1", "2"] },
+    { "name": "email", "inferredType": "TEXT", "sampleValues": ["a@example.com"] }
+  ],
+  "totalRows": 1523,
+  "warnings": ["Column 'note' has mixed types"]
+}
+```
+
+**Errors:** `INVALID_PATH`, `INVALID_CSV`
+
+### 12.2 ImportCSV
+
+```go
+func (s *ImportService) ImportCSV(req ImportCSVRequest) (*ImportResult, error)
+```
+
+**ImportCSVRequest:**
+
+```json
+{
+  "connectionId": "01HX...",
+  "filePath": "/Users/dev/import.csv",
+  "format": { "delimiter": ",", "quoteChar": "\"", "includeHeader": true },
+  "target": {
+    "kind": "existing",
+    "tableName": "users",
+    "mode": "append",
+    "columnMapping": { "id": "id", "email": "email_address" }
+  }
+}
+```
+
+**target.kind:**
+
+| 值 | 行为 |
+|----|------|
+| `new` | `CREATE TABLE` + `INSERT`；需提供 `newTableName`、`columns`（名+类型） |
+| `existing` | 写入已有表；需 `tableName` + `columnMapping` |
+
+**target.mode（`existing` 时）:**
+
+| 值 | 行为 |
+|----|------|
+| `append` | `INSERT` 追加行 |
+| `update` | 按主键 `UPSERT`；表无主键 → `PRIMARY_KEY_REQUIRED` |
+
+**返回:**
+
+```json
+{
+  "rowsImported": 1523,
+  "rowsUpdated": 0,
+  "tableName": "users",
+  "durationMs": 420
+}
+```
+
+**Errors:** `CONNECTION_NOT_FOUND`, `READ_ONLY`, `TABLE_NOT_FOUND`, `PRIMARY_KEY_REQUIRED`, `INVALID_CSV`, `IMPORT_FAILED`
+
+**事务语义:** 单事务批量写入；失败整批回滚。
+
+---
+
+## 13. ConfigService（v0.2）
+
+读写 `~/.data-nexus/config.yaml`；模型见 [DATA_MODEL.md §2.4](./DATA_MODEL.md#24-appconfig应用配置含日志)。
+
+### 13.1 GetConfig
+
+```go
+func (s *ConfigService) GetConfig() (*AppConfig, error)
+```
+
+返回当前生效配置（含默认值填充后的完整视图）。
+
+### 13.2 UpdateConfig
+
+```go
+func (s *ConfigService) UpdateConfig(req UpdateConfigRequest) (*AppConfig, error)
+```
+
+**UpdateConfigRequest:** 部分字段 PATCH；仅更新提供的键。
+
+```json
+{
+  "log": {
+    "level": "debug",
+    "output": "both"
+  }
+}
+```
+
+**行为:**
+- 持久化到 `config.yaml`
+- 日志级别 / 输出目标热更新（调用 `logger.Reload`）
+- CLI flags 仍优先于配置文件（启动时生效，运行时 PATCH 不覆盖 CLI）
+
+**Errors:** `INVALID_REQUEST`

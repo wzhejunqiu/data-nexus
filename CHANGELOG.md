@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-06-07
+
+### Added
+
+- Multi-cell inline table editing with pending changes bar and batch submit (`UpdateCellsBatch`, transactional)
+- CSV export from data grid (current page / full table) and SQL results with configurable `CSVFormatOptions`
+- CSV import wizard: new or existing table, append or update modes, column mapping, preview
+- Monaco SQL autocomplete for tables/columns, SQL formatting (`sql-formatter`), EXPLAIN query plan tree
+- Settings dialog for `~/.data-nexus/config.yaml` (log level, output, file path)
+- `FileService`, `ExportService`, `ImportService`, `ConfigService` Wails bindings
+- Double-click `.db` file association via NSIS installer + positional CLI args
+- `DialogService.SaveFile`, `OpenCSVFile`
+
+### Changed
+
+- Product version bumped to 0.2.0
+
 ## [0.1.0] - 2026-06-07
 
 First public MVP release — a lightweight desktop SQLite manager for Windows and Linux.
@@ -33,4 +50,5 @@ Pre-built binaries are published for:
 
 macOS builds are temporarily omitted from Release until code signing and notarization are configured. macOS users can build from source.
 
+[0.2.0]: https://github.com/wzhejunqiu/data-nexus/releases/tag/v0.2.0
 [0.1.0]: https://github.com/wzhejunqiu/data-nexus/releases/tag/v0.1.0

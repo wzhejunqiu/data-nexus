@@ -297,9 +297,215 @@ type PaginationMeta struct {
 
 ---
 
-## 5. 值序列化
+## 5. CSV 与批量编辑模型
 
-### 5.1 Go → JSON
+> v0.2 新增；ImportService / ExportService / TableService.UpdateCellsBatch 共用。
+
+### 5.1 CSVFormatOptions
+
+导入与导出共用同一结构，保证往返一致。
+
+```go
+type CSVFormatOptions struct {
+    Delimiter     string `json:"delimiter"`     // 默认 ","
+    QuoteChar     string `json:"quoteChar"`     // 默认 "\""
+    IncludeHeader bool   `json:"includeHeader"` // 默认 true
+    NullValue     string `json:"nullValue"`     // NULL 的 CSV 表示，默认 ""
+    LineEnding    string `json:"lineEnding"`    // "lf" | "crlf"，默认 "lf"
+    Encoding      string `json:"encoding"`      // "utf-8" | "utf-8-bom"，默认 "utf-8"
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `Delimiter` | 单字符；`,` `\t` `;` 等 |
+| `QuoteChar` | 包裹含分隔符/换行的字段 |
+| `IncludeHeader` | 首行是否为列名 |
+| `NullValue` | 导出时 JSON `null` 的文本；导入时识别为 NULL |
+| `Encoding` | `utf-8-bom` 便于 Excel 直接打开中文 CSV |
+
+**默认来源:** `AppConfig.defaults.csv`（可选，见 ConfigService）；UI ExportDialog / ImportWizard 可覆盖。
+
+### 5.2 CellChange（单格变更）
+
+```go
+type CellChange struct {
+    RowKey   map[string]any `json:"rowKey"`   // 主键列 → 值；或 rowid
+    Column   string         `json:"column"`
+    OldValue any            `json:"oldValue"`
+    NewValue any            `json:"newValue"`
+}
+```
+
+`RowKey` 示例：
+
+```json
+{ "id": 42 }
+{ "rowid": 7 }
+```
+
+### 5.3 UpdateCellsBatchRequest / Result
+
+```go
+type UpdateCellsBatchRequest struct {
+    ConnectionID string       `json:"connectionId"`
+    TableName    string       `json:"tableName"`
+    Changes      []CellChange `json:"changes"` // 1–200
+}
+
+type UpdateCellsBatchResult struct {
+    UpdatedCount int `json:"updatedCount"`
+    DurationMs   int `json:"durationMs"`
+}
+```
+
+**约束:** `len(Changes)` ∈ [1, 200]；Driver 单事务执行。
+
+### 5.4 ImportTarget / ImportMode
+
+```go
+type ImportTargetKind string
+const (
+    ImportTargetNew      ImportTargetKind = "new"
+    ImportTargetExisting ImportTargetKind = "existing"
+)
+
+type ImportMode string
+const (
+    ImportModeAppend ImportMode = "append" // INSERT
+    ImportModeUpdate ImportMode = "update" // UPSERT，需主键
+)
+
+type ImportTarget struct {
+    Kind          ImportTargetKind   `json:"kind"`
+    TableName     string             `json:"tableName,omitempty"`     // existing
+    NewTableName  string             `json:"newTableName,omitempty"`  // new
+    Mode          ImportMode         `json:"mode,omitempty"`          // existing only
+    ColumnMapping map[string]string  `json:"columnMapping"`           // csvCol → dbCol
+    Columns       []ImportColumnDef  `json:"columns,omitempty"`       // new table
+}
+
+type ImportColumnDef struct {
+    Name     string `json:"name"`
+    DataType string `json:"dataType"` // INTEGER | TEXT | REAL | BLOB
+}
+```
+
+### 5.5 ExportScope
+
+```go
+type ExportScope string
+const (
+    ExportScopePage ExportScope = "page" // 当前分页
+    ExportScopeAll  ExportScope = "all"  // 全表
+)
+
+type ExportTableRequest struct {
+    ConnectionID string            `json:"connectionId"`
+    TableName    string            `json:"tableName"`
+    Scope        ExportScope       `json:"scope"`
+    Page         int               `json:"page,omitempty"`
+    PageSize     int               `json:"pageSize,omitempty"`
+    Sort         string            `json:"sort,omitempty"`
+    Order        SortOrder         `json:"order,omitempty"`
+    Format       CSVFormatOptions  `json:"format"`
+    OutputPath   string            `json:"outputPath,omitempty"`
+}
+
+type ExportResult struct {
+    Content    string `json:"content,omitempty"`
+    RowCount   int    `json:"rowCount"`
+    FilePath   string `json:"filePath,omitempty"`
+    DurationMs int    `json:"durationMs"`
+}
+
+// 桌面端全表导出（ExportTableCSV）
+type ExportTableCSVRequest struct {
+    ConnectionID string           `json:"connectionId"`
+    TableName    string           `json:"tableName"`
+    Format       CSVFormatOptions `json:"format"`
+    DefaultPath  string           `json:"defaultPath,omitempty"`
+    ExportID     string           `json:"exportId,omitempty"`
+}
+
+type ExportProgress struct {
+    ExportID string `json:"exportId"`
+    Exported int    `json:"exported"`
+}
+
+const CSVExportWarnRows = 10_000 // UI 警告阈值，非硬限制
+```
+
+**整表导出 Driver 契约（内部，不暴露 Wails）：**
+
+```go
+type StableRowKey struct {
+    Columns []string // ORDER BY 列（复合 PK 多列）
+    Source  string   // "primary_key" | "unique_index" | "rowid"（仅 SQLite）
+}
+
+type TableExportOptions struct {
+    BatchSize int // 默认 1000
+}
+
+type TableExportBatch struct {
+    Rows    []map[string]any
+    HasMore bool
+}
+
+// driver/export.TableExportCursor
+//   Columns() / NextBatch(ctx) / Close()
+```
+
+详见 [EXPORT_MULTI_DIALECT.md](./EXPORT_MULTI_DIALECT.md)。
+
+### 5.6 ImportPreview / ImportResult
+
+```go
+type ImportPreviewColumn struct {
+    Name          string   `json:"name"`
+    InferredType  string   `json:"inferredType"`
+    SampleValues  []string `json:"sampleValues"`
+}
+
+type ImportPreview struct {
+    Columns   []ImportPreviewColumn `json:"columns"`
+    TotalRows int                   `json:"totalRows"`
+    Warnings  []string              `json:"warnings,omitempty"`
+}
+
+type ImportResult struct {
+    RowsImported int    `json:"rowsImported"`
+    RowsUpdated  int    `json:"rowsUpdated"`
+    TableName    string `json:"tableName"`
+    DurationMs   int    `json:"durationMs"`
+}
+```
+
+### 5.7 前端 PendingEdits 状态
+
+```typescript
+interface PendingEdit {
+  rowKey: Record<string, unknown>
+  column: string
+  oldValue: unknown
+  newValue: unknown
+}
+
+interface PendingEditsState {
+  edits: Map<string, PendingEdit> // key: `${rowKeyHash}:${column}`
+  tableName: string
+  connectionId: string
+}
+```
+
+提交时将 `edits` 转为 `CellChange[]` 调用 `UpdateCellsBatch`；放弃时清空 Map。
+
+---
+
+## 6. 值序列化
+
+### 6.1 Go → JSON
 
 ```go
 func SerializeCellValue(v any, colType string) any {
@@ -317,7 +523,7 @@ func SerializeCellValue(v any, colType string) any {
 }
 ```
 
-### 5.2 前端 Cell 渲染
+### 6.2 前端 Cell 渲染
 
 | JSON 值 | 渲染 |
 |---------|------|
@@ -328,7 +534,7 @@ func SerializeCellValue(v any, colType string) any {
 
 ---
 
-## 6. 多数据库差异矩阵（设计参考）
+## 7. 多数据库差异矩阵（设计参考）
 
 | 能力 | SQLite | PostgreSQL | MySQL |
 |------|--------|------------|-------|
@@ -338,15 +544,22 @@ func SerializeCellValue(v any, colType string) any {
 | 自增 ID | ROWID / INTEGER PK | SERIAL / IDENTITY | AUTO_INCREMENT |
 | 类型系统 | 动态 | 丰富 | 丰富 |
 | 只读连接 | `?mode=ro` | `default_transaction_read_only` | `READ ONLY` |
+| 整表 CSV 导出 | `OpenTableExport` + keyset | Phase 2 | Phase 3 |
+| 稳定排序键 | PK → `rowid` | PK 必须 | PK 必须 |
+| 无主键表导出 | 允许（rowid） | 拒绝 | 拒绝 |
+| 导出分页 | keyset，batch=1000 | 同左 | 同左 |
+| 导出行数上限 | 无 | 无 | 无 |
+| CSV 格式选项 | `CSVFormatOptions` 共用 | 同左 | 同左 |
 
 **抽象策略:**
 - `TableInfo.Schema` 在 SQLite 为 `null`，Postgres 为 `"public"` 等
 - `BrowseTable` 内部构建方言特定的 quoted identifier
 - `DataType` 统一为大写字符串；前端不依赖特定 DB 类型语义
+- 整表导出走 `OpenTableExport` / `TableExportCursor`，与 `BrowseTable` 分离；详见 [EXPORT_MULTI_DIALECT.md](./EXPORT_MULTI_DIALECT.md)
 
 ---
 
-## 7. 标识符校验
+## 8. 标识符校验
 
 防止 SQL 注入（动态表名/列名场景）：
 
@@ -369,7 +582,7 @@ MySQL：`` `identifier` ``
 
 ---
 
-## 8. 会话状态（前端）
+## 9. 会话状态（前端）
 
 ```typescript
 interface AppState {
@@ -378,6 +591,8 @@ interface AppState {
   activeTab: 'schema' | 'data' | 'sql'
   queryHistory: QueryHistoryItem[]  // max 50
   theme: 'light' | 'dark' | 'system'
+  pendingEdits: PendingEditsState | null  // v0.2 批量编辑
+  csvFormatDefaults: CSVFormatOptions   // v0.2 导入导出默认格式
 }
 
 interface QueryHistoryItem {

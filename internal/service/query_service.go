@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/wzhejunqiu/data-nexus/internal/driver/export"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 )
 
@@ -107,15 +108,30 @@ func (s *QueryService) BrowseRows(ctx context.Context, req model.BrowseRowsReque
 		return nil, err
 	}
 	opts := model.BrowseOptions{
-		Page:     req.Page,
-		PageSize: req.PageSize,
-		Sort:     req.Sort,
-		Order:    req.Order,
+		Page:           req.Page,
+		PageSize:       req.PageSize,
+		Sort:           req.Sort,
+		Order:          req.Order,
+		SkipTotalCount: req.SkipTotalCount,
 	}
 	if opts.Order == "" {
 		opts.Order = model.SortAsc
 	}
 	return drv.BrowseTable(ctx, req.TableName, opts)
+}
+
+func (s *QueryService) OpenTableExport(ctx context.Context, connectionID, tableName string, opts model.TableExportOptions) (export.TableExportCursor, error) {
+	if connectionID == "" {
+		return nil, model.ErrInvalidRequest("connectionId is required")
+	}
+	if tableName == "" {
+		return nil, model.ErrInvalidRequest("tableName is required")
+	}
+	drv, err := s.mgr.Driver(connectionID)
+	if err != nil {
+		return nil, err
+	}
+	return drv.OpenTableExport(ctx, tableName, opts)
 }
 
 func (s *QueryService) ListTables(ctx context.Context, connectionID string) (*model.TableList, error) {
@@ -136,4 +152,35 @@ func (s *QueryService) GetTableSchema(ctx context.Context, connectionID, tableNa
 		return nil, err
 	}
 	return drv.GetTableSchema(ctx, tableName)
+}
+
+func (s *QueryService) UpdateCellsBatch(ctx context.Context, req model.UpdateCellsBatchRequest) (*model.UpdateCellsBatchResult, error) {
+	if req.ConnectionID == "" {
+		return nil, model.ErrInvalidRequest("connectionId is required")
+	}
+	if req.TableName == "" {
+		return nil, model.ErrInvalidRequest("tableName is required")
+	}
+	if len(req.Changes) == 0 {
+		return nil, model.ErrInvalidRequest("changes is required")
+	}
+	if len(req.Changes) > model.MaxBatchCellUpdates {
+		return nil, model.ErrInvalidRequest(fmt.Sprintf("at most %d changes per batch", model.MaxBatchCellUpdates))
+	}
+	drv, err := s.mgr.Driver(req.ConnectionID)
+	if err != nil {
+		return nil, err
+	}
+	if drv.ReadOnly() {
+		return nil, model.ErrReadOnly()
+	}
+	schema, err := drv.GetTableSchema(ctx, req.TableName)
+	if err != nil {
+		return nil, err
+	}
+	count, err := drv.UpdateCells(ctx, req.TableName, req.Changes, schema)
+	if err != nil {
+		return nil, err
+	}
+	return &model.UpdateCellsBatchResult{UpdatedCount: count}, nil
 }

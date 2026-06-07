@@ -1,10 +1,18 @@
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { Button } from './ui/Button'
+import { SettingsDialogContainer } from '@/features/settings/SettingsDialog'
 import { useThemeStore, resolveTheme, type ThemeMode } from '@/stores/themeStore'
 
 export function Header({ openCount }: { openCount: number }) {
   const { t, i18n } = useTranslation()
   const { mode, setMode } = useThemeStore()
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
+  useEffect(() => {
+    return EventsOn('app:settings', () => setSettingsOpen(true))
+  }, [])
 
   const cycleTheme = () => {
     const order: ThemeMode[] = ['light', 'dark', 'system']
@@ -34,10 +42,14 @@ export function Header({ openCount }: { openCount: number }) {
         <Button variant="ghost" size="sm" onClick={toggleLang}>
           {i18n.language === 'zh-CN' ? t('language.en') : t('language.zh')}
         </Button>
+        <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>
+          {t('settings.title')}
+        </Button>
         <Button variant="ghost" size="sm" onClick={cycleTheme}>
           {t(`theme.${mode}`)}
         </Button>
       </div>
+      <SettingsDialogContainer open={settingsOpen} onOpenChange={setSettingsOpen} />
     </header>
   )
 }

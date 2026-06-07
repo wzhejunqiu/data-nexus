@@ -63,6 +63,14 @@ func ErrDialogCancelled() *AppError {
 	return NewAppError("DIALOG_CANCELLED", "dialog cancelled", nil)
 }
 
+func ErrExportCancelled() *AppError {
+	return NewAppError("EXPORT_CANCELLED", "export cancelled", nil)
+}
+
+func ErrExportNoStableKey(tableName string) *AppError {
+	return NewAppError("EXPORT_NO_STABLE_KEY", "table has no stable sort key for export", map[string]any{"tableName": tableName})
+}
+
 func ErrInvalidPath(message string) *AppError {
 	return NewAppError("INVALID_PATH", message, nil)
 }

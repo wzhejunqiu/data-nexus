@@ -155,6 +155,20 @@ func TestIsDevMode(t *testing.T) {
 	}
 }
 
+func TestConfigSave(t *testing.T) {
+	home := withHome(t)
+	cfg := config.DefaultConfig()
+	cfg.Log.Level = "warn"
+	if err := config.Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+	loaded := config.Load()
+	if loaded.Log.Level != "warn" {
+		t.Fatalf("expected warn, got %s", loaded.Log.Level)
+	}
+	_ = home
+}
+
 func TestDefaultLogFilePathNoHome(t *testing.T) {
 	t.Setenv("HOME", "")
 	path := config.DefaultLogFilePath()

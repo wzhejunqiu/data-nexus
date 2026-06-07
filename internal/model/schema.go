@@ -56,19 +56,21 @@ const (
 )
 
 type BrowseRowsRequest struct {
-	ConnectionID string    `json:"connectionId"`
-	TableName    string    `json:"tableName"`
-	Page         int       `json:"page"`
-	PageSize     int       `json:"pageSize"`
-	Sort         string    `json:"sort"`
-	Order        SortOrder `json:"order"`
+	ConnectionID   string    `json:"connectionId"`
+	TableName      string    `json:"tableName"`
+	Page           int       `json:"page"`
+	PageSize       int       `json:"pageSize"`
+	Sort           string    `json:"sort"`
+	Order          SortOrder `json:"order"`
+	SkipTotalCount bool      `json:"skipTotalCount,omitempty"`
 }
 
 type BrowseOptions struct {
-	Page     int
-	PageSize int
-	Sort     string
-	Order    SortOrder
+	Page           int
+	PageSize       int
+	Sort           string
+	Order          SortOrder
+	SkipTotalCount bool
 }
 
 type PaginationMeta struct {

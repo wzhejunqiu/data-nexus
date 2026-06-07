@@ -1,18 +1,28 @@
 import Editor, { type OnMount } from '@monaco-editor/react'
+import type { editor, languages, Position } from 'monaco-editor'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { format as formatSQL } from 'sql-formatter'
 import { Button } from '@/components/ui/Button'
 import { NullCell } from '@/components/ui/NullCell'
+import { useToastStore } from '@/components/ui/Toast'
+import { ExportCsvDialog } from '@/features/csv/ExportCsvDialog'
 import { connectionApi } from '@/lib/api/connection'
+import { dialogApi } from '@/lib/api/dialog'
 import { formatError } from '@/lib/api/errors'
+import { fileApi } from '@/lib/api/file'
 import { queryApi } from '@/lib/api/query'
+import { schemaApi } from '@/lib/api/schema'
 import type { QueryResponse } from '@/lib/types'
+import type { CSVFormatOptions } from '@/lib/types/csv'
+import { loadCSVFormatPreference, saveCSVFormatPreference } from '@/lib/types/csv'
 import { formatCell, rowsToCSV } from '@/lib/utils'
 import { useQueryHistoryStore } from '@/stores/queryHistoryStore'
 import { resolveTheme, useThemeStore } from '@/stores/themeStore'
 import { useStatusStore } from '@/stores/statusStore'
 import { ConfirmDialog } from './ConfirmDialog'
+import { ExplainTree, isExplainResult } from './ExplainTree'
 import { QueryHistory } from './QueryHistory'
 
 const PRAGMAS = [
@@ -22,6 +32,12 @@ const PRAGMAS = [
   'PRAGMA user_version;',
 ]
 
+const SQL_KEYWORDS = [
+  'SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'ON', 'GROUP', 'BY',
+  'ORDER', 'HAVING', 'LIMIT', 'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE', 'CREATE',
+  'TABLE', 'INDEX', 'AND', 'OR', 'NOT', 'NULL', 'AS', 'DISTINCT', 'EXPLAIN', 'WITH', 'PRAGMA',
+]
+
 const EMPTY_HISTORY: string[] = []
 const MIN_EDITOR_LINES = 8
 const MAX_EDITOR_LINES = 20
@@ -29,6 +45,7 @@ const EDITOR_LINE_HEIGHT = 19
 
 export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const { t } = useTranslation()
+  const pushToast = useToastStore((s) => s.push)
   const themeMode = useThemeStore((s) => s.mode)
   const monacoTheme = resolveTheme(themeMode) === 'dark' ? 'vs-dark' : 'vs'
   const setStatus = useStatusStore((s) => s.setStatus)
@@ -37,7 +54,9 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const [error, setError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingRun, setPendingRun] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [editorHeight, setEditorHeight] = useState(MIN_EDITOR_LINES * EDITOR_LINE_HEIGHT)
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const addHistory = useQueryHistoryStore((s) => s.add)
   const history = useQueryHistoryStore((s) =>
     connectionId ? (s.items[connectionId] ?? EMPTY_HISTORY) : EMPTY_HISTORY,
@@ -51,6 +70,14 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const openConnections = connections?.items.filter((c) => c.status === 'open') ?? []
   const [selectedConn, setSelectedConn] = useState('')
   const activeConn = connectionId || selectedConn
+
+  const { data: tables } = useQuery({
+    queryKey: ['schema', 'tables', activeConn],
+    queryFn: () => schemaApi.listTables(activeConn),
+    enabled: !!activeConn,
+  })
+
+  const schemaCache = useRef<Map<string, string[]>>(new Map())
 
   const activeConnItem = openConnections.find((c) => c.id === activeConn)
   const connReadOnly = activeConnItem?.config.sqlite?.readOnly ?? false
@@ -105,7 +132,10 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
     }
   })
 
+  const tableNames = useMemo(() => tables?.items.map((t) => t.name) ?? [], [tables])
+
   const handleEditorMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor
     const updateHeight = () => {
       const lines = Math.max(MIN_EDITOR_LINES, editor.getContentHeight() / EDITOR_LINE_HEIGHT)
       setEditorHeight(Math.min(MAX_EDITOR_LINES, lines) * EDITOR_LINE_HEIGHT)
@@ -115,13 +145,94 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       handleRunRef.current()
     })
+    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
+      formatEditorSQL()
+    })
+
+    monaco.languages.registerCompletionItemProvider('sql', {
+      triggerCharacters: ['.', ' '],
+      provideCompletionItems: async (model: editor.ITextModel, position: Position) => {
+        const word = model.getWordUntilPosition(position)
+        const range = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: word.startColumn,
+          endColumn: word.endColumn,
+        }
+        const line = model.getLineContent(position.lineNumber).slice(0, position.column - 1)
+        const dotMatch = /(\w+)\.\s*$/.exec(line)
+        const suggestions: languages.CompletionItem[] = []
+
+        if (dotMatch && activeConn) {
+          const table = dotMatch[1]
+          let cols = schemaCache.current.get(table)
+          if (!cols) {
+            try {
+              const schema = await schemaApi.getTableSchema(activeConn, table)
+              cols = schema.columns.map((c) => c.name)
+              schemaCache.current.set(table, cols)
+            } catch {
+              cols = []
+            }
+          }
+          for (const col of cols) {
+            suggestions.push({
+              label: col,
+              kind: monaco.languages.CompletionItemKind.Field,
+              insertText: col,
+              range,
+            })
+          }
+        } else {
+          for (const kw of SQL_KEYWORDS) {
+            suggestions.push({
+              label: kw,
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: kw,
+              range,
+            })
+          }
+          for (const name of tableNames) {
+            suggestions.push({
+              label: name,
+              kind: monaco.languages.CompletionItemKind.Class,
+              insertText: name,
+              range,
+            })
+          }
+        }
+        return { suggestions }
+      },
+    })
+  }
+
+  const formatEditorSQL = () => {
+    try {
+      const formatted = formatSQL(sql, { language: 'sql' })
+      setSql(formatted)
+      editorRef.current?.setValue(formatted)
+    } catch {
+      pushToast(t('sql.formatError'), 'error')
+    }
   }
 
   const resultColumns = useMemo(() => result?.columns?.map((c) => c.name) ?? [], [result])
 
   const copyCsv = () => {
     if (!result?.columns || !result.rows) return
-    navigator.clipboard.writeText(rowsToCSV(resultColumns, result.rows))
+    const format = loadCSVFormatPreference()
+    navigator.clipboard.writeText(rowsToCSV(resultColumns, result.rows, format))
+  }
+
+  const handleExportCsv = async (format: CSVFormatOptions) => {
+    if (!result?.columns || !result.rows) return
+    saveCSVFormatPreference(format)
+    const csv = rowsToCSV(resultColumns, result.rows, format)
+    const path = await dialogApi.saveFile('query-result.csv', [
+      { displayName: 'CSV', pattern: '*.csv' },
+    ])
+    await fileApi.writeTextFile(path, csv, format.encoding)
+    pushToast(t('csv.exportSuccess'), 'info')
   }
 
   return (
@@ -144,6 +255,9 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
         </label>
         <Button onClick={() => void handleRun()} disabled={!activeConn || execute.isPending}>
           {t('sql.run')} (⌘↵)
+        </Button>
+        <Button variant="outline" size="sm" onClick={formatEditorSQL}>
+          {t('sql.format')}
         </Button>
         <QueryHistory history={history} onSelect={setSql} />
         <select
@@ -184,12 +298,18 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
               </span>
             )}
             {result.kind === 'result' && result.columns && (
-              <Button size="sm" variant="outline" onClick={copyCsv}>
-                {t('sql.copyCsv')}
-              </Button>
+              <>
+                <Button size="sm" variant="outline" onClick={copyCsv}>
+                  {t('sql.copyCsv')}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setExportOpen(true)}>
+                  {t('csv.export')}
+                </Button>
+              </>
             )}
           </div>
-          {result.kind === 'result' && result.columns && (
+          {result.kind === 'result' && isExplainResult(sql, result) && <ExplainTree result={result} />}
+          {result.kind === 'result' && result.columns && !isExplainResult(sql, result) && (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
@@ -231,6 +351,13 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
           if (pendingRun) execute.mutate()
           setPendingRun(false)
         }}
+      />
+      <ExportCsvDialog
+        open={exportOpen}
+        title={t('csv.export')}
+        mode="page"
+        onOpenChange={setExportOpen}
+        onExport={(format) => handleExportCsv(format)}
       />
     </div>
   )

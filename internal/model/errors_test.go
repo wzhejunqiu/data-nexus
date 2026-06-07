@@ -30,6 +30,7 @@ func TestAppErrorConstructors(t *testing.T) {
 		{"result too large", model.ErrResultTooLarge(), "RESULT_TOO_LARGE"},
 		{"read only", model.ErrReadOnly(), "READ_ONLY"},
 		{"dialog cancelled", model.ErrDialogCancelled(), "DIALOG_CANCELLED"},
+		{"export cancelled", model.ErrExportCancelled(), "EXPORT_CANCELLED"},
 		{"invalid path", model.ErrInvalidPath("msg"), "INVALID_PATH"},
 		{"internal", model.ErrInternal("msg"), "INTERNAL_ERROR"},
 	}

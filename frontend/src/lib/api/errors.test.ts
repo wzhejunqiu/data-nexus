@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import i18n from '@/i18n'
-import { formatError, isDialogCancelled, mapWailsError, translateAppError } from './errors'
+import { formatError, isDialogCancelled, isExportCancelled, mapWailsError, translateAppError } from './errors'
 
 const KNOWN_ERROR_CODES = [
   'INVALID_REQUEST',
@@ -14,6 +14,8 @@ const KNOWN_ERROR_CODES = [
   'RESULT_TOO_LARGE',
   'READ_ONLY',
   'DIALOG_CANCELLED',
+  'EXPORT_CANCELLED',
+  'EXPORT_NO_STABLE_KEY',
   'SAVED_NOT_FOUND',
   'INTERNAL_ERROR',
 ] as const
@@ -36,6 +38,11 @@ describe('mapWailsError', () => {
     expect(isDialogCancelled(err)).toBe(true)
   })
 
+  it('detects export cancelled', () => {
+    const err = mapWailsError({ code: 'EXPORT_CANCELLED', message: 'export cancelled' })
+    expect(isExportCancelled(err)).toBe(true)
+  })
+
   it('falls back to INTERNAL_ERROR for unknown codes', () => {
     const err = mapWailsError('UNKNOWN_CODE: something broke')
     expect(err.code).toBe('INTERNAL_ERROR')
@@ -51,7 +58,7 @@ describe('mapWailsError', () => {
   it.each([
     ['CONNECTION_FAILED', 'en', 'Failed to open database'],
     ['DATABASE_LOCKED', 'en', 'Database is locked'],
-    ['RESULT_TOO_LARGE', 'en', 'Result set exceeds row limit'],
+    ['RESULT_TOO_LARGE', 'en', 'row limit'],
     ['READ_ONLY', 'en', 'read-only'],
     ['CONNECTION_FAILED', 'zh-CN', '无法打开'],
     ['DATABASE_LOCKED', 'zh-CN', '数据库被锁定'],

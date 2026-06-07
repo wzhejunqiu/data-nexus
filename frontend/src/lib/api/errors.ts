@@ -13,6 +13,8 @@ export type ErrorCode =
   | 'RESULT_TOO_LARGE'
   | 'READ_ONLY'
   | 'DIALOG_CANCELLED'
+  | 'EXPORT_CANCELLED'
+  | 'EXPORT_NO_STABLE_KEY'
   | 'SAVED_NOT_FOUND'
   | 'INTERNAL_ERROR'
 
@@ -28,6 +30,8 @@ const KNOWN_ERROR_CODES = new Set<string>([
   'RESULT_TOO_LARGE',
   'READ_ONLY',
   'DIALOG_CANCELLED',
+  'EXPORT_CANCELLED',
+  'EXPORT_NO_STABLE_KEY',
   'SAVED_NOT_FOUND',
   'INTERNAL_ERROR',
 ])
@@ -58,6 +62,10 @@ export function mapWailsError(err: unknown): AppError {
     }
   }
   return { code: 'INTERNAL_ERROR', message: String(err) }
+}
+
+export function isExportCancelled(err: AppError): boolean {
+  return err.code === 'EXPORT_CANCELLED'
 }
 
 export function isDialogCancelled(err: AppError): boolean {

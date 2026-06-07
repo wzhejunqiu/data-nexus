@@ -18,6 +18,7 @@ type App struct {
 	log    *zap.Logger
 	conn   *wailssvc.ConnectionService
 	dialog *wailssvc.DialogService
+	export *wailssvc.ExportService
 	appSvc *wailssvc.AppService
 	mgr    interface {
 		CloseAll()
@@ -32,6 +33,7 @@ func NewApp(
 	log *zap.Logger,
 	conn *wailssvc.ConnectionService,
 	dialog *wailssvc.DialogService,
+	export *wailssvc.ExportService,
 	appSvc *wailssvc.AppService,
 	mgr interface {
 		CloseAll()
@@ -44,6 +46,7 @@ func NewApp(
 		log:       log,
 		conn:      conn,
 		dialog:    dialog,
+		export:    export,
 		appSvc:    appSvc,
 		mgr:       mgr,
 		startupDB: startupDB,
@@ -53,6 +56,7 @@ func NewApp(
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.dialog.SetContext(ctx)
+	a.export.SetContext(ctx)
 	a.appSvc.SetContext(ctx)
 	runtime.OnFileDrop(ctx, a.handleFileDrop)
 
@@ -171,6 +175,10 @@ func (a *App) ApplicationMenu() *menu.Menu {
 	})
 	viewSub.AddText("Language: English", nil, func(_ *menu.CallbackData) {
 		_ = a.appSvc.EmitLanguageChange("en")
+	})
+	viewSub.AddSeparator()
+	viewSub.AddText("Settings...", keys.CmdOrCtrl(","), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(a.ctx, "app:settings")
 	})
 
 	helpSub := menu.NewMenu()

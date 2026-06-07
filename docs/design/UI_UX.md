@@ -187,7 +187,81 @@ VIEWS (2)
 - Loading：表格 skeleton
 - 空表：Empty state 插画 + 「此表暂无数据」
 
-### 4.6 Tab: SQL 编辑器
+#### 4.5.1 行内编辑与批量提交（v0.2）
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ users  [导出 CSV ▾]              < 1 2 3 ... 31 >           │
+│ 每页 [50 ▾]  共 1,523 行                                      │
+├────┬──────────────────┬─────────────────────┬───────────────┤
+│ id │ email *          │ created_at          │               │  ← * 表示已修改
+├────┼──────────────────┼─────────────────────┼───────────────┤
+│ 1  │ [new@example.com]│ 2026-01-01T...      │               │  ← 编辑中 input
+│ 2  │ b@example.com    │ NULL                │               │
+└────┴──────────────────┴─────────────────────┴───────────────┘
+┌─ 待提交 2 处变更 ────────────────── [放弃] [提交变更 ▶] ─────┐
+└─────────────────────────────────────────────────────────────┘
+```
+
+**交互:**
+- 双击单元格 → 原地 `<input>` / 类型适配编辑器（TEXT/INTEGER/REAL）
+- 修改后不立即写库；加入 `pendingEdits`，单元格左侧或背景高亮
+- 底部 **EditBatchBar** 显示待提交数量；「放弃」清空 pending
+- 「提交变更」→ ConfirmDialog 摘要（表名、变更条数、样例行）→ `UpdateCellsBatch`
+- 成功：Toast + 刷新当前页 + 清空 pending
+- 失败：Toast + SQL 错误；pending 保留供用户修正
+- 只读连接：双击无反应或 Tooltip「只读模式」
+- BLOB 列：禁用编辑，Tooltip 说明
+- Esc：取消当前格编辑（未提交到 pending 则丢弃；已在 pending 则恢复原值）
+- 切换表 / 分页 / 关闭连接：若有 pending → 确认是否放弃
+
+### 4.6 导出 CSV（v0.2）
+
+**入口:**
+- 数据 Tab 工具栏「导出 CSV」
+- SQL 结果区工具栏「导出 CSV」（v0.1 已有复制，v0.2 增加写文件）
+
+**ExportDialog 字段:**
+
+| 选项 | 说明 |
+|------|------|
+| 范围 | 当前页 / 全表（SQL 结果仅当前结果集） |
+| 分隔符 | `,` `\t` `;` 自定义 |
+| 引号 | `"` 或 `'` |
+| 包含表头 | 开关 |
+| NULL 表示 | 默认空字符串 |
+| 编码 | UTF-8 / UTF-8 BOM |
+
+**流程:** 配置选项 → 系统 `SaveFile` 对话框 → 后端分批 Export + 写盘 → Toast「已导出」
+
+**全表导出交互（v0.2+）:**
+
+- 表行数 > 10,000 时显示非阻塞黄色警告，仍可继续。
+- 导出中显示不确定进度条与已导出行数（`exported`）；不预先整表 `COUNT(*)`。
+- 导出中「取消」调用 `CancelExportTableCSV`，删除半成品文件；Toast「导出已取消」。
+- 取消或失败时对话框保持打开，便于重试。
+
+### 4.7 设置页（v0.2）
+
+**入口:** View → Settings（或 Header ⚙ 图标）
+
+```
+┌─ 设置 ─────────────────────────────────────────────┐
+│  日志                                               │
+│    级别    [ info ▾ ]                               │
+│    输出    [ auto ▾ ]  console | file | both       │
+│    文件路径 [ ~/Library/Logs/...        ] [浏览]    │
+│  导入/导出（可选）                                  │
+│    默认 CSV 分隔符 [ , ▾ ]                          │
+│  [取消]                              [保存]         │
+└─────────────────────────────────────────────────────┘
+```
+
+- 保存调用 `ConfigService.UpdateConfig`
+- 日志热更新；无效值 inline 校验
+- 语言切换可复用现有 `LanguageToggle` 或迁入设置页
+
+### 4.8 Tab: SQL 编辑器
 
 ```
 ┌─ 历史 ▾ ──────────────────────────────────── [执行 ▶] ────────┐
@@ -209,6 +283,23 @@ VIEWS (2)
 - 错误：结果区顶部红色 alert，展示 SQL 错误原文
 - 历史下拉：点击填充到编辑器
 - Monaco 配置：最小 8 行，自动增高至 20 行
+- **v0.2:** 表名/列名自动补全（CompletionItem）
+- **v0.2:** 工具栏「格式化」「EXPLAIN」
+
+#### 4.8.1 CSV 导入向导（v0.2）
+
+**入口:** 连接树表右键「导入 CSV…」或 Sidebar 工具栏
+
+```
+步骤 1 选文件 → 步骤 2 预览/列映射 → 步骤 3 目标与模式 → 执行
+```
+
+| 步骤 | 内容 |
+|------|------|
+| 1 | `OpenCSVFile` + 格式选项 |
+| 2 | 预览前 20 行；CSV 列 → 表列映射；新建表时可编辑推断类型 |
+| 3 | 目标：新建表 / 已有表；模式：`append` / `update`（需主键） |
+| 完成 | 进度 + 结果摘要；刷新 Schema / 数据 Tab |
 
 ---
 
@@ -224,6 +315,10 @@ VIEWS (2)
 | `SchemaSidebar` | 表/视图列表 | P0 |
 | `SchemaTable` | 列定义表格 | P0 |
 | `DataGrid` | 分页数据表格 | P0 |
+| `EditBatchBar` | 待提交编辑条 + 提交/放弃 | v0.2 |
+| `ExportDialog` | CSV 导出选项 + 范围 | v0.2 |
+| `ImportWizard` | CSV 导入多步向导 | v0.2 |
+| `SettingsPanel` | 应用配置（日志等） | v0.2 |
 | `SqlEditor` | Monaco 包装 | P0 |
 | `QueryResultPanel` | 结果/错误展示 | P0 |
 | `ConfirmDialog` | 写操作确认 | P0 |
@@ -247,6 +342,9 @@ VIEWS (2)
 | 加载表列表 | Sidebar skeleton（3-5 行） |
 | 加载表数据 | DataGrid skeleton |
 | 执行 SQL | 执行按钮 spinner + 结果区 loading |
+| 批量提交 | EditBatchBar 按钮 spinner + 「提交中…」 |
+| CSV 全表导出 | 进度条 + 可取消；>1 万行非阻塞警告 |
+| CSV 导入 | ImportWizard 步骤内 loading |
 
 ### 6.2 错误状态
 
@@ -257,6 +355,9 @@ VIEWS (2)
 | SQL 错误 | 结果区 Alert， monospace 展示错误信息 |
 | 未打开连接访问表/SQL | 提示「请先打开该连接」 |
 | 无已打开连接 | 主区 Empty：「新建或打开一个连接开始」 |
+| 批量提交失败 | Toast + 可展开 SQL 详情；pending 保留 |
+| CSV 导入失败 | ImportWizard 内 Alert；事务回滚说明 |
+| 只读拦截编辑/导入 | inline 提示 + `READ_ONLY` Toast |
 
 ### 6.3 空状态
 
@@ -319,5 +420,8 @@ MVP 核心态 — 多连接 + 数据浏览：
 | 表数据浏览 | 数据 Tab + DataGrid |
 | SQL 编辑器 | SQL Tab |
 | 写操作确认 | ConfirmDialog |
+| 批量编辑确认 | ConfirmDialog（变更摘要） |
 | 查询历史 | SQL Tab 历史下拉 |
+| CSV 导出/导入 | ExportDialog / ImportWizard |
+| 应用设置 | SettingsPanel |
 | 深色主题 | Header ThemeToggle |

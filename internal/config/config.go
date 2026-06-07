@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -43,12 +44,30 @@ var (
 
 func ParseFlags() CLIOverrides {
 	flag.Parse()
-	return CLIOverrides{
+	cli := CLIOverrides{
 		LogLevel:  *flagLogLevel,
 		LogOutput: *flagLogOutput,
 		LogFile:   *flagLogFile,
 		DBPath:    *flagDB,
 	}
+	if cli.DBPath == "" {
+		cli.DBPath = firstDatabaseArg(flag.Args())
+	}
+	return cli
+}
+
+func firstDatabaseArg(args []string) string {
+	for _, arg := range args {
+		if arg == "" || strings.HasPrefix(arg, "-") {
+			continue
+		}
+		ext := strings.ToLower(filepath.Ext(arg))
+		switch ext {
+		case ".db", ".sqlite", ".sqlite3":
+			return arg
+		}
+	}
+	return ""
 }
 
 func DefaultConfig() Config {
@@ -106,6 +125,17 @@ func Load() Config {
 		cfg.Log.File.MaxAgeDays = 30
 	}
 	return cfg
+}
+
+func Save(cfg Config) error {
+	if err := os.MkdirAll(ConfigDir(), 0o755); err != nil {
+		return err
+	}
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(ConfigPath(), data, 0o644)
 }
 
 func ApplyCLI(cfg Config, cli CLIOverrides) Config {

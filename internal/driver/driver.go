@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 
+	"github.com/wzhejunqiu/data-nexus/internal/driver/export"
 	"github.com/wzhejunqiu/data-nexus/internal/driver/sqlite"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 )
@@ -16,8 +17,10 @@ type Driver interface {
 	ListTables(ctx context.Context) ([]model.TableInfo, error)
 	GetTableSchema(ctx context.Context, tableName string) (*model.TableSchema, error)
 	BrowseTable(ctx context.Context, tableName string, opts model.BrowseOptions) (*model.PaginatedTableData, error)
+	OpenTableExport(ctx context.Context, tableName string, opts model.TableExportOptions) (export.TableExportCursor, error)
 	QueryRows(ctx context.Context, sql string, params []any, maxRows int) (*model.QueryResult, error)
 	Exec(ctx context.Context, sql string, params []any) (*model.ExecResult, error)
+	UpdateCells(ctx context.Context, tableName string, changes []model.CellChange, schema *model.TableSchema) (int, error)
 	ClassifySQL(ctx context.Context, sql string) (model.StatementKind, error)
 }
 

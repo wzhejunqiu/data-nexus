@@ -22,3 +22,9 @@ func (s *TableService) BrowseRows(req model.BrowseRowsRequest) (*model.Paginated
 		return s.query.BrowseRows(context.Background(), req)
 	})
 }
+
+func (s *TableService) UpdateCellsBatch(req model.UpdateCellsBatchRequest) (*model.UpdateCellsBatchResult, error) {
+	return call(s.log, "TableService.UpdateCellsBatch", func() (*model.UpdateCellsBatchResult, error) {
+		return s.query.UpdateCellsBatch(context.Background(), req)
+	})
+}

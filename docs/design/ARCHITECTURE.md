@@ -24,8 +24,9 @@
 │                              │ In-memory Bridge (<1ms)          │
 │  ┌───────────────────────────▼───────────────────────────────┐  │
 │  │  Wails Services（绑定层）                                  │  │
-│  │  ConnectionService · SchemaService · TableService …         │  │
-│  │  QueryService · DialogService · AppService                │  │
+│  │  ConnectionService · SchemaService · TableService · QueryService │
+│  │  DialogService · FileService · ExportService · ImportService     │
+│  │  ConfigService · AppService                                     │
 │  └───────────────────────────┬───────────────────────────────┘  │
 │                              │                                  │
 │  ┌───────────────────────────▼───────────────────────────────┐  │
@@ -239,20 +240,29 @@ data-nexus/
 │   │   ├── connection.go        # ConnectionService
 │   │   ├── connection.go      # ConnectionService
 │   │   ├── schema.go            # SchemaService
-│   │   ├── table.go             # TableService
+│   │   ├── table.go             # TableService（含 UpdateCellsBatch）
 │   │   ├── query.go             # QueryService
 │   │   ├── dialog.go            # DialogService（原生对话框）
+│   │   ├── file.go              # FileService（WriteTextFile）
+│   │   ├── export.go            # ExportService
+│   │   ├── import.go            # ImportService
+│   │   ├── config.go            # ConfigService
 │   │   └── app.go               # AppService（版本、主题同步）
 │   ├── service/                 # 业务逻辑（UI 无关）
 │   │   ├── connection_manager.go
 │   │   ├── connection_store.go  # connections.json 读写
-│   │   └── query_service.go
+│   │   ├── query_service.go
+│   │   ├── export_service.go    # CSV 序列化（v0.2）
+│   │   ├── import_service.go    # CSV 解析与批量写入（v0.2）
+│   │   └── csv/                 # 共用 CSV 读写、CSVFormatOptions
 │   ├── driver/
-│   │   ├── driver.go
-│   │   └── sqlite/
+│   │   ├── driver.go            # Driver 接口（含 OpenTableExport）
+│   │   ├── export/              # TableExportCursor 契约、稳定键解析
+│   │   └── sqlite/              # export_cursor.go — keyset 整表导出
 │   ├── model/
 │   │   ├── connection.go
 │   │   ├── schema.go
+│   │   ├── export.go            # StableRowKey、TableExportOptions
 │   │   ├── query.go
 │   │   └── errors.go            # AppError 结构化错误
 │   ├── config/
@@ -291,9 +301,13 @@ data-nexus/
 |---------|------|
 | `ConnectionService` | ListConnections / Open / Close / Remove / Create |
 | `SchemaService` | ListTables / GetTableSchema（均带 `connectionId`） |
-| `TableService` | BrowseTableRows |
+| `TableService` | BrowseRows / **UpdateCellsBatch**（v0.2，单事务 1–200 条） |
 | `QueryService` | ExecuteSQL |
-| `DialogService` | OpenDatabaseFile / SaveFile / ShowMessage |
+| `DialogService` | OpenDatabaseFile / OpenCSVFile / SaveFile |
+| `FileService` | WriteTextFile（v0.2，路径校验后落盘） |
+| `ExportService` | ExportTable / ExportQueryResult（v0.2，共用 CSVFormatOptions） |
+| `ImportService` | PreviewImport / ImportCSV（v0.2，append/update，new/existing） |
+| `ConfigService` | GetConfig / UpdateConfig（v0.2，`config.yaml`） |
 | `AppService` | GetVersion / GetPlatform |
 
 方法签名与错误码见 [API.md](./API.md)（已改为 Service 绑定契约）。
@@ -353,7 +367,8 @@ func main() {
             Assets: assets,
         },
         Bind: []interface{}{
-            connSvc, schemaSvc, tableSvc, querySvc, dialogSvc, appSvc,
+            connSvc, schemaSvc, tableSvc, querySvc,
+            dialogSvc, fileSvc, exportSvc, importSvc, configSvc, appSvc,
         },
         OnStartup: app.startup,
     })
@@ -391,40 +406,50 @@ func (m *ConnectionManager) Driver(connectionId string) (driver.Driver, error) {
 
 （与 v0.1 设计相同，见 [DATA_MODEL.md](./DATA_MODEL.md)）
 
-### 5.6 原生能力（DialogService）
+### 5.6 原生能力（DialogService · FileService）
 
-MVP 利用 Wails 桌面特性：
+MVP 利用 Wails 桌面特性；v0.2 扩展 CSV 导入导出路径选择与落盘。
 
 ```go
-// DialogService.OpenDatabaseFile 打开 .db/.sqlite/.sqlite3 文件选择器
-func (s *DialogService) OpenDatabaseFile() (string, error) {
-    return runtime.OpenFileDialog(s.ctx, runtime.OpenDialogOptions{
-        Title: "选择 SQLite 数据库",
-        Filters: []runtime.FileFilter{
-            {DisplayName: "SQLite Database", Pattern: "*.db;*.sqlite;*.sqlite3"},
-        },
-    })
+// DialogService.OpenDatabaseFile — 打开 .db/.sqlite/.sqlite3
+// DialogService.OpenCSVFile — 导入 CSV 选文件（v0.2）
+// DialogService.SaveFile — 导出目标路径（v0.2）
+
+// FileService.WriteTextFile — 将 ExportService 生成的 CSV 写入用户选定路径
+func (s *FileService) WriteTextFile(path string, content string) error {
+    // 校验 path 非空、绝对路径、不在系统敏感目录
+    return os.WriteFile(path, []byte(content), 0o644)
 }
 ```
 
-| 能力 | Wails API | MVP |
-|------|-----------|-----|
+| 能力 | Wails API / Service | 版本 |
+|------|---------------------|------|
 | 打开数据库文件 | `runtime.OpenFileDialog` | P0 |
+| 打开 CSV 文件 | `runtime.OpenFileDialog` | v0.2 |
 | 导出 CSV 路径 | `runtime.SaveFileDialog` | v0.2 |
+| 写入 CSV 内容 | `FileService.WriteTextFile` | v0.2 |
 | 应用菜单 File→Open | `menu` | P0 |
 | 拖拽 `.db` 到窗口 | `OnFileDrop` | P1 |
 | 文件关联双击打开 | 启动参数 + 安装器 | v0.2 |
 | 系统托盘 | `systray` | P2 |
 
+**导出流程:** UI → `SaveFile` → `ExportService` 生成 CSV 字符串 → `WriteTextFile`。
+
+**导入流程:** UI → `OpenCSVFile` → `ImportService.PreviewImport` → 用户确认 → `ImportCSV`（Driver 单事务）。
+
 ### 5.7 安全考量
 
-| 风险 | MVP 策略 |
-|------|----------|
-| SQL 注入（BrowseTable） | 表名/列名白名单校验 |
+| 风险 | 策略 |
+|------|------|
+| SQL 注入（BrowseTable / UpdateCellsBatch） | 表名/列名白名单校验；值参数化绑定 |
 | 任意文件读取 | 路径仅来自用户对话框或显式 CLI 参数 |
+| 任意文件写入 | `WriteTextFile` 仅接受 `SaveFile` 返回路径或 CLI 白名单路径 |
+| 批量编辑部分成功脏写 | `UpdateCellsBatch` 单事务 all-or-nothing |
+| CSV 导入部分成功 | `ImportCSV` 单事务；失败整批回滚 |
 | 前端越权调用 | Wails 仅暴露已 Bind 的 Service 方法 |
 | 写操作误删 | 前端确认 + 只读连接模式 |
-| 结果集过大 | `MaxRows = 10000` 硬限制 |
+| 结果集过大 | `MaxQueryRows = 10000` 硬限制（SQL 查询结果）；整表导出无硬上限，依赖稳定排序键 |
+| 批量编辑滥用 | 单次 1–200 条变更上限（`BATCH_TOO_LARGE`） |
 
 > 桌面模式下无 CSRF/HTTP 端口暴露问题。
 
@@ -465,6 +490,52 @@ sequenceDiagram
     T->>S: BrowseTable(opts)
     S-->>T: PaginatedTableData
     T-->>F: result
+```
+
+### 6.2 批量编辑流程（v0.2）
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant T as TableService
+    participant S as SQLiteDriver
+
+    U->>F: 编辑多格 → pendingEdits
+    U->>F: 点击「提交变更」
+    F->>F: ConfirmDialog
+    F->>T: UpdateCellsBatch({ changes })
+    T->>S: BEGIN → UPDATE×N → COMMIT
+    alt 全部成功
+        S-->>T: OK
+        T-->>F: { updatedCount }
+        F->>F: 刷新 + 清空 pending
+    else 任一条失败
+        S-->>T: ROLLBACK
+        T-->>F: SQL_ERROR
+        F->>F: Toast，保留 pending
+    end
+```
+
+### 6.3 CSV 导出流程（v0.2）
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant D as DialogService
+    participant E as ExportService
+    participant W as FileService
+
+    U->>F: 导出 CSV（配置 scope + format）
+    F->>D: SaveFile("users.csv")
+    D-->>F: "/Users/dev/users.csv"
+    F->>E: ExportTable({ outputPath, ... })
+    E->>E: 生成 CSV 字符串
+    E->>W: WriteTextFile(path, content)
+    W-->>E: OK
+    E-->>F: { rowCount, filePath }
+    F->>F: Toast「已导出 N 行」
 ```
 
 ---

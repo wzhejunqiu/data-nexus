@@ -18,6 +18,7 @@
 
 - [ ] `PostgresDriver` — `pgx` 或 `database/sql` + `pgx/stdlib`
 - [ ] `MySQLDriver` — `go-sql-driver/mysql`
+- [ ] `OpenTableExport` — 各方言 `TableExportCursor`（PG/MySQL 见 [EXPORT_MULTI_DIALECT.md](../design/EXPORT_MULTI_DIALECT.md)）
 - [ ] Driver 工厂按 `DriverType` 分发
 
 ### 连接配置

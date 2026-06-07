@@ -164,6 +164,6 @@ describe('SqlEditor', () => {
       expect(screen.getByRole('button', { name: /复制为 CSV/ })).toBeInTheDocument()
     })
     fireEvent.click(screen.getByRole('button', { name: /复制为 CSV/ }))
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('id\n7')
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('id\r\n7')
   })
 })

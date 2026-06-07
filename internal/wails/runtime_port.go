@@ -12,6 +12,7 @@ type RuntimePort interface {
 	MessageDialog(ctx context.Context, opts wailsruntime.MessageDialogOptions) (string, error)
 	EventsEmit(ctx context.Context, event string, data ...any)
 	OpenFileDialog(ctx context.Context, opts wailsruntime.OpenDialogOptions) (string, error)
+	SaveFileDialog(ctx context.Context, opts wailsruntime.SaveDialogOptions) (string, error)
 }
 
 type wailsRuntime struct{}
@@ -30,4 +31,8 @@ func (wailsRuntime) EventsEmit(ctx context.Context, event string, data ...any) {
 
 func (wailsRuntime) OpenFileDialog(ctx context.Context, opts wailsruntime.OpenDialogOptions) (string, error) {
 	return wailsruntime.OpenFileDialog(ctx, opts)
+}
+
+func (wailsRuntime) SaveFileDialog(ctx context.Context, opts wailsruntime.SaveDialogOptions) (string, error) {
+	return wailsruntime.SaveFileDialog(ctx, opts)
 }

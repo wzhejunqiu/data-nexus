@@ -36,15 +36,21 @@ func main() {
 	}
 	mgr := service.NewConnectionManager(store, log)
 	querySvc := service.NewQueryService(mgr)
+	exportSvc := service.NewExportService(querySvc)
+	importSvc := service.NewImportService(querySvc)
 
 	connWails := wailssvc.NewConnectionService(mgr, log)
 	schemaWails := wailssvc.NewSchemaService(querySvc, log)
 	tableWails := wailssvc.NewTableService(querySvc, log)
 	queryWails := wailssvc.NewQueryService(querySvc, log)
 	dialogWails := wailssvc.NewDialogService(log)
+	fileWails := wailssvc.NewFileService(log)
+	configWails := wailssvc.NewConfigService(log)
+	exportWails := wailssvc.NewExportService(exportSvc, dialogWails, log)
+	importWails := wailssvc.NewImportService(importSvc, log)
 	appWails := wailssvc.NewAppService(log)
 
-	app := NewApp(log, connWails, dialogWails, appWails, mgr, cli.DBPath)
+	app := NewApp(log, connWails, dialogWails, exportWails, appWails, mgr, cli.DBPath)
 	app.SetOpenDatabaseHandler(func() {
 		path, err := dialogWails.OpenDatabaseFile()
 		if err != nil {
@@ -94,6 +100,10 @@ func main() {
 			tableWails,
 			queryWails,
 			dialogWails,
+			fileWails,
+			configWails,
+			exportWails,
+			importWails,
 			appWails,
 		},
 	})

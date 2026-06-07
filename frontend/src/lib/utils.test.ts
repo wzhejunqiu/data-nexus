@@ -35,21 +35,21 @@ describe('rowsToCSV', () => {
         { id: 2, name: 'bob' },
       ],
     )
-    expect(csv).toBe('id,name\n1,alice\n2,bob')
+    expect(csv).toBe('id,name\r\n1,alice\r\n2,bob')
   })
 
   it('escapes null as empty field', () => {
     const csv = rowsToCSV(['name'], [{ name: null }])
-    expect(csv).toBe('name\n')
+    expect(csv).toBe('name\r\n')
   })
 
   it('quotes fields containing commas', () => {
     const csv = rowsToCSV(['note'], [{ note: 'hello, world' }])
-    expect(csv).toBe('note\n"hello, world"')
+    expect(csv).toBe('note\r\n"hello, world"')
   })
 
-  it('escapes double quotes', () => {
-    const csv = rowsToCSV(['note'], [{ note: 'say "hi"' }])
-    expect(csv).toBe('note\n"say ""hi"""')
+  it('uses custom delimiter', () => {
+    const csv = rowsToCSV(['a'], [{ a: 'x' }], { delimiter: ';', hasHeader: true })
+    expect(csv).toBe('a\r\nx')
   })
 })

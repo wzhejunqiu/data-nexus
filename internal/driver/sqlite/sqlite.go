@@ -283,6 +283,16 @@ func (d *Driver) loadIndexColumns(ctx context.Context, indexName string) ([]stri
 	return cols, rows.Err()
 }
 
+func orderClauseForBrowse(opts model.BrowseOptions, order string) (string, error) {
+	if opts.Sort == "" {
+		return "", nil
+	}
+	if !identRe.MatchString(opts.Sort) {
+		return "", model.ErrInvalidRequest("invalid sort column")
+	}
+	return fmt.Sprintf(" ORDER BY %q %s", opts.Sort, order), nil
+}
+
 func (d *Driver) BrowseTable(ctx context.Context, tableName string, opts model.BrowseOptions) (*model.PaginatedTableData, error) {
 	if !identRe.MatchString(tableName) {
 		return nil, model.ErrTableNotFound(tableName)
@@ -298,29 +308,30 @@ func (d *Driver) BrowseTable(ctx context.Context, tableName string, opts model.B
 	if pageSize <= 0 {
 		pageSize = 50
 	}
-	if pageSize > 200 {
-		pageSize = 200
+	const maxPageSize = 200
+	if pageSize > maxPageSize {
+		pageSize = maxPageSize
 	}
 
 	var total int64
-	if err := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %q", tableName)).Scan(&total); err != nil {
-		return nil, model.ErrSQL(err.Error())
-	}
-	totalPages := int(math.Ceil(float64(total) / float64(pageSize)))
-	if totalPages == 0 {
-		totalPages = 1
+	totalPages := 1
+	if !opts.SkipTotalCount {
+		if err := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %q", tableName)).Scan(&total); err != nil {
+			return nil, model.ErrSQL(err.Error())
+		}
+		totalPages = int(math.Ceil(float64(total) / float64(pageSize)))
+		if totalPages == 0 {
+			totalPages = 1
+		}
 	}
 
 	order := "ASC"
 	if opts.Order == model.SortDesc {
 		order = "DESC"
 	}
-	sortCol := ""
-	if opts.Sort != "" {
-		if !identRe.MatchString(opts.Sort) {
-			return nil, model.ErrInvalidRequest("invalid sort column")
-		}
-		sortCol = fmt.Sprintf(" ORDER BY %q %s", opts.Sort, order)
+	sortCol, err := orderClauseForBrowse(opts, order)
+	if err != nil {
+		return nil, err
 	}
 
 	offset := (page - 1) * pageSize
