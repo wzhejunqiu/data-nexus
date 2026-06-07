@@ -203,6 +203,9 @@ func TestQueryServiceBrowseRows(t *testing.T) {
 		ConnectionID: conn.ID,
 		SQL:          "INSERT INTO items (name) VALUES ('a'), ('b'), ('c')",
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	data, err := qs.BrowseRows(ctx, model.BrowseRowsRequest{
 		ConnectionID: conn.ID,

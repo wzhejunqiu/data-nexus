@@ -55,7 +55,7 @@ func TestNewVariousLogLevels(t *testing.T) {
 		if err != nil {
 			t.Fatalf("level %q: %v", level, err)
 		}
-		log.Sync()
+		_ = log.Sync()
 	}
 }
 
