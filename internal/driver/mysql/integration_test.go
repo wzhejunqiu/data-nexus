@@ -2,26 +2,51 @@ package mysql_test
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/wzhejunqiu/data-nexus/internal/driver/mysql"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
+	"github.com/wzhejunqiu/data-nexus/internal/testutil/mysqlserver"
 )
+
+var testMySQL *mysqlserver.Server
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	if !testing.Short() {
+		srv, err := mysqlserver.Start()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "mysql integration harness: %v\n", err)
+			os.Exit(1)
+		}
+		testMySQL = srv
+	}
+	code := m.Run()
+	if testMySQL != nil {
+		_ = testMySQL.Close()
+	}
+	os.Exit(code)
+}
 
 func testMySQLConfig(t *testing.T) model.DriverConfig {
 	t.Helper()
-	if os.Getenv("TEST_MYSQL_DSN") == "" {
-		t.Skip("TEST_MYSQL_DSN not set")
+	if testing.Short() {
+		t.Skip("integration test skipped in -short mode")
+	}
+	if testMySQL == nil {
+		t.Fatal("mysql integration harness not started")
 	}
 	return model.DriverConfig{
 		Type: model.DriverTypeMySQL,
 		MySQL: &model.MySQLConfig{
-			Host:     "127.0.0.1",
-			Port:     3306,
-			Database: "testdb",
-			User:     "test",
-			Password: "test",
+			Host:     testMySQL.Host,
+			Port:     testMySQL.Port,
+			Database: testMySQL.Database,
+			User:     "root",
+			Password: "",
 			TLS:      false,
 			ReadOnly: false,
 		},
@@ -29,9 +54,6 @@ func testMySQLConfig(t *testing.T) model.DriverConfig {
 }
 
 func TestIntegrationMySQLConnectListTables(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test skipped in -short mode")
-	}
 	cfg := testMySQLConfig(t)
 	ctx := context.Background()
 
@@ -82,9 +104,6 @@ func TestIntegrationMySQLConnectListTables(t *testing.T) {
 }
 
 func TestIntegrationMySQLExportCursor(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test skipped in -short mode")
-	}
 	cfg := testMySQLConfig(t)
 	ctx := context.Background()
 
@@ -131,9 +150,6 @@ func TestIntegrationMySQLExportCursor(t *testing.T) {
 }
 
 func TestIntegrationMySQLExportCompositePK(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test skipped in -short mode")
-	}
 	cfg := testMySQLConfig(t)
 	ctx := context.Background()
 

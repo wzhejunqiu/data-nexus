@@ -36,3 +36,13 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 2. Use `detect_changes` for code review.
 3. Use `get_affected_flows` to understand impact.
 4. Use `query_graph` pattern="tests_for" to check coverage.
+
+## Testing
+
+MySQL and PostgreSQL drivers follow a two-layer test strategy:
+
+- **Unit tests** use `go-sqlmock` (white-box, `package mysql` / `package postgres`). Run via `make test` (`go test -short`).
+- **Integration tests** simulate real database behavior in-process:
+  - MySQL: `go-mysql-server` (`package mysql_test`, black-box)
+  - PostgreSQL: `embedded-postgres` (`package postgres_test`, black-box)
+- Run integration tests with `make test-integration` (no Docker required). They are excluded from default coverage (`-short` skips them).

@@ -98,11 +98,12 @@ Release 版本默认将日志写入文件（`log.output: auto`）：
 
 - macOS 预构建包暂未发布（签名/公证就绪后通过 Release 提供）
 
-### 本地远程数据库测试（可选）
+### Driver 集成测试（可选）
 
 ```bash
-make test-db-up              # docker compose up
-make test-db-integration     # PG + MySQL 集成测试
+make test-integration        # MySQL + PostgreSQL（进程内 DB，无需 Docker）
+make test-mysql-integration  # 仅 MySQL
+make test-postgres-integration  # 仅 PostgreSQL
 ```
 
 ## 参与开发

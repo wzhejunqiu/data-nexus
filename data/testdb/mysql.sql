@@ -1,4 +1,4 @@
--- Test database seed for local MySQL (make test-db-up)
+-- Test database seed for manual MySQL acceptance (import into a real instance)
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS post_tags;
 DROP TABLE IF EXISTS order_items;

@@ -1,4 +1,4 @@
--- Test database seed for local PostgreSQL (make test-db-up)
+-- Test database seed for manual PostgreSQL acceptance (import into a real instance)
 DROP TABLE IF EXISTS post_tags CASCADE;
 DROP TABLE IF EXISTS order_items CASCADE;
 DROP TABLE IF EXISTS orders CASCADE;

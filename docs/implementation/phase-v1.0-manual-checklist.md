@@ -2,16 +2,13 @@
 
 > PostgreSQL / MySQL 远程连接 · 最后更新: 2026-06-07
 
-本地测试数据库：
+Driver 自动化集成测试（进程内 DB，无需 Docker）：
 
 ```bash
-make test-db-up   # 启动 docker-compose.test.yml
-make test-db-down # 停止并清理
+make test-integration
 ```
 
-默认凭据：`test` / `test`，数据库 `testdb`，PG 端口 `5432`，MySQL 端口 `3306`。
-
-`make test-db-up` 启动后会自动注入测试表（users、posts、orders、tags、active_users 视图等，与 SQLite demo 结构类似）。
+手动验收请连接真实 PostgreSQL / MySQL 实例；`data/testdb/*.sql` 提供与 SQLite demo 同结构的种子数据（users、posts、orders、tags、active_users 视图等），可按需导入。
 
 ---
 
