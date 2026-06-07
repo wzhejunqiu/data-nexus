@@ -16,9 +16,9 @@
 
 | 版本 | 文件 | 主题 | 状态 |
 |------|------|------|------|
-| v0.2 | [phase-v0.2-enhancements.md](./phase-v0.2-enhancements.md) | 体验增强（CSV、批量编辑、自动补全等） | 🔄 进行中 |
+| v0.2 | [phase-v0.2-enhancements.md](./phase-v0.2-enhancements.md) | 体验增强（CSV、批量编辑、自动补全等） | ✅ 已完成 |
 | | [phase-v0.2-manual-checklist.md](./phase-v0.2-manual-checklist.md) | v0.2 手动验收清单 | |
-| v0.3 | [phase-v0.3-exploration.md](./phase-v0.3-exploration.md) | 探索型差异化（列画像、Filter→SQL 等） | |
+| v0.3 | [phase-v0.3-exploration.md](./phase-v0.3-exploration.md) | 探索型差异化（列画像、Filter→SQL 等） | 🔄 待发布 |
 | v1.0 | [phase-v1.0-multi-connection.md](./phase-v1.0-multi-connection.md) | PostgreSQL / MySQL | |
 | v1.x | [phase-v1.x-multi-database.md](./phase-v1.x-multi-database.md) | Headless REST、ER 等 | |
 
@@ -37,5 +37,5 @@
 ```
 Phase 0 ✓ → Phase 1 ✓ → Phase 2 ✓ → Phase 3 ✓ → Phase 4 ✓ → tag v0.1.0
                                                           ↓
-                                                v0.2（进行中）→ v0.3 → v1.0 → v1.x
+                                                v0.2 ✓ → v0.3（待发布）→ v1.0 → v1.x
 ```

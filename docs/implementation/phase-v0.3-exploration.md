@@ -70,7 +70,7 @@
 
 - [x] 选表后可看列画像（无需写 SQL）
 - [x] Filter UI 生成可执行 SQL
-- [ ] tag `v0.3.0`（暂缓）
+- [ ] tag `v0.3.0`（Release workflow 触发）
 
 ---
 

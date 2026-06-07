@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-07
+
 ### Added
 
 - Column data profiling (`GetTableProfile`) with sampling for large tables and `ColumnProfile` UI in Schema tab
@@ -17,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Facet panel for low-cardinality columns
 - SQLite `ATTACH` / `DETACH` with sidebar schema grouping
 - SQL execution history persistence (`ExecutionLogStore`, `~/.data-nexus/sql-global.db`, `SqlExecutionService`); SQL editor history loaded per `connectionId` via React Query
+
+### Changed
+
+- Product version bumped to 0.3.0
+- Single-source versioning: `wails.json` `productVersion` synced to Go (`internal/version`) and frontend via `make sync-version`
 
 ## [0.2.0] - 2026-06-07
 
@@ -63,5 +70,6 @@ Pre-built binaries are published for:
 
 macOS builds are temporarily omitted from Release until code signing and notarization are configured. macOS users can build from source.
 
+[0.3.0]: https://github.com/wzhejunqiu/data-nexus/releases/tag/v0.3.0
 [0.2.0]: https://github.com/wzhejunqiu/data-nexus/releases/tag/v0.2.0
 [0.1.0]: https://github.com/wzhejunqiu/data-nexus/releases/tag/v0.1.0

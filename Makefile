@@ -1,4 +1,4 @@
-.PHONY: dev build test test-cover test-perf bench lint generate ci-test fmt-check fmt-check-go fmt-check-go-staged fmt-check-go-head fmt vuln-check check pre-commit pre-push install-hooks embed-stub gen-test-db
+.PHONY: dev build test test-cover test-perf bench lint generate sync-version ci-test fmt-check fmt-check-go fmt-check-go-staged fmt-check-go-head fmt vuln-check check pre-commit pre-push install-hooks embed-stub gen-test-db
 
 UNAME_S := $(shell uname -s)
 WAILS_TAGS :=
@@ -6,16 +6,16 @@ ifeq ($(UNAME_S),Linux)
 WAILS_TAGS := -tags webkit2_41
 endif
 
-dev:
+dev: sync-version
 	wails dev $(WAILS_TAGS)
 
-build:
+build: sync-version
 	wails build $(WAILS_TAGS)
 
-test:
+test: sync-version
 	go test -short ./...
 
-test-cover:
+test-cover: sync-version
 	go test -short ./internal/... -cover
 
 test-perf:
@@ -26,6 +26,14 @@ bench:
 
 generate: embed-stub
 	wails generate module
+
+# Single source of truth: wails.json info.productVersion.
+# Writes generated internal/version/product.txt (gitignored) and syncs frontend/package.json.
+sync-version:
+	@ver=$$(node -pe "require('./wails.json').info.productVersion"); \
+	printf '%s\n' "$$ver" > internal/version/product.txt; \
+	node -e "const fs=require('fs'); const p=require('./frontend/package.json'); p.version='$$ver'; fs.writeFileSync('frontend/package.json', JSON.stringify(p,null,2)+'\n')"; \
+	cd frontend && npm install --package-lock-only --silent
 
 # Tracked .go files on disk (aligned with CI checkout; skips node_modules).
 fmt-check-go:
@@ -72,6 +80,7 @@ fmt:
 embed-stub:
 	@mkdir -p frontend/dist
 	@test -f frontend/dist/index.html || printf '%s\n' '<!doctype html><html><head></head><body></body></html>' > frontend/dist/index.html
+	@$(MAKE) sync-version
 
 lint-frontend:
 	cd frontend && npm run lint

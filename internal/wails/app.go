@@ -8,10 +8,9 @@ import (
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
+	"github.com/wzhejunqiu/data-nexus/internal/version"
 	"go.uber.org/zap"
 )
-
-const appVersion = "0.2.0"
 
 type AppService struct {
 	log                *zap.Logger
@@ -100,7 +99,7 @@ func (s *AppService) EmitLanguageChange(lang string) error {
 func (s *AppService) GetVersion() (*model.VersionInfo, error) {
 	return call(s.log, "AppService.GetVersion", func() (*model.VersionInfo, error) {
 		return &model.VersionInfo{
-			Version:  appVersion,
+			Version:  version.Version(),
 			Platform: runtime.GOOS,
 			Arch:     runtime.GOARCH,
 		}, nil
