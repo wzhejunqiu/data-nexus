@@ -147,51 +147,15 @@ jobs:
       - name: Go tests
         run: go test ./...
 
-  build-desktop:
-    name: Build (${{ matrix.name }})
+  smoke-build:
+    name: Smoke build (linux-amd64)
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: linux-amd64
-            platform: linux/amd64
-            install-linux-deps: true
-            build-tags: "-tags webkit2_41"
-          - os: ubuntu-24.04-arm
-            name: linux-arm64
-            platform: linux/arm64
-            install-linux-deps: true
-            build-tags: "-tags webkit2_41"
-          - os: macos-latest
-            name: macos-arm64
-            platform: darwin/arm64
-            install-linux-deps: false
-            build-tags: ""
-          - os: macos-latest
-            name: macos-amd64
-            platform: darwin/amd64
-            install-linux-deps: false
-            build-tags: ""
-          - os: windows-latest
-            name: windows-amd64
-            platform: windows/amd64
-            install-linux-deps: false
-            build-tags: ""
-          - os: windows-latest
-            name: windows-arm64
-            platform: windows/arm64
-            install-linux-deps: false
-            build-tags: ""
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Linux build dependencies
-        if: matrix.install-linux-deps
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -220,15 +184,4 @@ jobs:
         run: make embed-stub
 
       - name: Build desktop app
-        run: wails build ${{ matrix.build-tags }} -platform ${{ matrix.platform }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: data-nexus-${{ matrix.name }}
-          path: |
-            build/bin/data-nexus*
-            build/bin/*.exe
-            build/bin/*.app
-          if-no-files-found: error
-          retention-days: 14
+        run: wails build -tags webkit2_41 -platform linux/amd64
