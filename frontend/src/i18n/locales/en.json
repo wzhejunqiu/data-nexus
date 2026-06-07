@@ -41,6 +41,9 @@
     "saveAndOpen": "Save and open",
     "saveSuccess": "Connection saved",
     "applyNamespace": "Apply",
+    "tls": "Enable TLS",
+    "tlsSkipVerify": "Skip server certificate verification",
+    "tlsSkipVerifyHint": "Certificates are verified by default. Enable only for self-signed or private CA setups.",
     "sqliteOptionsHint": "Read-only / WAL apply to new SQLite connections",
     "error": {
       "auth": "Authentication failed",

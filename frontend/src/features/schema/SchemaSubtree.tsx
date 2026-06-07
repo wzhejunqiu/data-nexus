@@ -107,6 +107,7 @@ export function SchemaSubtree({
         database,
         user: my.user,
         tls: my.tls,
+        tlsSkipVerify: my.tlsSkipVerify ?? false,
         readOnly: my.readOnly,
       }
       await connectionApi.updateMySQLSettings(connectionId, update)

@@ -303,6 +303,7 @@ func (s *ConnectionStore) UpdateMySQLSettings(id string, update model.MySQLSetti
 				my.User = update.User
 			}
 			my.TLS = update.TLS
+			my.TLSSkipVerify = update.TLSSkipVerify
 			my.ReadOnly = update.ReadOnly
 			s.data.Items[i].Config.MySQL = my
 			s.data.Items[i].UpdatedAt = time.Now().UTC()

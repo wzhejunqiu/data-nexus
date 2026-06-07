@@ -29,6 +29,7 @@ export interface MySQLConfig {
   database: string
   user: string
   tls: boolean
+  tlsSkipVerify?: boolean
   readOnly: boolean
 }
 
@@ -84,6 +85,7 @@ export interface MySQLSettingsUpdate {
   user: string
   password?: string | null
   tls: boolean
+  tlsSkipVerify: boolean
   readOnly: boolean
 }
 

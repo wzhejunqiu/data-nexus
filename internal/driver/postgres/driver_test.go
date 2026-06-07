@@ -200,10 +200,13 @@ func TestOpenTableExport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = cursor.Close() }()
 	batch, err := cursor.NextBatch(context.Background())
 	if err != nil || len(batch.Rows) != 1 {
 		t.Fatalf("batch: %+v err=%v", batch, err)
+	}
+	mock.ExpectExec(`ROLLBACK`).WillReturnResult(sqlmock.NewResult(0, 0))
+	if err := cursor.Close(); err != nil {
+		t.Fatal(err)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)

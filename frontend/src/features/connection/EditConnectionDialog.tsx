@@ -43,6 +43,7 @@ function EditConnectionForm({
     database: item.config.mysql?.database ?? '',
     user: item.config.mysql?.user ?? '',
     tls: item.config.mysql?.tls ?? false,
+    tlsSkipVerify: item.config.mysql?.tlsSkipVerify ?? false,
     readOnly: item.config.mysql?.readOnly ?? false,
   }))
   const [newPassword, setNewPassword] = useState('')
@@ -202,6 +203,33 @@ function EditConnectionForm({
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder={t('connection.passwordOptional')}
               />
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={mysql.tls}
+                  onChange={(e) =>
+                    setMySQL((m) => ({
+                      ...m,
+                      tls: e.target.checked,
+                      tlsSkipVerify: e.target.checked ? m.tlsSkipVerify : false,
+                    }))
+                  }
+                />
+                {t('connection.tls')}
+              </label>
+              {mysql.tls && (
+                <>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={mysql.tlsSkipVerify}
+                      onChange={(e) => setMySQL((m) => ({ ...m, tlsSkipVerify: e.target.checked }))}
+                    />
+                    {t('connection.tlsSkipVerify')}
+                  </label>
+                  <p className="text-xs text-muted">{t('connection.tlsSkipVerifyHint')}</p>
+                </>
+              )}
             </>
           )}
         </div>

@@ -26,6 +26,7 @@ const defaultMySQL = (): MySQLConfig => ({
   database: '',
   user: '',
   tls: false,
+  tlsSkipVerify: false,
   readOnly: false,
 })
 
@@ -162,14 +163,33 @@ export function RemoteConnectionForm({
         </>
       )}
       {type === 'mysql' && (
-        <label className="flex items-center gap-2 text-xs text-muted">
-          <input
-            type="checkbox"
-            checked={mysql.tls}
-            onChange={(e) => setMySQL((m) => ({ ...m, tls: e.target.checked }))}
-          />
-          TLS
-        </label>
+        <>
+          <label className="flex items-center gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={mysql.tls}
+              onChange={(e) =>
+                setMySQL((m) => ({
+                  ...m,
+                  tls: e.target.checked,
+                  tlsSkipVerify: e.target.checked ? m.tlsSkipVerify : false,
+                }))
+              }
+            />
+            {t('connection.tls')}
+          </label>
+          {mysql.tls && (
+            <label className="flex items-center gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={mysql.tlsSkipVerify ?? false}
+                onChange={(e) => setMySQL((m) => ({ ...m, tlsSkipVerify: e.target.checked }))}
+              />
+              {t('connection.tlsSkipVerify')}
+            </label>
+          )}
+          {mysql.tls && <p className="text-xs text-muted">{t('connection.tlsSkipVerifyHint')}</p>}
+        </>
       )}
       <label className="flex items-center gap-2 text-xs text-muted">
         <input

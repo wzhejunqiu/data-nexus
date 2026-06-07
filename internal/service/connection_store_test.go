@@ -323,13 +323,13 @@ func TestConnectionStoreUpdateMySQLSettings(t *testing.T) {
 		t.Fatal(err)
 	}
 	updated, err := store.UpdateMySQLSettings(item.ID, model.MySQLSettingsUpdate{
-		Host: "h2", Port: 3307, Database: "db2", User: "u2", TLS: true,
+		Host: "h2", Port: 3307, Database: "db2", User: "u2", TLS: true, TLSSkipVerify: true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	my := updated.Config.MySQL
-	if my.Host != "h2" || my.Port != 3307 || !my.TLS {
+	if my.Host != "h2" || my.Port != 3307 || !my.TLS || !my.TLSSkipVerify {
 		t.Fatalf("unexpected mysql settings: %+v", my)
 	}
 }

@@ -41,6 +41,9 @@
     "saveAndOpen": "保存并打开",
     "saveSuccess": "连接已保存",
     "applyNamespace": "应用",
+    "tls": "启用 TLS",
+    "tlsSkipVerify": "不校验服务端证书",
+    "tlsSkipVerifyHint": "默认校验证书。仅自签名或内网 CA 等开发场景可勾选此项。",
     "sqliteOptionsHint": "只读 / WAL 仅用于新建 SQLite 连接",
     "error": {
       "auth": "认证失败",

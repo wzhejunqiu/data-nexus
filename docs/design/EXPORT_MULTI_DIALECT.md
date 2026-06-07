@@ -87,7 +87,7 @@ sequenceDiagram
 | 方言 | 长导出读一致性 |
 |------|----------------|
 | SQLite | 默认 snapshot；只读连接 `?mode=ro` |
-| PostgreSQL | `BEGIN READ ONLY` 或 `SET TRANSACTION READ ONLY` |
+| PostgreSQL | `BEGIN READ ONLY`；`Close()` 时 `ROLLBACK` 结束只读事务 |
 | MySQL | InnoDB consistent read（默认 REPEATABLE READ 单连接） |
 
 导出期间不阻塞写操作；文档说明「导出为快照时点数据，非实时同步」。

@@ -45,13 +45,14 @@ type PostgresConfig struct {
 }
 
 type MySQLConfig struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Database string `json:"database"`
-	User     string `json:"user"`
-	Password string `json:"-"`
-	TLS      bool   `json:"tls"`
-	ReadOnly bool   `json:"readOnly"`
+	Host          string `json:"host"`
+	Port          int    `json:"port"`
+	Database      string `json:"database"`
+	User          string `json:"user"`
+	Password      string `json:"-"`
+	TLS           bool   `json:"tls"`
+	TLSSkipVerify bool   `json:"tlsSkipVerify,omitempty"`
+	ReadOnly      bool   `json:"readOnly"`
 }
 
 func (c *PostgresConfig) NormalizedPort() int {
@@ -121,13 +122,14 @@ type PostgresSettingsUpdate struct {
 }
 
 type MySQLSettingsUpdate struct {
-	Host     string  `json:"host"`
-	Port     int     `json:"port"`
-	Database string  `json:"database"`
-	User     string  `json:"user"`
-	Password *string `json:"password,omitempty"`
-	TLS      bool    `json:"tls"`
-	ReadOnly bool    `json:"readOnly"`
+	Host          string  `json:"host"`
+	Port          int     `json:"port"`
+	Database      string  `json:"database"`
+	User          string  `json:"user"`
+	Password      *string `json:"password,omitempty"`
+	TLS           bool    `json:"tls"`
+	TLSSkipVerify bool    `json:"tlsSkipVerify"`
+	ReadOnly      bool    `json:"readOnly"`
 }
 
 type Connection struct {
