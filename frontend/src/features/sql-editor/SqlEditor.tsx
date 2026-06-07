@@ -21,6 +21,8 @@ const PRAGMAS = [
   'PRAGMA user_version;',
 ]
 
+const EMPTY_HISTORY: string[] = []
+
 export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const { t } = useTranslation()
   const themeMode = useThemeStore((s) => s.mode)
@@ -32,7 +34,9 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingRun, setPendingRun] = useState(false)
   const addHistory = useQueryHistoryStore((s) => s.add)
-  const history = useQueryHistoryStore((s) => (connectionId ? (s.items[connectionId] ?? []) : []))
+  const history = useQueryHistoryStore((s) =>
+    connectionId ? (s.items[connectionId] ?? EMPTY_HISTORY) : EMPTY_HISTORY,
+  )
 
   const { data: connections } = useQuery({
     queryKey: ['connections'],

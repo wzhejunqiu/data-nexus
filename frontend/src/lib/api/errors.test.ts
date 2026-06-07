@@ -9,9 +9,21 @@ describe('mapWailsError', () => {
     expect(err.message).toBe('syntax error')
   })
 
+  it('parses wails string error shape', () => {
+    const err = mapWailsError('SQL_ERROR: near DESC: syntax error')
+    expect(err.code).toBe('SQL_ERROR')
+    expect(err.message).toBe('near DESC: syntax error')
+  })
+
   it('detects dialog cancelled', () => {
     const err = mapWailsError({ code: 'DIALOG_CANCELLED', message: 'cancelled' })
     expect(isDialogCancelled(err)).toBe(true)
+  })
+
+  it('shows SQL error message instead of generic internal text', () => {
+    const t = i18n.getFixedT('zh-CN')
+    const msg = translateAppError(t, { code: 'SQL_ERROR', message: 'near DESC: syntax error' })
+    expect(msg).toBe('near DESC: syntax error')
   })
 
   it('translates known error codes', () => {

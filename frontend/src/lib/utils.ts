@@ -25,7 +25,9 @@ export function isWriteSQL(sql: string): boolean {
     trimmed.startsWith('SELECT') ||
     trimmed.startsWith('WITH') ||
     trimmed.startsWith('PRAGMA') ||
-    trimmed.startsWith('EXPLAIN')
+    trimmed.startsWith('EXPLAIN') ||
+    trimmed.startsWith('DESC') ||
+    trimmed.startsWith('DESCRIBE')
   )
 }
 

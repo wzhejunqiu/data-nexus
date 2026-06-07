@@ -78,3 +78,76 @@ func TestQueryServiceSelectReturnsResult(t *testing.T) {
 		t.Fatalf("unexpected response: %+v", res)
 	}
 }
+
+func TestQueryServiceDescTableReturnsSchema(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "app.db")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	qs := service.NewQueryService(mgr)
+	_, err = qs.Execute(context.Background(), model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE orders (id INTEGER, name TEXT)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := qs.Execute(context.Background(), model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "DESC orders",
+	})
+	if err != nil {
+		t.Fatalf("DESC orders: %v", err)
+	}
+	if res.Kind != "result" || res.RowCount == 0 {
+		t.Fatalf("unexpected response: %+v", res)
+	}
+}
+
+func TestQueryServiceInvalidDescReturnsSQLError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "app.db")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewConnectionManager(store, zap.NewNop())
+	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	qs := service.NewQueryService(mgr)
+	_, err = qs.Execute(context.Background(), model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "desc SELECT * from orders limit 10;",
+	})
+	if err == nil {
+		t.Fatal("expected SQL error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "SQL_ERROR" {
+		t.Fatalf("expected SQL_ERROR, got %v", err)
+	}
+}

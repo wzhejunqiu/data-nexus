@@ -16,7 +16,34 @@ export type ErrorCode =
   | 'SAVED_NOT_FOUND'
   | 'INTERNAL_ERROR'
 
+const KNOWN_ERROR_CODES = new Set<string>([
+  'INVALID_REQUEST',
+  'INVALID_PATH',
+  'CONNECTION_NOT_FOUND',
+  'CONNECTION_ALREADY_OPEN',
+  'CONNECTION_FAILED',
+  'DATABASE_LOCKED',
+  'TABLE_NOT_FOUND',
+  'SQL_ERROR',
+  'RESULT_TOO_LARGE',
+  'READ_ONLY',
+  'DIALOG_CANCELLED',
+  'SAVED_NOT_FOUND',
+  'INTERNAL_ERROR',
+])
+
+function parseAppErrorString(raw: string): AppError | null {
+  const idx = raw.indexOf(': ')
+  if (idx <= 0) return null
+  const code = raw.slice(0, idx)
+  if (!KNOWN_ERROR_CODES.has(code)) return null
+  return { code, message: raw.slice(idx + 2) }
+}
+
 export function mapWailsError(err: unknown): AppError {
+  if (typeof err === 'string') {
+    return parseAppErrorString(err) ?? { code: 'INTERNAL_ERROR', message: err }
+  }
   if (err && typeof err === 'object') {
     const e = err as Record<string, unknown>
     if (typeof e.code === 'string' && typeof e.message === 'string') {
@@ -27,7 +54,7 @@ export function mapWailsError(err: unknown): AppError {
       }
     }
     if (typeof e.message === 'string') {
-      return { code: 'INTERNAL_ERROR', message: e.message }
+      return parseAppErrorString(e.message) ?? { code: 'INTERNAL_ERROR', message: e.message }
     }
   }
   return { code: 'INTERNAL_ERROR', message: String(err) }
@@ -38,6 +65,9 @@ export function isDialogCancelled(err: AppError): boolean {
 }
 
 export function translateAppError(t: TFunction, err: AppError): string {
+  if (err.code === 'SQL_ERROR' && err.message) {
+    return err.message
+  }
   const key = `errors.${err.code}`
   const translated = t(key, { defaultValue: '' })
   if (translated) return translated

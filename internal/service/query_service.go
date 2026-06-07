@@ -2,10 +2,30 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 )
+
+// describeSQLRe matches MySQL-style DESC/DESCRIBE with a single table identifier.
+var describeSQLRe = regexp.MustCompile(`(?is)^\s*(?:DESC|DESCRIBE)\s+((?:` + "`" + `[^` + "`" + `]+` + "`" + `|\[[^\]]+\]|"[^"]+"|'[^']+'|[A-Za-z_][\w$#]*(?:\.[A-Za-z_][\w$#]*)*))\s*;?\s*$`)
+
+func rewriteDescribeSQL(sql string) (string, bool) {
+	m := describeSQLRe.FindStringSubmatch(sql)
+	if m == nil {
+		return sql, false
+	}
+	return fmt.Sprintf("PRAGMA table_info(%s)", m[1]), true
+}
+
+func normalizeSQL(sql string) string {
+	if rewritten, ok := rewriteDescribeSQL(sql); ok {
+		return rewritten
+	}
+	return sql
+}
 
 type QueryService struct {
 	mgr *ConnectionManager
@@ -30,8 +50,9 @@ func (s *QueryService) Execute(ctx context.Context, req model.ExecuteQueryReques
 	if maxRows <= 0 {
 		maxRows = 1000
 	}
-	if isQuerySQL(req.SQL) {
-		result, err := drv.QueryRows(ctx, req.SQL, req.Params, maxRows)
+	sqlText := normalizeSQL(req.SQL)
+	if isQuerySQL(sqlText) {
+		result, err := drv.QueryRows(ctx, sqlText, req.Params, maxRows)
 		if err != nil {
 			return nil, err
 		}
@@ -44,7 +65,7 @@ func (s *QueryService) Execute(ctx context.Context, req model.ExecuteQueryReques
 			DurationMs: result.Duration.Milliseconds(),
 		}, nil
 	}
-	execResult, err := drv.Exec(ctx, req.SQL, req.Params)
+	execResult, err := drv.Exec(ctx, sqlText, req.Params)
 	if err != nil {
 		return nil, err
 	}
