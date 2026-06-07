@@ -13,6 +13,7 @@ build/bin/
 
 # Frontend
 frontend/node_modules/
+frontend/coverage/
 frontend/dist/
 frontend/wailsjs/
 frontend/package.json.md5

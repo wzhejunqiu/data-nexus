@@ -1,4 +1,4 @@
-.PHONY: dev build test test-cover test-perf bench lint generate ci-test fmt-check fmt vuln-check check embed-stub gen-test-db
+.PHONY: dev build test test-cover test-perf bench lint generate ci-test fmt-check fmt vuln-check check pre-push install-hooks embed-stub gen-test-db
 
 UNAME_S := $(shell uname -s)
 WAILS_TAGS :=
@@ -52,6 +52,14 @@ vuln-check:
 	cd frontend && npm audit --omit=dev --audit-level=high
 
 check: fmt-check lint vuln-check ci-test
+
+# Lightweight gate before git push (matches CI format + security jobs).
+pre-push: embed-stub fmt-check lint vuln-check
+
+install-hooks:
+	@chmod +x .githooks/pre-push
+	git config core.hooksPath .githooks
+	@echo "Installed git hooks from .githooks (pre-push -> make pre-push)"
 
 gen-test-db:
 	./data/generate.sh

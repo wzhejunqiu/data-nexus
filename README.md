@@ -47,6 +47,8 @@ make fmt-check    # gofmt
 make lint         # golangci-lint（需已安装）
 make vuln-check   # govulncheck + npm audit
 make check        # 上述 + 测试构建
+make pre-push     # push 前检查：fmt + lint + vuln（与 CI 格式/安全 job 对齐）
+make install-hooks # 安装 pre-push hook，失败时阻止 push
 ```
 
 ## 配置

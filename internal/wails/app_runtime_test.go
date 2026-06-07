@@ -13,8 +13,11 @@ import (
 )
 
 type mockRuntime struct {
-	title       string
-	events      []struct{ name string; data any }
+	title  string
+	events []struct {
+		name string
+		data any
+	}
 	dialogMsg   string
 	dialogErr   error
 	filePath    string
@@ -39,7 +42,10 @@ func (m *mockRuntime) EventsEmit(_ context.Context, event string, data ...any) {
 	if len(data) > 0 {
 		payload = data[0]
 	}
-	m.events = append(m.events, struct{ name string; data any }{name: event, data: payload})
+	m.events = append(m.events, struct {
+		name string
+		data any
+	}{name: event, data: payload})
 }
 
 func (m *mockRuntime) OpenFileDialog(_ context.Context, opts wailsruntime.OpenDialogOptions) (string, error) {

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Runs before git push. Blocks push when checks fail.
+set -e
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+echo "pre-push: running fmt-check, lint, and vuln-check..."
+make pre-push
