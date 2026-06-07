@@ -1,6 +1,7 @@
 # Data Nexus — UI/UX 设计
 
-> 版本: v0.2 · 状态: 草案 · 最后更新: 2026-06-07
+> 版本: v0.5 · 状态: 草案 · 最后更新: 2026-06-08  
+> **v0.5–v0.8 实施:** [phase-v0.5.md](../implementation/phase-v0.5.md) · [phase-v0.6.md](../implementation/phase-v0.6.md) · [phase-v0.7.md](../implementation/phase-v0.7.md) · [phase-v0.8.md](../implementation/phase-v0.8.md)
 
 ---
 
@@ -12,7 +13,7 @@
 | **信息密度适中** | 开发者工具风格，紧凑但不拥挤 |
 | **状态可见** | 连接状态、加载、错误始终有明确反馈 |
 | **安全提示** | 写操作必须有确认，危险操作视觉区分 |
-| **桌面原生** | 系统窗口、菜单栏、文件对话框；非浏览器 Tab |
+| **桌面原生** | Wails 窗口 + 文件对话框；或 v0.5 **Server 模式** 下浏览器访问同一 UI |
 | **可扩展布局** | 侧边栏结构预留多连接树形导航 |
 
 ### 1.1 桌面壳（Wails）
@@ -21,9 +22,23 @@
 |------|------|
 | 窗口 | 默认 1280×800，最小 960×600 |
 | 标题栏 | `Data Nexus — app.db`（连接后显示文件名） |
-| 菜单栏 | File（Open / Close / Quit）、View（Theme / **Language**）、Help（About） |
-| 文件打开 | 系统原生对话框 |
-| 拖拽 | 拖 `.db` 到窗口打开（P1） |
+| 应用内 MenuBar（v0.5） | **文件**（新建连接 / 打开 SQLite / 关闭 / 退出）、**视图**（SQL 执行历史 / 设置）、**帮助**（关于） |
+| 原生菜单（v0.5 精简） | 仅保留 macOS 标准 **App / Edit / Window**（含 Quit）；不再重复 File/View/Help |
+| 文件打开 | 系统原生对话框（MenuBar「打开 SQLite」或新建连接 Dialog） |
+| 拖拽 | 拖 `.db` 到窗口打开（P1；**Server 模式不适用**） |
+
+### 1.2 HTTP 模式 UI（v0.7，仅 `--server`）
+
+> v0.6 `--api` 无 Web UI。本节适用于 [phase-v0.7.md](../implementation/phase-v0.7.md)。
+
+| 元素 | 说明 |
+|------|------|
+| 启动 | `./data-nexus --server` — **不** 打开 Wails 窗口 |
+| 访问 | 浏览器打开 `http://127.0.0.1:8080/` |
+| 布局 | 与桌面相同的 React UI（MenuBar + 左连接列表 + 右展示区） |
+| API | HTTP REST；前端 Transport 层替代 Wails Bridge |
+
+**`--api` 模式无 Web UI**（v0.6），不适用本节。见 [phase-v0.6.md](../implementation/phase-v0.6.md)。
 
 ---
 
@@ -67,23 +82,29 @@
 
 ## 3. 页面结构
 
-### 3.1 整体布局
+### 3.1 整体布局（v0.5）
+
+主工作台为 **左连接列表 + 右展示区** 两栏；全局操作经顶栏 MenuBar。
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  Header: Logo | 已打开连接数 | 主题切换                         │
-├──────────────┬───────────────────────────────────────────────────┤
-│              │  Tab Bar: [表结构] [数据] [SQL]  连接: app.db ▾   │
-│ Connection   ├───────────────────────────────────────────────────┤
-│ Tree         │                                                   │
-│ [+ 新建连接] │              Main Content Area                    │
-│ ▼ ● app.db   │                                                   │
-│     users    │                                                   │
-│ ○ staging.db │                                                   │
-├──────────────┴───────────────────────────────────────────────────┤
+│  MenuBar: [文件▾] [视图▾] [帮助▾]              已打开 N 个连接   │
+├─────────────────┬────────────────────────────────────────────────┤
+│  连接列表        │  Tab: [表结构] [数据] [SQL]    连接: app.db ▾  │
+│  ● app.db       ├────────────────────────────────────────────────┤
+│    └ users      │                                                │
+│  ○ staging.db   │              Main Content Area                 │
+│  [SavedQueries] │                                                │
+├─────────────────┴────────────────────────────────────────────────┤
 │  Status Bar: 行数 | 耗时 | 版本                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
+
+| 区域 | 职责 |
+|------|------|
+| 顶栏 MenuBar | 新建连接、打开 SQLite、关闭连接、SQL 历史、设置、关于 |
+| 左侧连接列表 | 连接导航；已打开连接展开 Schema 子树；不含「新建连接」等全局控件 |
+| 右侧展示区 | Tab + 主内容（结构 / 数据 / SQL） |
 
 ### 3.2 路由
 
@@ -97,37 +118,72 @@ MVP 采用单页应用；**无 Welcome 页**，启动即进入主工作台。见
 
 ## 4. 关键页面与交互
 
-### 4.1 主界面 — 连接树（Navicat 模式）
+### 4.1 主界面 — 连接列表（Navicat 模式，v0.5）
 
-**启动即显示本布局**（无 Welcome）。
-
-```
-├─ Sidebar: ConnectionTree ─────┬─ Main: Tabs ──────────────────┤
-│  [+ 新建连接]                  │  [结构|数据|SQL]  连接: app.db ▾│
-│  ▼ ● app.db          [关闭]   ├───────────────────────────────┤
-│      users                     │                               │
-│      orders                    │      Content                  │
-│  ○ staging.db        [打开]    │                               │
-│  ○ analytics.db      [打开]    │                               │
-└────────────────────────────────┴───────────────────────────────┘
-```
-
-**交互:**
-- **新建连接** → `OpenConnectionFromFile` 或 表单创建后打开
-- **○ 未打开** → 显示「打开」；**● 已打开** → 展开 Schema，显示「关闭」
-- 可同时多个 ●；点击表名 → 主区绑定 `connectionId + tableName`
-- SQL Tab 顶部显示当前连接下拉；切换连接切换 SQL 上下文
-- 删除连接 → `RemoveConnection`（打开中需确认）
-
-### 4.2 Header（精简）
+**启动即显示本布局**（无 Welcome）。左侧为紧凑 **连接列表**，管理操作经 **右键菜单**；**双击** 打开连接。
 
 ```
-[Data Nexus]  已打开 2 个连接                    [🌙]
+├─ 连接列表 ───────────────────┬─ 展示区 ─────────────────────────┤
+│  ● app.db                    │  [结构|数据|SQL]  连接: app.db ▾│
+│    └ users                   ├──────────────────────────────────┤
+│  ○ staging.db                │         Content                  │
+│  [SavedQueries]              │                                  │
+└──────────────────────────────┴──────────────────────────────────┘
 ```
 
-- 连接详情（名称、路径、只读）在连接树节点或主区 Tab 上下文展示
-- 关闭连接在连接树节点操作，非全局「断开」
-- 「断开」需二次确认（若 SQL 编辑器有未保存内容，P2 提示）
+**交互（v0.5）：**
+
+| 手势 | 行为 |
+|------|------|
+| **双击** 连接 item | **打开连接**：未打开 → `OpenConnection`；已打开 → 设为 `activeConnectionId` |
+| **单击** 连接 item | 仅选中/高亮，不 open |
+| **右键** 连接 item | 上下文菜单：打开/关闭、重命名、编辑连接、删除 |
+| 点击表名 | 主区绑定 `connectionId + tableName` |
+| SQL Tab | 连接下拉切换 SQL 上下文；保留 per-connection 历史下拉 |
+
+**右键菜单项（按状态）：**
+
+| 菜单项 | 条件 |
+|--------|------|
+| 打开 | `status !== 'open'` |
+| 关闭 | `status === 'open'` |
+| 重命名 / 编辑连接 | 始终 |
+| 删除 | 始终（danger；打开中需 confirm） |
+
+**自左侧移除（v0.5）：** 「新建连接」按钮、`readOnly`/`wal` 勾选（迁入新建连接 Dialog）、「启动时恢复已打开连接」（迁入设置）。
+
+详见 [CONNECTION_UX.md §5](./CONNECTION_UX.md#5-v05-连接列表与右键菜单)。
+
+### 4.2 顶栏 — AppMenuBar（v0.5）
+
+```
+[Data Nexus]  [文件▾] [视图▾] [帮助▾]                    已打开 2 个连接
+```
+
+**文件**
+
+| 项 | 行为 | 快捷键 |
+|----|------|--------|
+| 新建连接… | `NewConnectionDialog` | `Cmd/Ctrl+N` |
+| 打开 SQLite 文件… | 文件对话框 + `OpenConnectionFromFile` | `Cmd/Ctrl+O` |
+| 关闭当前连接 | `CloseConnection(activeConnectionId)` | `Cmd/Ctrl+W` |
+| 退出 | Quit（macOS 亦可经 App 菜单） | `Cmd/Ctrl+Q`（macOS App 菜单） |
+
+**视图**
+
+| 项 | 行为 | 快捷键 |
+|----|------|--------|
+| SQL 执行历史… | `SqlExecutionHistoryDialog`（跨连接） | — |
+| 设置… | `SettingsDialog`（含主题、语言、日志、启动恢复连接） | `Cmd/Ctrl+,` |
+
+**帮助**
+
+| 项 | 行为 |
+|----|------|
+| 关于 Data Nexus | `AboutDialog`（版本、平台；i18n） |
+
+- 主题 / 语言：迁入设置 Dialog（不再单独 Header 按钮）
+- 导出/导入向导期间：MenuBar 可见；部分 File 项 disabled；右侧显示向导标题
 
 ### 4.3 Sidebar — Schema 树
 
@@ -236,25 +292,53 @@ VIEWS (2)
 
 **全表导出:** 不预先 `COUNT(*)`；取消调用 `CancelExportTableCSV` 删除半成品文件，结果页展示「已取消」。
 
-### 4.7 设置页（v0.2）
+### 4.7 设置（v0.2，v0.5 入口变更）
 
-**入口:** View → Settings（或 Header ⚙ 图标）
+**入口:** MenuBar → 视图 → 设置（`Cmd/Ctrl+,`）
 
 ```
 ┌─ 设置 ─────────────────────────────────────────────┐
-│  日志                                               │
-│    级别    [ info ▾ ]                               │
-│    输出    [ auto ▾ ]  console | file | both       │
-│    文件路径 [ ~/Library/Logs/...        ] [浏览]    │
-│  导入/导出（可选）                                  │
-│    默认 CSV 分隔符 [ , ▾ ]                          │
-│  [取消]                              [保存]         │
-└─────────────────────────────────────────────────────┘
+│  常规                                             │
+│    启动时恢复已打开连接  [ ]   （v0.5 自左侧迁入）  │
+│  外观                                             │
+│    主题    [ system ▾ ]                           │
+│    语言    [ zh-CN ▾ ]                            │
+│  日志                                             │
+│    级别    [ info ▾ ]                             │
+│    输出    [ auto ▾ ]  console | file | both      │
+│    文件路径 [ ~/Library/Logs/...        ]         │
+│  [取消]                              [保存]       │
+└───────────────────────────────────────────────────┘
 ```
 
 - 保存调用 `ConfigService.UpdateConfig`
 - 日志热更新；无效值 inline 校验
-- 语言切换可复用现有 `LanguageToggle` 或迁入设置页
+
+### 4.8 全局 SQL 执行历史（v0.5）
+
+**入口:** MenuBar → 视图 → SQL 执行历史
+
+**组件:** `SqlExecutionHistoryDialog`
+
+| 列 | 说明 |
+|----|------|
+| 执行时间 | `executedAt` |
+| 连接 | 由 `connectionId` 映射连接名 |
+| SQL | 摘要（可点击整行） |
+| 类型 | result / exec |
+| 耗时 / 影响行 | `durationMs` / `effectRows` |
+
+**交互:** 点击行 → 关闭 Dialog → 切换 `activeConnectionId` → SQL Tab → 填充编辑器。
+
+**API:** `SqlExecutionService.ListAllSqlExecutions(limit?)`（默认 50，上限 200）。
+
+SQL Tab 内 per-connection `QueryHistory` 下拉 **保留**（快捷入口，不重复全局能力）。
+
+### 4.9 关于（v0.5）
+
+**入口:** MenuBar → 帮助 → 关于 Data Nexus
+
+**组件:** `AboutDialog` — 应用名、版本（`AppService.GetVersion`）、平台/架构；中英文 i18n。替代原生 `ShowAbout` MessageDialog。
 
 ### 4.8 Tab: SQL 编辑器
 
@@ -306,9 +390,12 @@ VIEWS (2)
 | 组件 | 用途 | 优先级 |
 |------|------|--------|
 | `AppShell` | 整体布局框架 | P0 |
-| `ConnectionTree` | Navicat 式连接 + Schema 树 | P0 |
-| `NewConnectionDialog` | 新建连接（文件对话框 + 只读） | P0 |
-| `ConnectionTreeItem` | 打开/关闭/删除 | P0 |
+| `AppMenuBar` | 应用内顶栏菜单（文件/视图/帮助） | v0.5 |
+| `ConnectionTree` | 左连接列表 + Schema 子树 | P0 |
+| `ConnectionTreeItem` | 连接行 + 右键 ContextMenu | v0.5 |
+| `NewConnectionDialog` | 新建连接（含 SQLite 只读/WAL） | P0 |
+| `SqlExecutionHistoryDialog` | 跨连接 SQL 执行历史 | v0.5 |
+| `AboutDialog` | 关于（版本、平台） | v0.5 |
 | `ConnectionStatus` | Header 状态 Chip | P0 |
 | `SchemaSidebar` | 表/视图列表 | P0 |
 | `SchemaTable` | 列定义表格 | P0 |
@@ -325,8 +412,9 @@ VIEWS (2)
 | `ThemeToggle` | 主题切换 | P1 |
 | `LanguageToggle` | 语言切换 zh-CN / en | P1（i18n 必做） |
 | `IndexList` | 索引展示 | P1 |
-| `QueryHistory` | SQL 历史 | P1 |
-| `ConnectionTree` | 多连接树 | v1.0 |
+| `QueryHistory` | SQL Tab 当前连接历史下拉 | P1 |
+| `ContextMenu` | Radix 右键菜单基元 | v0.5 |
+| `Menubar` | Radix 顶栏菜单基元 | v0.5 |
 
 ---
 
@@ -390,20 +478,19 @@ MVP 目标：**桌面窗口**（Wails 默认窗口，≥ 960px 宽）
 
 ## 9. 线框图参考
 
-MVP 核心态 — 多连接 + 数据浏览：
+MVP 核心态 — 多连接 + 数据浏览（v0.5 布局）：
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ ■ Data Nexus    已打开 2 个连接                          [🌙]   │
+│ ■ Data Nexus  [文件▾][视图▾][帮助▾]      已打开 2 个连接       │
 ├──────────┬──────────────────────────────────────────────────────┤
-│[+ 新建]  │  users @ app.db  │ 表结构 │ 数据 │ SQL              │
-│▼ ● app.db│──────────────────────────────────────────────────────│
-│  users ◀ │  id ▲ │ email          │ created_at                    │
-│  orders  │  ─────┼────────────────┼──────────────                 │
-│○ staging │    1  │ a@example.com  │ 2026-01-01...                 │
-│  [打开]  │                                                      │
+│ ● app.db │  users @ app.db  │ 表结构 │ 数据 │ SQL              │
+│   users ◀│──────────────────────────────────────────────────────│
+│ ○ staging│  id ▲ │ email          │ created_at                    │
+│          │  ─────┼────────────────┼──────────────                 │
+│          │    1  │ a@example.com  │ 2026-01-01...                 │
 ├──────────┴──────────────────────────────────────────────────────┤
-│ 1,523 rows · page 1/31                          data-nexus v0.1 │
+│ 1,523 rows · page 1/31                          data-nexus v0.5 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -413,13 +500,14 @@ MVP 核心态 — 多连接 + 数据浏览：
 
 | PRD 功能 | UI 入口 |
 |----------|---------|
-| 连接 SQLite | 连接树「新建/打开」+ File 菜单 + NewConnectionDialog |
-| Schema 浏览 | Sidebar + 表结构 Tab |
+| 连接 SQLite | MenuBar 文件 → 新建连接 / 打开 SQLite |
+| 远程连接 | MenuBar 文件 → 新建连接 → PG/MySQL Tab |
+| Schema 浏览 | 左连接列表 Schema 子树 + 表结构 Tab |
 | 表数据浏览 | 数据 Tab + DataGrid |
 | SQL 编辑器 | SQL Tab |
+| SQL 执行历史 | MenuBar 视图 → SQL 执行历史；SQL Tab 内历史下拉 |
+| 应用设置 | MenuBar 视图 → 设置 |
+| 关于 | MenuBar 帮助 → 关于 |
 | 写操作确认 | ConfirmDialog |
 | 批量编辑确认 | ConfirmDialog（变更摘要） |
-| 查询历史 | SQL Tab 历史下拉 |
 | CSV 导出/导入 | ExportWizardPage / ImportWizardPage |
-| 应用设置 | SettingsPanel |
-| 深色主题 | Header ThemeToggle |

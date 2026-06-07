@@ -1,6 +1,6 @@
 # Data Nexus — 实施路线图
 
-> 版本: v0.4 · 最后更新: 2026-06-07
+> 版本: v0.8 · 最后更新: 2026-06-08
 
 > **实施时请打开 [docs/implementation/](./implementation/README.md)**，各阶段有独立任务清单文件，本文件仅作概览与决策记录。
 
@@ -33,7 +33,10 @@ Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ �
 | v0.2 | [phase-v0.2-enhancements.md](./implementation/phase-v0.2-enhancements.md) | 体验增强 | ✅ 已完成 |
 | v0.3 | [phase-v0.3-exploration.md](./implementation/phase-v0.3-exploration.md) | Filter→SQL、列画像 | ✅ 已完成 |
 | v0.4 | [phase-v0.4-multi-connection.md](./implementation/phase-v0.4-multi-connection.md) | PostgreSQL / MySQL（发布 **v0.4.0**） | ✅ 已验收，待 tag |
-| v1.x | [phase-v1.x-multi-database.md](./implementation/phase-v1.x-multi-database.md) | Headless REST、ER 等 | |
+| v0.5 | [phase-v0.5.md](./implementation/phase-v0.5.md) | 桌面 UI 重构（MenuBar、连接右键） | |
+| v0.6 | [phase-v0.6.md](./implementation/phase-v0.6.md) | 纯 Headless REST（`--api`） | |
+| v0.7 | [phase-v0.7.md](./implementation/phase-v0.7.md) | `--server` 浏览器 UI | |
+| v0.8 | [phase-v0.8.md](./implementation/phase-v0.8.md) | ER 图 · 插件 · 驱动深化（v0.8.0–v0.8.2） | |
 
 ---
 
@@ -52,7 +55,9 @@ Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ �
 | 2026-06-07 | v0.3 聚焦 Filter→SQL + 列画像 | Datasette/DuckDB UI 验证的需求，SQLite 工具空白区 |
 | 2026-06-07 | 只读模式纳入 MVP P0 | sqlite-web/Tabulita 标配，降低误操作风险 |
 | 2026-06-07 | 采用 Wails v2 桌面端 | 原生文件对话框、单二进制、对标 TablePlus；弃 HTTP embed 方案 |
-| 2026-06-07 | MVP 不做 headless REST | Bridge 足够；`internal/service` 保留便于 v1.x `--server` |
+| 2026-06-07 | MVP 不做 headless REST | Bridge 足够；`internal/service` 保留便于 v0.5 `--server` |
+| 2026-06-08 | v0.5–v0.7 拆分 | v0.5 桌面 UI；v0.6 `--api`；v0.7 `--server` |
+| 2026-06-08 | v0.8 平台能力 | v0.8.0 ER 图；v0.8.1 插件；v0.8.2 驱动深化 |
 | 2026-06-07 | 日志框架用 zap | 默认 INFO；dev 控制台、release 文件；用户 YAML/CLI 可配置 |
 | 2026-06-07 | MVP 含全部 P1 | 索引、主题、PRAGMA、CSV 复制等均纳入 v0.1.0 |
 | 2026-06-07 | 需要 i18n | react-i18next，默认 zh-CN，MVP 含 en 语言包 |
@@ -62,4 +67,4 @@ Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ �
 
 > 开放问题决策后追加到此表。
 
-**推荐实施顺序：** Phase 0–4 ✓ → v0.2 ✓ → v0.3 ✓ → v0.4 ✓ → **tag v0.4.0** → v1.x
+**推荐实施顺序：** Phase 0–4 ✓ → v0.2 ✓ → v0.3 ✓ → v0.4 ✓ → **tag v0.4.0** → **v0.5** → **v0.6** → **v0.7** → **v0.8**

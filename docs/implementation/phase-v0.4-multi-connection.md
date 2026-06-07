@@ -44,7 +44,7 @@
 
 ## 非目标（v0.4）
 
-- Headless REST（可并行规划 v1.x）
+- Headless REST（见 [phase-v0.6.md](./phase-v0.6.md)）；浏览器 Server（见 [phase-v0.7.md](./phase-v0.7.md)）
 - Redis / Mongo 等非 SQL 引擎
 
 ---
@@ -59,4 +59,4 @@
 
 ## 下一阶段
 
-[phase-v1.x-multi-database.md](./phase-v1.x-multi-database.md)
+[phase-v0.5.md](./phase-v0.5.md) → … → [phase-v0.8.md](./phase-v0.8.md)

@@ -80,9 +80,39 @@ wails build
 
 **不再**默认启动 `127.0.0.1:8080` HTTP 服务。前端运行在 WebView 内，通过 Wails 绑定调用 Go。
 
-### 2.3 可选扩展：Headless 模式（v1.x，非 MVP）
+### 2.3 HTTP 模式（v0.6 / v0.7）
 
-保留 `internal/service` 与 `internal/driver` 与 UI 解耦，未来可通过 `--server` 启动 REST API（供 CI/脚本），与桌面模式共享业务层。MVP 不实现。
+**与 Wails 桌面互斥。** v0.6 交付 REST 基础；v0.7 在之上挂载浏览器 UI。
+
+| 模式 | 版本 | CLI | 静态 UI | REST |
+|------|------|-----|---------|------|
+| 纯 Headless | v0.6 | `--api` | 无 | `/api/v1/*` |
+| Server + 浏览器 | v0.7 | `--server` | `GET /` → `frontend/dist` | `/api/v1/*`（复用 v0.6） |
+
+实施清单：[phase-v0.6.md](../implementation/phase-v0.6.md)、[phase-v0.7.md](../implementation/phase-v0.7.md)。
+
+### 2.4 三运行时概览
+
+```
+桌面:     WebView ──Wails Bridge──► internal/service ──► driver
+
+--server: 浏览器 ──GET / + REST───► internal/server ───► internal/service ──► driver
+
+--api:    curl/脚本 ──REST only──► internal/server ───► internal/service ──► driver
+```
+
+MVP 仅实现桌面；**v0.6** 补齐 `--api`，**v0.7** 补齐 `--server`。**均不**启动 Wails。
+
+### 2.5 internal/server 结构（v0.5）
+
+```
+internal/server/
+  router.go      # chi 组装
+  api.go         # RegisterAPI → /api/v1/*（v0.6）
+  static.go      # RegisterStatic（v0.7，仅 --server）
+  middleware.go  # Basic Auth、JSON 错误
+  run.go         # Run(Options{Listen, UI, Auth})
+```
 
 ---
 

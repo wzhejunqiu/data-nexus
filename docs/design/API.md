@@ -4,7 +4,7 @@
 
 前端通过 `wailsjs/go/wails/*` 自动生成的绑定调用 Go Service。所有方法均为 **async**（返回 Promise）。时间戳使用 ISO 8601 UTC。
 
-> **历史说明：** v0.1 曾设计 REST API（`localhost:8080`）。自 v0.2 起 MVP 改为 Wails 桌面绑定；方法语义与数据模型保持一致。未来 headless 模式（`--server`）可映射为 REST，见 [ARCHITECTURE.md](./ARCHITECTURE.md#23-可选扩展headless-模式v1x非-mvp)。
+> **历史说明：** MVP 为 Wails 桌面。**v0.6** 起 `--api` 纯 REST；**v0.7** 起 `--server` 浏览器 UI + REST。见 [ARCHITECTURE.md §2.3](./ARCHITECTURE.md#23-http-模式v06--v07)。
 
 ---
 
@@ -569,25 +569,66 @@ export function useTables() {
 
 ---
 
-## 10. 未来 Headless REST 映射（v1.x 预留）
+## 10. HTTP REST 映射（v0.6 / v0.7）
+
+**v0.6** 实现下列 `/api/v1/*`（`--api`）；**v0.7** 复用同一 handler，并增加 `--server` 静态 UI。
+
+| 模式 | 版本 | CLI | `GET /` |
+|------|------|-----|---------|
+| 纯 Headless | v0.6 | `--api` | 无 UI |
+| Server + UI | v0.7 | `--server` | 静态前端 |
 
 | Service 方法 | 等价 REST |
 |--------------|-----------|
+| — | `GET /api/v1/health` |
+| `AppService.GetVersion` | `GET /api/v1/version` |
+| `ConnectionService.ListConnections` | `GET /api/v1/connections` |
 | `ConnectionService.OpenConnection` | `POST /api/v1/connections/{id}/open` |
+| `ConnectionService.CloseConnection` | `POST /api/v1/connections/{id}/close` |
 | `ConnectionService.CreateConnection` | `POST /api/v1/connections` |
+| `ConnectionService.CreateRemoteConnection` | `POST /api/v1/connections/remote` |
+| `ConnectionService.OpenConnectionFromFile` | `POST /api/v1/connections/open-file` |
 | `SchemaService.ListTables` | `GET /api/v1/connections/{id}/schema/tables` |
 | `TableService.BrowseRows` | `GET /api/v1/connections/{id}/tables/{name}/rows` |
 | `TableService.UpdateCellsBatch` | `PATCH /api/v1/connections/{id}/tables/{name}/cells` |
 | `QueryService.Execute` | `POST /api/v1/connections/{id}/query` |
+| `SqlExecutionService.ListQueryHistory` | `GET /api/v1/connections/{id}/query-history` |
+| `SqlExecutionService.ListAllSqlExecutions` | `GET /api/v1/sql-executions` |
 | `ExportService.ExportTable` | `POST /api/v1/connections/{id}/tables/{name}/export` |
 | `ExportService.ExportQueryResult` | `POST /api/v1/export/query-result` |
 | `ImportService.PreviewImport` | `POST /api/v1/import/preview` |
 | `ImportService.ImportCSV` | `POST /api/v1/connections/{id}/import` |
 | `ConfigService.GetConfig` | `GET /api/v1/config` |
 | `ConfigService.UpdateConfig` | `PATCH /api/v1/config` |
-| `FileService.WriteTextFile` | `PUT /api/v1/files`（headless 受路径白名单约束） |
+| `FileService.WriteTextFile` | `PUT /api/v1/files`（HTTP 模式受路径白名单约束） |
 
-启用 `--server` 时由 chi router 包装同一 `internal/service` 层。
+**CLI：**
+
+```bash
+# 浏览器 UI + REST
+./data-nexus --server
+./data-nexus --server --listen 127.0.0.1:8080
+
+# 纯 Headless REST（无 Web UI）
+./data-nexus --api
+./data-nexus --api --listen 127.0.0.1:9090
+```
+
+`--server` 与 `--api` **互斥**。二者可选 `--basic-auth user:pass`（具体 flag 名实施时定）。
+
+**纯 API 示例：**
+
+```bash
+curl -s http://127.0.0.1:8080/api/v1/health
+curl -s http://127.0.0.1:8080/api/v1/connections
+curl -s -X POST "http://127.0.0.1:8080/api/v1/connections/{id}/query" \
+  -H 'Content-Type: application/json' \
+  -d '{"sql":"SELECT 1"}'
+```
+
+**`--server` 前端：** Transport 层用 `fetch` 访问上表。**`--api`：** 无前端；仅机器客户端。
+
+错误体 JSON 与 Wails `AppError` 对齐。chi 包装同一 `internal/service` 层。
 
 ---
 
@@ -771,12 +812,14 @@ func (s *CannedQueryService) DeleteCannedQuery(id string) error
 ```go
 func (s *SqlExecutionService) ListQueryHistory(connectionID string) ([]string, error)
 func (s *SqlExecutionService) ListSqlExecutions(connectionID string, limit int) (*SqlExecutionList, error)
+func (s *SqlExecutionService) ListAllSqlExecutions(limit int) (*SqlExecutionList, error)
 ```
 
 | 方法 | 说明 |
 |------|------|
 | `ListQueryHistory` | 该连接最近执行的 SQL，按文本去重，最多 50 条（SQL Tab 下拉） |
-| `ListSqlExecutions` | 完整 `SqlExecutionRecord` 列表，按时间倒序；`limit` 默认 50，上限 200 |
+| `ListSqlExecutions` | 该连接完整 `SqlExecutionRecord` 列表，按时间倒序；`limit` 默认 50，上限 200 |
+| `ListAllSqlExecutions` | **v0.5** 跨连接执行历史，按时间倒序；`limit` 默认 50，上限 200；供 `SqlExecutionHistoryDialog` |
 
 记录字段见 [DATA_MODEL.md §9](./DATA_MODEL.md#9-sql-执行历史v03)。
 

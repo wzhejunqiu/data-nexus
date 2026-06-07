@@ -672,9 +672,11 @@ type SqlExecutionRecord struct {
 
 ### 9.3 前端
 
-SQL 编辑器历史下拉：`SqlExecutionService.ListQueryHistory(connectionId)` → `string[]`（按 `sql_text` 去重，最多 50 条）。TanStack Query key：`['query-history', connectionId]`；Execute 成功后 `invalidateQueries`。
+**SQL Tab 历史下拉（per-connection）：** `SqlExecutionService.ListQueryHistory(connectionId)` → `string[]`（按 `sql_text` 去重，最多 50 条）。TanStack Query key：`['query-history', connectionId]`；Execute 成功后 `invalidateQueries`。
 
-完整审计列表：`ListSqlExecutions(connectionId, limit?)` → `SqlExecutionList`（默认 50，上限 200；本次 UI 不展示）。
+**单连接审计列表：** `ListSqlExecutions(connectionId, limit?)` → `SqlExecutionList`（默认 50，上限 200）。
+
+**全局 SQL 执行历史（v0.5）：** MenuBar → 视图 → SQL 执行历史 → `SqlExecutionHistoryDialog`。API：`ListAllSqlExecutions(limit?)` → `SqlExecutionList`（跨 `connection_id`，按 `executed_at` 倒序）。TanStack Query key：`['sql-executions-all']`。点击行 → 切换连接 + SQL Tab + 填充编辑器。
 
 ### 9.4 其它会话状态
 

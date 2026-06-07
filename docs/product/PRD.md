@@ -168,7 +168,7 @@
 | v0.2 | 体验增强 | 行内编辑、CSV、SQL 自动补全/格式化、多 Tab SQL | Beekeeper |
 | v0.3 | 探索型差异化 | 列画像、Filter→SQL、Canned Queries | Datasette |
 | v1.0 | 远程多库 | PostgreSQL、MySQL 驱动 | Beekeeper, DBeaver |
-| v2.0 | 平台能力 | ER 图、Basic Auth、插件扩展 | DBeaver, TablePlus |
+| v2.0 | 平台能力 | ~~ER 图、插件~~ → **v0.8**；Basic Auth 见 v0.6/v0.7 | DBeaver, TablePlus |
 
 详细里程碑见 [ROADMAP.md](../ROADMAP.md)。完整竞品分析见 [COMPETITIVE_ANALYSIS.md](./COMPETITIVE_ANALYSIS.md)。
 
