@@ -12,8 +12,10 @@ import {
 } from '@/features/csv/exportWizardSteps'
 import { runExport } from '@/features/csv/useExportRunner'
 import { useExportProgress } from '@/features/csv/useExportProgress'
+import { useToastStore } from '@/components/ui/Toast'
 import { exportApi } from '@/lib/api/export'
 import { dialogApi } from '@/lib/api/dialog'
+import { formatError, isDialogCancelled, mapWailsError } from '@/lib/api/errors'
 import type { CSVFormatOptions } from '@/lib/types/csv'
 import { CSV_EXPORT_WARN_ROWS, loadCSVFormatPreference } from '@/lib/types/csv'
 import type { ExportResult, ExportSource } from '@/stores/exportStore'
@@ -21,6 +23,7 @@ import { useExportStore } from '@/stores/exportStore'
 
 export function ExportWizardPage() {
   const { t } = useTranslation()
+  const pushToast = useToastStore((s) => s.push)
   const session = useExportStore((s) => s.session)!
   const closeExport = useExportStore((s) => s.closeExport)
 
@@ -71,10 +74,16 @@ export function ExportWizardPage() {
   }, [step, steps])
 
   const pickFile = async () => {
-    const path = await dialogApi.saveFile(defaultFileName, [
-      { displayName: 'CSV', pattern: '*.csv' },
-    ])
-    setFilePath(path)
+    try {
+      const path = await dialogApi.saveFile(defaultFileName, [
+        { displayName: 'CSV', pattern: '*.csv' },
+      ])
+      setFilePath(path)
+    } catch (err) {
+      const appErr = mapWailsError(err)
+      if (isDialogCancelled(appErr)) return
+      pushToast(formatError(t, appErr), 'error')
+    }
   }
 
   const startExport = () => {

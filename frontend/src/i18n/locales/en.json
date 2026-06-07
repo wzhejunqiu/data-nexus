@@ -75,7 +75,8 @@
     "doubleClick": "Double-click to edit",
     "noView": "Views cannot be edited",
     "noPK": "Tables without a primary key cannot be edited inline",
-    "noBlob": "BLOB columns cannot be edited"
+    "noBlob": "BLOB columns cannot be edited",
+    "noRowid": "The rowid column cannot be edited"
   },
   "csv": {
     "export": "Export CSV",
@@ -128,6 +129,8 @@
     "delimiterPipe": "Pipe (|)",
     "quoteChar": "Quote character",
     "hasHeader": "First row is header",
+    "nullValue": "NULL representation",
+    "nullValueHint": "Empty = blank cell",
     "lineEnding": "Line ending",
     "encoding": "Encoding",
     "commentChar": "Comment character",
@@ -140,17 +143,24 @@
     "modeAppend": "Append (INSERT)",
     "modeUpdate": "Update (UPSERT)",
     "confirmImport": "Import from {{file}} (mode: {{mode}})?",
-    "importSuccess": "Import done: {{inserted}} inserted, {{updated}} updated"
+    "importSuccess": "Import done: {{inserted}} inserted, {{updated}} updated",
+    "updateRequiresPK": "Update mode requires a primary key on the target table."
   },
   "settings": {
     "title": "Settings",
     "save": "Save",
     "savedRestart": "Settings saved. Restart the app for log changes to take effect.",
+    "savedLevelApplied": "Log level updated.",
+    "savedRestartRequired": "Settings saved. Restart the app for output path and rotation changes.",
+    "validationInvalid": "Invalid value",
     "configPath": "Config file",
     "logLevel": "Log level",
     "logOutput": "Log output",
     "logFilePath": "Log file path",
-    "maxSizeMB": "Max log file size (MB)"
+    "maxSizeMB": "Max log file size (MB)",
+    "maxBackups": "Max log backups",
+    "maxAgeDays": "Max log age (days)",
+    "compress": "Compress rotated logs"
   },
   "status": {
     "rows": "{{count}} rows",

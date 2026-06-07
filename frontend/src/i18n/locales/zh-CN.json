@@ -75,7 +75,8 @@
     "doubleClick": "双击编辑",
     "noView": "视图不可编辑",
     "noPK": "无主键表不可行内编辑",
-    "noBlob": "BLOB 列不可编辑"
+    "noBlob": "BLOB 列不可编辑",
+    "noRowid": "rowid 列不可编辑"
   },
   "csv": {
     "export": "导出 CSV",
@@ -128,6 +129,8 @@
     "delimiterPipe": "竖线 (|)",
     "quoteChar": "引号字符",
     "hasHeader": "首行是表头",
+    "nullValue": "NULL 表示",
+    "nullValueHint": "留空表示空白单元格",
     "lineEnding": "行尾",
     "encoding": "编码",
     "commentChar": "注释字符",
@@ -140,17 +143,24 @@
     "modeAppend": "追加 (INSERT)",
     "modeUpdate": "更新 (UPSERT)",
     "confirmImport": "确认从 {{file}} 导入（模式：{{mode}}）",
-    "importSuccess": "导入完成：插入 {{inserted}} 行，更新 {{updated}} 行"
+    "importSuccess": "导入完成：插入 {{inserted}} 行，更新 {{updated}} 行",
+    "updateRequiresPK": "更新模式要求目标表有主键。"
   },
   "settings": {
     "title": "设置",
     "save": "保存",
     "savedRestart": "配置已保存，重启应用后日志设置生效",
+    "savedLevelApplied": "日志级别已更新。",
+    "savedRestartRequired": "配置已保存，输出路径与轮转参数需重启应用后生效。",
+    "validationInvalid": "无效值",
     "configPath": "配置文件",
     "logLevel": "日志级别",
     "logOutput": "日志输出",
     "logFilePath": "日志文件路径",
-    "maxSizeMB": "日志文件最大 MB"
+    "maxSizeMB": "日志文件最大 MB",
+    "maxBackups": "日志备份数量",
+    "maxAgeDays": "日志保留天数",
+    "compress": "压缩轮转日志"
   },
   "status": {
     "rows": "{{count}} 行",

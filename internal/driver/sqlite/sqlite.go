@@ -334,8 +334,24 @@ func (d *Driver) BrowseTable(ctx context.Context, tableName string, opts model.B
 		return nil, err
 	}
 
+	schema, err := d.GetTableSchema(ctx, tableName)
+	if err != nil {
+		return nil, err
+	}
+	pkCols := primaryKeyColumns(schema)
+	selectFrom := fmt.Sprintf("SELECT * FROM %q", tableName)
+	if len(pkCols) == 0 {
+		withoutRowID, err := d.isWithoutRowID(ctx, tableName)
+		if err != nil {
+			return nil, err
+		}
+		if !withoutRowID {
+			selectFrom = fmt.Sprintf("SELECT rowid, * FROM %q", tableName)
+		}
+	}
+
 	offset := (page - 1) * pageSize
-	query := fmt.Sprintf("SELECT * FROM %q%s LIMIT ? OFFSET ?", tableName, sortCol)
+	query := fmt.Sprintf("%s%s LIMIT ? OFFSET ?", selectFrom, sortCol)
 	rows, err := d.db.QueryContext(ctx, query, pageSize, offset)
 	if err != nil {
 		return nil, model.ErrSQL(err.Error())

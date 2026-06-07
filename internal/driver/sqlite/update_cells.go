@@ -16,8 +16,16 @@ func (d *Driver) UpdateCells(ctx context.Context, tableName string, changes []mo
 		return 0, model.ErrInvalidRequest("cannot edit view")
 	}
 	pkCols := primaryKeyColumns(schema)
+	useRowid := false
 	if len(pkCols) == 0 {
-		return 0, model.ErrInvalidRequest("table has no primary key")
+		withoutRowID, err := d.isWithoutRowID(ctx, tableName)
+		if err != nil {
+			return 0, err
+		}
+		if withoutRowID {
+			return 0, model.ErrInvalidRequest("table has no primary key")
+		}
+		useRowid = true
 	}
 	colSet := columnNameSet(schema)
 
@@ -30,6 +38,9 @@ func (d *Driver) UpdateCells(ctx context.Context, tableName string, changes []mo
 	updated := 0
 	seen := make(map[string]struct{})
 	for _, ch := range changes {
+		if ch.ColumnName == "rowid" {
+			return 0, model.ErrInvalidRequest("cannot edit rowid column")
+		}
 		if !identRe.MatchString(ch.ColumnName) || !colSet[ch.ColumnName] {
 			return 0, model.ErrInvalidRequest("invalid column: " + ch.ColumnName)
 		}
@@ -42,20 +53,30 @@ func (d *Driver) UpdateCells(ctx context.Context, tableName string, changes []mo
 		}
 		seen[key] = struct{}{}
 
-		for _, pk := range pkCols {
-			if _, ok := ch.PrimaryKey[pk]; !ok {
-				return 0, model.ErrInvalidRequest("missing primary key column: " + pk)
+		var whereParts []string
+		var args []any
+		args = append(args, sqlValue(ch.NewValue))
+		if useRowid {
+			rowid, ok := ch.PrimaryKey["rowid"]
+			if !ok {
+				return 0, model.ErrInvalidRequest("missing rowid")
+			}
+			whereParts = []string{"rowid = ?"}
+			args = append(args, sqlValue(rowid))
+		} else {
+			for _, pk := range pkCols {
+				if _, ok := ch.PrimaryKey[pk]; !ok {
+					return 0, model.ErrInvalidRequest("missing primary key column: " + pk)
+				}
+			}
+			whereParts = make([]string, len(pkCols))
+			for i, pk := range pkCols {
+				whereParts[i] = fmt.Sprintf("%q = ?", pk)
+				args = append(args, sqlValue(ch.PrimaryKey[pk]))
 			}
 		}
 
 		setClause := fmt.Sprintf("%q = ?", ch.ColumnName)
-		whereParts := make([]string, len(pkCols))
-		args := make([]any, 0, len(pkCols)+1)
-		args = append(args, sqlValue(ch.NewValue))
-		for i, pk := range pkCols {
-			whereParts[i] = fmt.Sprintf("%q = ?", pk)
-			args = append(args, sqlValue(ch.PrimaryKey[pk]))
-		}
 		query := fmt.Sprintf("UPDATE %q SET %s WHERE %s", tableName, setClause, strings.Join(whereParts, " AND "))
 		res, err := tx.ExecContext(ctx, query, args...)
 		if err != nil {

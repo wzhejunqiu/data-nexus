@@ -24,8 +24,10 @@ import { tableApi } from '@/lib/api/table'
 import type { PaginatedTableData, PendingEdit } from '@/lib/types'
 import {
   cellKey,
+  coerceNewValue,
   formatCell,
   isBlobValue,
+  valuesEqual,
 } from '@/lib/utils'
 import { useStatusStore } from '@/stores/statusStore'
 
@@ -64,7 +66,6 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
     [schema],
   )
   const isView = schema?.type === 'view'
-  const canEdit = !readOnly && !isView && pkColumns.length > 0
 
   const { data, isLoading, error, isFetching } = useQuery({
     queryKey: ['rows', connectionId, tableName, page, pageSize, sort, order],
@@ -78,6 +79,12 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
         order,
       }),
   })
+
+  const usesRowidKey =
+    pkColumns.length === 0 &&
+    !isView &&
+    (data?.rows.some((r) => r.rowid != null) ?? false)
+  const canEdit = !readOnly && !isView && (pkColumns.length > 0 || usesRowidKey)
 
   useEffect(() => {
     if (data) {
@@ -135,9 +142,7 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
   const commitEdit = useCallback(
     (edit: PendingEdit) => {
       const key = cellKey(edit.primaryKey, edit.columnName)
-      const same =
-        edit.newValue === edit.originalValue ||
-        (edit.newValue === '' && (edit.originalValue === null || edit.originalValue === undefined))
+      const same = valuesEqual(edit.originalValue, edit.newValue)
       setPendingEdits((prev) => {
         const next = new Map(prev)
         if (same) next.delete(key)
@@ -177,6 +182,7 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
         readOnly={readOnly}
         isView={isView}
         hasPK={pkColumns.length > 0}
+        usesRowidKey={usesRowidKey}
         pkColumns={pkColumns}
         pendingEdits={pendingEdits}
         submitting={saveBatch.isPending}
@@ -230,6 +236,7 @@ function DataGridTable({
   readOnly,
   isView,
   hasPK,
+  usesRowidKey,
   pkColumns,
   pendingEdits,
   submitting,
@@ -253,6 +260,7 @@ function DataGridTable({
   readOnly: boolean
   isView: boolean
   hasPK: boolean
+  usesRowidKey: boolean
   pkColumns: string[]
   pendingEdits: Map<string, PendingEdit>
   submitting: boolean
@@ -277,12 +285,20 @@ function DataGridTable({
     () => new Set(data.columns.filter((c) => c.dataType.toUpperCase().includes('BLOB')).map((c) => c.name)),
     [data.columns],
   )
+  const systemCols = useMemo(() => {
+    const cols = new Set(blobCols)
+    if (usesRowidKey) cols.add('rowid')
+    return cols
+  }, [blobCols, usesRowidKey])
 
   const getPK = useCallback(
     (row: Record<string, unknown>) => {
-      const pk: Record<string, unknown> = {}
-      for (const k of pkColumns) pk[k] = row[k]
-      return pk
+      if (pkColumns.length > 0) {
+        const pk: Record<string, unknown> = {}
+        for (const k of pkColumns) pk[k] = row[k]
+        return pk
+      }
+      return { rowid: row.rowid }
     },
     [pkColumns],
   )
@@ -296,12 +312,13 @@ function DataGridTable({
       pushToast(t('edit.noView'), 'error')
       return
     }
-    if (!hasPK) {
+    if (!hasPK && !usesRowidKey) {
       pushToast(t('edit.noPK'), 'error')
       return
     }
-    if (blobCols.has(col)) {
-      pushToast(t('edit.noBlob'), 'error')
+    if (systemCols.has(col)) {
+      if (col === 'rowid') pushToast(t('edit.noRowid'), 'error')
+      else pushToast(t('edit.noBlob'), 'error')
       return
     }
     const pk = getPK(row)
@@ -317,14 +334,15 @@ function DataGridTable({
     if (!row) return
     const pk = getPK(row)
     const original = row[col]
-    const newValue = editValue === '' ? null : editValue
+    const colMeta = data.columns.find((c) => c.name === col)
+    const newValue = coerceNewValue(original, editValue, colMeta?.dataType ?? 'TEXT')
     onCommitEdit({ columnName: col, primaryKey: pk, originalValue: original, newValue })
     setEditing(null)
     if (move === 'down') {
       const nextRow = rowIdx + 1
       if (nextRow < data.rows.length) startEdit(nextRow, col, data.rows[nextRow])
     } else if (move === 'next' || move === 'prev') {
-      const cols = columnNames.filter((c) => !blobCols.has(c))
+      const cols = columnNames.filter((c) => !systemCols.has(c))
       const idx = cols.indexOf(col)
       const nextIdx = move === 'next' ? idx + 1 : idx - 1
       if (nextIdx >= 0 && nextIdx < cols.length) {

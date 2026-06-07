@@ -43,6 +43,11 @@ describe('rowsToCSV', () => {
     expect(csv).toBe('name\r\n')
   })
 
+  it('uses custom nullValue', () => {
+    const csv = rowsToCSV(['name'], [{ name: null }], { nullValue: 'NULL' })
+    expect(csv).toBe('name\r\nNULL')
+  })
+
   it('quotes fields containing commas', () => {
     const csv = rowsToCSV(['note'], [{ note: 'hello, world' }])
     expect(csv).toBe('note\r\n"hello, world"')

@@ -24,10 +24,11 @@ func main() {
 	cli := config.ParseFlags()
 	cfg := config.ApplyCLI(config.Load(), cli)
 
-	log, err := logger.New(cfg.Log, config.IsDevMode())
+	logMgr, err := logger.NewManager(cfg.Log, config.IsDevMode())
 	if err != nil {
 		panic(err)
 	}
+	log := logMgr.Logger()
 	defer func() { _ = log.Sync() }()
 
 	store, err := service.NewConnectionStore("")
@@ -45,7 +46,7 @@ func main() {
 	queryWails := wailssvc.NewQueryService(querySvc, log)
 	dialogWails := wailssvc.NewDialogService(log)
 	fileWails := wailssvc.NewFileService(log)
-	configWails := wailssvc.NewConfigService(log)
+	configWails := wailssvc.NewConfigService(logMgr, log)
 	exportWails := wailssvc.NewExportService(exportSvc, dialogWails, log)
 	importWails := wailssvc.NewImportService(importSvc, log)
 	appWails := wailssvc.NewAppService(log)

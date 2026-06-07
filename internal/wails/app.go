@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const appVersion = "0.1.0"
+const appVersion = "0.2.0"
 
 type AppService struct {
 	log                *zap.Logger

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/wzhejunqiu/data-nexus/internal/config"
 	"go.uber.org/zap"
@@ -11,8 +12,34 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-func New(cfg config.LogConfig, devMode bool) (*zap.Logger, error) {
-	level := parseLevel(cfg.Level)
+type Manager struct {
+	mu     sync.RWMutex
+	logger *zap.Logger
+	level  zap.AtomicLevel
+}
+
+func NewManager(cfg config.LogConfig, devMode bool) (*Manager, error) {
+	level := zap.NewAtomicLevelAt(parseLevel(cfg.Level))
+	m := &Manager{level: level}
+	log, err := buildLogger(cfg, devMode, level)
+	if err != nil {
+		return nil, err
+	}
+	m.logger = log
+	return m, nil
+}
+
+func (m *Manager) Logger() *zap.Logger {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.logger
+}
+
+func (m *Manager) SetLevel(level string) {
+	m.level.SetLevel(parseLevel(level))
+}
+
+func buildLogger(cfg config.LogConfig, devMode bool, level zap.AtomicLevel) (*zap.Logger, error) {
 	output := cfg.Output
 	if output == "auto" {
 		if devMode {
@@ -69,4 +96,13 @@ func parseLevel(s string) zapcore.Level {
 	default:
 		return zapcore.InfoLevel
 	}
+}
+
+// New preserves the previous API for tests and one-off use.
+func New(cfg config.LogConfig, devMode bool) (*zap.Logger, error) {
+	mgr, err := NewManager(cfg, devMode)
+	if err != nil {
+		return nil, err
+	}
+	return mgr.Logger(), nil
 }

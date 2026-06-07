@@ -32,8 +32,9 @@ func (c *crlfWriter) Write(p []byte) (int, error) {
 
 // RowWriter streams CSV rows to w without buffering the entire table in memory.
 type RowWriter struct {
-	csv     *csv.Writer
-	columns []string
+	csv       *csv.Writer
+	columns   []string
+	nullValue string
 }
 
 func NewRowWriter(w io.Writer, columns []string, opts model.CSVFormatOptions) (*RowWriter, error) {
@@ -44,7 +45,7 @@ func NewRowWriter(w io.Writer, columns []string, opts model.CSVFormatOptions) (*
 	}
 	writer := csv.NewWriter(w)
 	writer.Comma = delimiter
-	rw := &RowWriter{csv: writer, columns: columns}
+	rw := &RowWriter{csv: writer, columns: columns, nullValue: o.NullValue}
 	if o.HasHeader && len(columns) > 0 {
 		if err := writer.Write(columns); err != nil {
 			return nil, err
@@ -65,7 +66,7 @@ func (rw *RowWriter) WriteRows(rows []map[string]any) error {
 func (rw *RowWriter) writeRow(row map[string]any) error {
 	record := make([]string, len(rw.columns))
 	for i, col := range rw.columns {
-		record[i] = formatCell(row[col])
+		record[i] = formatCell(row[col], rw.nullValue)
 	}
 	return rw.csv.Write(record)
 }

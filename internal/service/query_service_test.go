@@ -543,3 +543,48 @@ func TestQueryServiceUpdateCellsBatch(t *testing.T) {
 		t.Fatalf("unexpected row0: %+v", data.Rows[0])
 	}
 }
+
+func TestQueryServiceUpdateCellsBatchRollback(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+
+	_, err := qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = qs.Execute(ctx, model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "INSERT INTO users (id, email) VALUES (1, 'a@example.com'), (2, 'b@example.com')",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = qs.UpdateCellsBatch(ctx, model.UpdateCellsBatchRequest{
+		ConnectionID: conn.ID,
+		TableName:    "users",
+		Changes: []model.CellChange{
+			{ColumnName: "email", PrimaryKey: map[string]any{"id": int64(1)}, NewValue: "ok@example.com"},
+			{ColumnName: "email", PrimaryKey: map[string]any{"id": int64(2)}, NewValue: nil},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected NOT NULL constraint failure")
+	}
+
+	data, err := qs.BrowseRows(ctx, model.BrowseRowsRequest{
+		ConnectionID: conn.ID,
+		TableName:    "users",
+		Page:         1,
+		PageSize:     10,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data.Rows[0]["email"] != "a@example.com" {
+		t.Fatalf("expected rollback, row0 email=%v", data.Rows[0]["email"])
+	}
+}

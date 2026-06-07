@@ -81,7 +81,7 @@
 ### ExportService（v0.2 新增）
 
 - [x] `ExportTableCSV` — 全表导出 → SaveFile + 写盘
-- [x] 共用 `CSVFormatOptions`（分隔符、引号、表头、编码）
+- [x] 共用 `CSVFormatOptions`（分隔符、引号、表头、NULL 表示、编码）
 
 ### ImportService（v0.2 末）
 
@@ -96,7 +96,7 @@
 ### ConfigService（v0.2 新增）
 
 - [x] `GetConfig` / `UpdateConfig` / `GetConfigPath`
-- [x] 变更后需重启生效（日志热更新留 v0.3）
+- [x] 日志级别保存后立即生效；输出路径 / 轮转参数需重启
 
 ---
 
@@ -104,7 +104,7 @@
 
 - [x] `DataGrid` 行内编辑模式 + `pendingEdits` 状态条
 - [x] `BatchEditConfirmDialog` — 批量确认
-- [x] `ExportCsvDialog` + `CsvFormatFields`
+- [x] `ExportWizardPage` + `CsvFormatFields`
 - [x] `ImportWizard` — 选文件 → 预览 → 目标表/模式 → 执行
 - [x] `SettingsDialog` — 绑定 `ConfigService`
 - [x] Monaco completion provider（表名/列名）

@@ -9,6 +9,7 @@ type CSVFormatOptions struct {
 	Delimiter        string `json:"delimiter"`
 	QuoteChar        string `json:"quoteChar"`
 	HasHeader        bool   `json:"hasHeader"`
+	NullValue        string `json:"nullValue"`
 	LineEnding       string `json:"lineEnding"`
 	Encoding         string `json:"encoding"`
 	CommentChar      string `json:"commentChar"`
@@ -41,6 +42,7 @@ func (o CSVFormatOptions) Normalized() CSVFormatOptions {
 	if o.Encoding != "" {
 		n.Encoding = o.Encoding
 	}
+	n.NullValue = o.NullValue
 	n.CommentChar = o.CommentChar
 	n.LazyQuotes = o.LazyQuotes
 	n.TrimLeadingSpace = o.TrimLeadingSpace

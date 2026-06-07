@@ -54,6 +54,16 @@ export function CsvFormatFields({
         />
         {t('csv.hasHeader')}
       </label>
+      <label className="flex flex-col gap-1">
+        {t('csv.nullValue')}
+        <input
+          className="rounded border border-border bg-transparent px-2 py-1 font-mono text-xs"
+          value={format.nullValue ?? ''}
+          disabled={disabled}
+          onChange={(e) => set({ nullValue: e.target.value })}
+          placeholder={t('csv.nullValueHint')}
+        />
+      </label>
       {mode === 'export' && (
         <>
           <label className="flex flex-col gap-1">

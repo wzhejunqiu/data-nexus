@@ -50,7 +50,9 @@ export function rowsToCSV(
       columns
         .map((col) => {
           const val = row[col]
-          if (val === null || val === undefined) return ''
+          if (val === null || val === undefined) {
+            return escapeCSVField(opts.nullValue ?? '', quoteChar)
+          }
           return escapeCSVField(formatCell(val), quoteChar)
         })
         .join(delimiter),
@@ -83,4 +85,36 @@ export function pkSummary(pk: Record<string, unknown>): string {
   return Object.entries(pk)
     .map(([k, v]) => `${k}=${formatCell(v)}`)
     .join(', ')
+}
+
+export function isEmptyCellValue(value: unknown): boolean {
+  return value === null || value === undefined || value === ''
+}
+
+export function valuesEqual(original: unknown, newValue: unknown): boolean {
+  if (isEmptyCellValue(original) && isEmptyCellValue(newValue)) return true
+  if (original === newValue) return true
+  return String(original) === String(newValue)
+}
+
+export function coerceNewValue(
+  original: unknown,
+  editValue: string,
+  dataType: string,
+): unknown {
+  if (editValue === '') return null
+  const upper = dataType.toUpperCase()
+  if (upper.includes('INT')) {
+    const n = Number.parseInt(editValue, 10)
+    if (!Number.isNaN(n)) return n
+  }
+  if (upper.includes('REAL') || upper.includes('FLOAT') || upper.includes('DOUBLE')) {
+    const n = Number.parseFloat(editValue)
+    if (!Number.isNaN(n)) return n
+  }
+  if (typeof original === 'number' && editValue !== '') {
+    const n = Number(editValue)
+    if (!Number.isNaN(n)) return n
+  }
+  return editValue
 }

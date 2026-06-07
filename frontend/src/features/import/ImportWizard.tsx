@@ -6,7 +6,7 @@ import { Dialog } from '@/components/ui/Dialog'
 import { useToastStore } from '@/components/ui/Toast'
 import { CsvFormatFields } from '@/features/csv/CsvFormatFields'
 import { dialogApi } from '@/lib/api/dialog'
-import { formatError } from '@/lib/api/errors'
+import { formatError, isDialogCancelled, mapWailsError } from '@/lib/api/errors'
 import { importApi } from '@/lib/api/import'
 import { schemaApi } from '@/lib/api/schema'
 import type { CSVFormatOptions, CSVPreview } from '@/lib/types/csv'
@@ -42,6 +42,16 @@ export function ImportWizard({
     queryFn: () => schemaApi.listTables(connectionId),
     enabled: step !== 'file',
   })
+
+  const { data: targetSchema } = useQuery({
+    queryKey: ['schema', connectionId, targetTable],
+    queryFn: () => schemaApi.getTableSchema(connectionId, targetTable),
+    enabled: targetMode === 'existing' && !!targetTable && step !== 'file',
+  })
+
+  const targetHasPK = targetSchema?.columns.some((c) => c.primaryKey) ?? false
+  const updateBlocked =
+    targetMode === 'existing' && importMode === 'update' && !!targetTable && !targetHasPK
 
   const loadPreview = useMutation({
     mutationFn: () =>
@@ -79,9 +89,15 @@ export function ImportWizard({
   })
 
   const pickFile = async () => {
-    const path = await dialogApi.openCSVFile()
-    setFilePath(path)
-    setStep('format')
+    try {
+      const path = await dialogApi.openCSVFile()
+      setFilePath(path)
+      setStep('format')
+    } catch (err) {
+      const appErr = mapWailsError(err)
+      if (isDialogCancelled(appErr)) return
+      pushToast(formatError(t, appErr), 'error')
+    }
   }
 
   return (
@@ -109,13 +125,17 @@ export function ImportWizard({
             </Button>
           )}
           {step === 'target' && (
-            <Button onClick={() => setStep('mapping')}>{t('csv.next')}</Button>
+            <Button onClick={() => setStep('mapping')} disabled={updateBlocked}>
+              {t('csv.next')}
+            </Button>
           )}
           {step === 'mapping' && (
-            <Button onClick={() => setStep('confirm')}>{t('csv.next')}</Button>
+            <Button onClick={() => setStep('confirm')} disabled={updateBlocked}>
+              {t('csv.next')}
+            </Button>
           )}
           {step === 'confirm' && (
-            <Button onClick={() => runImport.mutate()} disabled={runImport.isPending}>
+            <Button onClick={() => runImport.mutate()} disabled={runImport.isPending || updateBlocked}>
               {t('csv.import')}
             </Button>
           )}
@@ -176,9 +196,14 @@ export function ImportWizard({
               onChange={(e) => setImportMode(e.target.value as 'append' | 'update')}
             >
               <option value="append">{t('csv.modeAppend')}</option>
-              <option value="update">{t('csv.modeUpdate')}</option>
+              <option value="update" disabled={targetMode === 'existing' && !!targetTable && !targetHasPK}>
+                {t('csv.modeUpdate')}
+              </option>
             </select>
           </label>
+          {updateBlocked && (
+            <p className="text-sm text-amber-600 dark:text-amber-400">{t('csv.updateRequiresPK')}</p>
+          )}
         </div>
       )}
       {step === 'mapping' && preview && (

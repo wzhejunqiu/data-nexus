@@ -2,6 +2,7 @@ export interface CSVFormatOptions {
   delimiter: string
   quoteChar: string
   hasHeader: boolean
+  nullValue?: string
   lineEnding: string
   encoding: string
   commentChar?: string
@@ -59,6 +60,7 @@ export function defaultCSVFormat(): CSVFormatOptions {
     delimiter: ',',
     quoteChar: '"',
     hasHeader: true,
+    nullValue: '',
     lineEnding: 'crlf',
     encoding: 'utf-8',
     commentChar: '',

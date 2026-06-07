@@ -124,9 +124,9 @@ func stripBOM(data []byte) []byte {
 	return data
 }
 
-func formatCell(val any) string {
+func formatCell(val any, nullValue string) string {
 	if val == nil {
-		return ""
+		return nullValue
 	}
 	switch v := val.(type) {
 	case string:
@@ -163,7 +163,7 @@ func WriteRows(w io.Writer, columns []string, rows []map[string]any, opts model.
 	for _, row := range rows {
 		record := make([]string, len(columns))
 		for i, col := range columns {
-			record[i] = formatCell(row[col])
+			record[i] = formatCell(row[col], o.NullValue)
 		}
 		if err := writer.Write(record); err != nil {
 			return err

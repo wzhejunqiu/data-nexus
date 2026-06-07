@@ -94,7 +94,7 @@ func (s *ImportService) ImportCSV(ctx context.Context, req model.ImportCSVReques
 	}
 
 	if req.Mode == "append" {
-		inserted, err := s.batchInsert(ctx, drv, tableName, headers, colMap, records)
+		inserted, err := s.batchInsert(ctx, drv, tableName, headers, colMap, records, req.Format.Normalized().NullValue)
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +118,7 @@ func (s *ImportService) ImportCSV(ctx context.Context, req model.ImportCSVReques
 		return nil, model.ErrInvalidRequest("upsert keys required for update mode")
 	}
 
-	inserted, updated, err := s.upsertRows(ctx, drv, tableName, headers, colMap, upsertKeys, records)
+	inserted, updated, err := s.upsertRows(ctx, drv, tableName, headers, colMap, upsertKeys, records, req.Format.Normalized().NullValue)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func sanitizeColumnName(h string) string {
 
 func (s *ImportService) batchInsert(ctx context.Context, drv interface {
 	Exec(ctx context.Context, sql string, params []any) (*model.ExecResult, error)
-}, table string, headers []string, colMap map[string]string, records [][]string) (int, error) {
+}, table string, headers []string, colMap map[string]string, records [][]string, nullValue string) (int, error) {
 	dbCols := mappedColumns(headers, colMap)
 	if len(dbCols) == 0 {
 		return 0, model.ErrInvalidRequest("no mapped columns")
@@ -221,7 +221,7 @@ func (s *ImportService) batchInsert(ctx context.Context, drv interface {
 	sqlText := fmt.Sprintf("INSERT INTO %q (%s) VALUES (%s)", table, quoteJoin(dbCols), placeholders)
 	inserted := 0
 	for _, record := range records {
-		argsOrdered := rowArgs(headers, colMap, dbCols, record)
+		argsOrdered := rowArgs(headers, colMap, dbCols, record, nullValue)
 		if _, err := drv.Exec(ctx, sqlText, argsOrdered); err != nil {
 			return inserted, err
 		}
@@ -233,17 +233,17 @@ func (s *ImportService) batchInsert(ctx context.Context, drv interface {
 func (s *ImportService) upsertRows(ctx context.Context, drv interface {
 	Exec(ctx context.Context, sql string, params []any) (*model.ExecResult, error)
 	QueryRows(ctx context.Context, sql string, params []any, maxRows int) (*model.QueryResult, error)
-}, table string, headers []string, colMap map[string]string, keys []string, records [][]string) (int, int, error) {
+}, table string, headers []string, colMap map[string]string, keys []string, records [][]string, nullValue string) (int, int, error) {
 	dbCols := mappedColumns(headers, colMap)
 	inserted := 0
 	updated := 0
 	for _, record := range records {
-		argsOrdered := rowArgs(headers, colMap, dbCols, record)
+		argsOrdered := rowArgs(headers, colMap, dbCols, record, nullValue)
 		keyArgs := make([]any, len(keys))
 		where := make([]string, len(keys))
 		for i, k := range keys {
 			where[i] = fmt.Sprintf("%q = ?", k)
-			keyArgs[i] = lookupMappedValue(k, headers, colMap, record)
+			keyArgs[i] = lookupMappedValue(k, headers, colMap, record, nullValue)
 		}
 		checkSQL := fmt.Sprintf("SELECT 1 FROM %q WHERE %s LIMIT 1", table, strings.Join(where, " AND "))
 		res, err := drv.QueryRows(ctx, checkSQL, keyArgs, 1)
@@ -265,7 +265,7 @@ func (s *ImportService) upsertRows(ctx context.Context, drv interface {
 					continue
 				}
 				setParts = append(setParts, fmt.Sprintf("%q = ?", dc))
-				setArgs = append(setArgs, lookupMappedValue(dc, headers, colMap, record))
+				setArgs = append(setArgs, lookupMappedValue(dc, headers, colMap, record, nullValue))
 			}
 			if len(setParts) > 0 {
 				updateSQL := fmt.Sprintf("UPDATE %q SET %s WHERE %s", table, strings.Join(setParts, ", "), strings.Join(where, " AND "))
@@ -312,22 +312,29 @@ func quoteJoin(cols []string) string {
 	return strings.Join(parts, ", ")
 }
 
-func rowArgs(headers []string, colMap map[string]string, dbCols []string, record []string) []any {
+func rowArgs(headers []string, colMap map[string]string, dbCols []string, record []string, nullValue string) []any {
 	args := make([]any, len(dbCols))
 	for i, dc := range dbCols {
-		args[i] = lookupMappedValue(dc, headers, colMap, record)
+		args[i] = lookupMappedValue(dc, headers, colMap, record, nullValue)
 	}
 	return args
 }
 
-func lookupMappedValue(dbCol string, headers []string, colMap map[string]string, record []string) any {
+func lookupMappedValue(dbCol string, headers []string, colMap map[string]string, record []string, nullValue string) any {
 	for i, h := range headers {
 		if colMap[h] == dbCol {
 			if i < len(record) {
-				return record[i]
+				return csvCellToSQL(record[i], nullValue)
 			}
-			return ""
+			return csvCellToSQL("", nullValue)
 		}
 	}
-	return ""
+	return csvCellToSQL("", nullValue)
+}
+
+func csvCellToSQL(cell, nullValue string) any {
+	if cell == nullValue {
+		return nil
+	}
+	return cell
 }
