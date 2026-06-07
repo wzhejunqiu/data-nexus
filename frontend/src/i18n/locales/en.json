@@ -144,7 +144,10 @@
     "modeUpdate": "Update (UPSERT)",
     "confirmImport": "Import from {{file}} (mode: {{mode}})?",
     "importSuccess": "Import done: {{inserted}} inserted, {{updated}} updated",
-    "updateRequiresPK": "Update mode requires a primary key on the target table."
+    "updateRequiresPK": "Update mode requires a primary key on the target table.",
+    "skipColumn": "Skip",
+    "selectTargetTable": "Select a target table.",
+    "newTableNameRequired": "Enter a name for the new table."
   },
   "settings": {
     "title": "Settings",

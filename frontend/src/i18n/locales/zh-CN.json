@@ -144,7 +144,10 @@
     "modeUpdate": "更新 (UPSERT)",
     "confirmImport": "确认从 {{file}} 导入（模式：{{mode}}）",
     "importSuccess": "导入完成：插入 {{inserted}} 行，更新 {{updated}} 行",
-    "updateRequiresPK": "更新模式要求目标表有主键。"
+    "updateRequiresPK": "更新模式要求目标表有主键。",
+    "skipColumn": "跳过",
+    "selectTargetTable": "请选择目标表。",
+    "newTableNameRequired": "请输入新表名。"
   },
   "settings": {
     "title": "设置",

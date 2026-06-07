@@ -12,30 +12,7 @@
   },
   "info": {
     "productName": "Data Nexus",
-    "productVersion": "0.2.0",
-    "fileAssociations": [
-      {
-        "ext": "db",
-        "name": "SQLite Database",
-        "description": "SQLite Database File",
-        "iconName": "appicon",
-        "role": "Editor"
-      },
-      {
-        "ext": "sqlite",
-        "name": "SQLite Database",
-        "description": "SQLite Database File",
-        "iconName": "appicon",
-        "role": "Editor"
-      },
-      {
-        "ext": "sqlite3",
-        "name": "SQLite Database",
-        "description": "SQLite Database File",
-        "iconName": "appicon",
-        "role": "Editor"
-      }
-    ]
+    "productVersion": "0.2.0"
   },
   "width": 1280,
   "height": 800,

@@ -26,7 +26,7 @@
 
 ### 连接与文件
 
-- [x] 双击 `.db` 文件关联 — `wails.json` fileAssociations + positional args + NSIS
+- [x] CLI / 拖拽打开 `.db` — positional args + OnFileDrop；安装器**不**注册文件关联，避免覆盖用户默认应用
 - [x] 拖拽 `.db` 到窗口打开（Wails OnFileDrop）— **已在 MVP 实现**
 
 ### 数据编辑（批量）

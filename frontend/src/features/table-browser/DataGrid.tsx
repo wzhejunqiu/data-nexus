@@ -277,6 +277,7 @@ function DataGridTable({
   const { t } = useTranslation()
   const pushToast = useToastStore((s) => s.push)
   const parentRef = useRef<HTMLDivElement>(null)
+  const cancelEditRef = useRef(false)
   const [editing, setEditing] = useState<{ rowIdx: number; col: string } | null>(null)
   const [editValue, setEditValue] = useState('')
 
@@ -329,27 +330,47 @@ function DataGridTable({
     setEditValue(val === null || val === undefined ? '' : String(val))
   }
 
-  const finishEdit = (rowIdx: number, col: string, move: 'none' | 'down' | 'next' | 'prev') => {
-    const row = data.rows[rowIdx]
-    if (!row) return
-    const pk = getPK(row)
-    const original = row[col]
-    const colMeta = data.columns.find((c) => c.name === col)
-    const newValue = coerceNewValue(original, editValue, colMeta?.dataType ?? 'TEXT')
-    onCommitEdit({ columnName: col, primaryKey: pk, originalValue: original, newValue })
+  const cancelEdit = useCallback(() => {
+    cancelEditRef.current = true
     setEditing(null)
-    if (move === 'down') {
-      const nextRow = rowIdx + 1
-      if (nextRow < data.rows.length) startEdit(nextRow, col, data.rows[nextRow])
-    } else if (move === 'next' || move === 'prev') {
-      const cols = columnNames.filter((c) => !systemCols.has(c))
-      const idx = cols.indexOf(col)
-      const nextIdx = move === 'next' ? idx + 1 : idx - 1
-      if (nextIdx >= 0 && nextIdx < cols.length) {
-        startEdit(rowIdx, cols[nextIdx], row)
+  }, [])
+
+  useEffect(() => {
+    if (!editing) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        cancelEdit()
       }
     }
-  }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [editing, cancelEdit])
+
+  const finishEdit = useCallback(
+    (rowIdx: number, col: string, move: 'none' | 'down' | 'next' | 'prev') => {
+      const row = data.rows[rowIdx]
+      if (!row) return
+      const pk = getPK(row)
+      const original = row[col]
+      const colMeta = data.columns.find((c) => c.name === col)
+      const newValue = coerceNewValue(original, editValue, colMeta?.dataType ?? 'TEXT')
+      onCommitEdit({ columnName: col, primaryKey: pk, originalValue: original, newValue })
+      setEditing(null)
+      if (move === 'down') {
+        const nextRow = rowIdx + 1
+        if (nextRow < data.rows.length) startEdit(nextRow, col, data.rows[nextRow])
+      } else if (move === 'next' || move === 'prev') {
+        const cols = columnNames.filter((c) => !systemCols.has(c))
+        const idx = cols.indexOf(col)
+        const nextIdx = move === 'next' ? idx + 1 : idx - 1
+        if (nextIdx >= 0 && nextIdx < cols.length) {
+          startEdit(rowIdx, cols[nextIdx], row)
+        }
+      }
+    },
+    [columnNames, data.columns, data.rows, editValue, getPK, onCommitEdit, systemCols],
+  )
 
   const columns = useMemo<ColumnDef<Record<string, unknown>>[]>(
     () =>
@@ -381,10 +402,17 @@ function DataGridTable({
                     e.preventDefault()
                     finishEdit(rowIdx, col.name, e.shiftKey ? 'prev' : 'next')
                   } else if (e.key === 'Escape') {
-                    setEditing(null)
+                    e.preventDefault()
+                    cancelEdit()
                   }
                 }}
-                onBlur={() => finishEdit(rowIdx, col.name, 'none')}
+                onBlur={() => {
+                  if (cancelEditRef.current) {
+                    cancelEditRef.current = false
+                    return
+                  }
+                  finishEdit(rowIdx, col.name, 'none')
+                }}
                 disabled={submitting}
               />
             )
@@ -394,7 +422,7 @@ function DataGridTable({
           return (
             <span
               className={isDirty ? 'border-l-2 border-amber-500 pl-1' : undefined}
-              onDoubleClick={() => canEdit && startEdit(rowIdx, col.name, row.original)}
+              onDoubleClick={() => startEdit(rowIdx, col.name, row.original)}
               title={canEdit ? t('edit.doubleClick') : undefined}
             >
               {isNull ? (
@@ -408,7 +436,7 @@ function DataGridTable({
           )
         },
       })),
-    [data.columns, pendingEdits, editing, editValue, canEdit, getPK, t, submitting],
+    [data.columns, pendingEdits, editing, editValue, canEdit, getPK, t, submitting, finishEdit, cancelEdit],
   )
 
   const table = useReactTable({

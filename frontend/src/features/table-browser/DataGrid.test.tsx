@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@/i18n'
 import { DataGrid } from './DataGrid'
@@ -26,6 +26,12 @@ vi.mock('@/lib/api/schema', () => ({
 vi.mock('@/stores/statusStore', () => ({
   useStatusStore: (selector: (s: { setStatus: () => void }) => unknown) =>
     selector({ setStatus: vi.fn() }),
+}))
+
+const pushToast = vi.fn()
+vi.mock('@/components/ui/Toast', () => ({
+  useToastStore: (selector: (s: { push: typeof pushToast }) => unknown) =>
+    selector({ push: pushToast }),
 }))
 
 const openConn = {
@@ -82,6 +88,7 @@ function renderGrid() {
 describe('DataGrid', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    pushToast.mockClear()
   })
 
   afterEach(() => {
@@ -146,5 +153,28 @@ describe('DataGrid', () => {
     renderGrid()
     await waitFor(() => expect(screen.getByText('alice')).toBeTruthy())
     expect(screen.queryByRole('button', { name: /导入 CSV|Import CSV/i })).toBeNull()
+  })
+
+  it('shows toast when editing on read-only connection', async () => {
+    await setupMocks(true)
+    renderGrid()
+    await waitFor(() => expect(screen.getByText('alice')).toBeTruthy())
+    fireEvent.doubleClick(screen.getByText('alice'))
+    expect(pushToast).toHaveBeenCalledWith(expect.stringMatching(/只读|read-only/i), 'error')
+  })
+
+  it('does not commit pending edit when Escape is pressed', async () => {
+    await setupMocks()
+    renderGrid()
+    await waitFor(() => expect(screen.getByText('alice')).toBeTruthy())
+    fireEvent.doubleClick(screen.getByText('alice'))
+    const input = screen.getByDisplayValue('alice')
+    fireEvent.change(input, { target: { value: 'bob' } })
+    fireEvent.keyDown(document, { key: 'Escape', code: 'Escape', keyCode: 27 })
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /保存|Save changes/i })).toBeNull()
+      expect(screen.queryByRole('textbox')).toBeNull()
+    })
+    expect(screen.getByText('alice')).toBeTruthy()
   })
 })

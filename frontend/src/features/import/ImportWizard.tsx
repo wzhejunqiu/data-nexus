@@ -11,6 +11,7 @@ import { importApi } from '@/lib/api/import'
 import { schemaApi } from '@/lib/api/schema'
 import type { CSVFormatOptions, CSVPreview } from '@/lib/types/csv'
 import { loadCSVFormatPreference, saveCSVFormatPreference } from '@/lib/types/csv'
+import { buildImportColumnMap } from '@/lib/csvImport'
 
 type Step = 'file' | 'format' | 'target' | 'mapping' | 'confirm'
 
@@ -58,9 +59,6 @@ export function ImportWizard({
       importApi.parseCSVPreview({ filePath, maxRows: 20, format }),
     onSuccess: (res) => {
       setPreview(res)
-      const map: Record<string, string> = {}
-      for (const h of res.headers) map[h] = h.replace(/[^A-Za-z0-9_]/g, '_')
-      setColumnMap(map)
       setStep('target')
     },
     onError: (err) => pushToast(formatError(t, err), 'error'),
@@ -87,6 +85,27 @@ export function ImportWizard({
     },
     onError: (err) => pushToast(formatError(t, err), 'error'),
   })
+
+  const goToMapping = () => {
+    if (!preview) return
+    if (targetMode === 'existing') {
+      if (!targetTable) {
+        pushToast(t('csv.selectTargetTable'), 'error')
+        return
+      }
+      const cols = targetSchema?.columns.map((c) => c.name) ?? []
+      setColumnMap(buildImportColumnMap(preview.headers, cols))
+    } else {
+      if (!newTableName.trim()) {
+        pushToast(t('csv.newTableNameRequired'), 'error')
+        return
+      }
+      setColumnMap(buildImportColumnMap(preview.headers))
+    }
+    setStep('mapping')
+  }
+
+  const targetColumns = targetSchema?.columns.map((c) => c.name) ?? []
 
   const pickFile = async () => {
     try {
@@ -125,7 +144,7 @@ export function ImportWizard({
             </Button>
           )}
           {step === 'target' && (
-            <Button onClick={() => setStep('mapping')} disabled={updateBlocked}>
+            <Button onClick={goToMapping} disabled={updateBlocked}>
               {t('csv.next')}
             </Button>
           )}
@@ -212,11 +231,26 @@ export function ImportWizard({
             <label key={h} className="flex items-center gap-2">
               <span className="w-32 truncate font-mono text-xs">{h}</span>
               <span>→</span>
-              <input
-                className="flex-1 rounded border border-border bg-transparent px-2 py-1 font-mono text-xs"
-                value={columnMap[h] ?? ''}
-                onChange={(e) => setColumnMap({ ...columnMap, [h]: e.target.value })}
-              />
+              {targetMode === 'existing' ? (
+                <select
+                  className="flex-1 rounded border border-border bg-transparent px-2 py-1 font-mono text-xs"
+                  value={columnMap[h] ?? ''}
+                  onChange={(e) => setColumnMap({ ...columnMap, [h]: e.target.value })}
+                >
+                  <option value="">{t('csv.skipColumn')}</option>
+                  {targetColumns.map((col) => (
+                    <option key={col} value={col}>
+                      {col}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  className="flex-1 rounded border border-border bg-transparent px-2 py-1 font-mono text-xs"
+                  value={columnMap[h] ?? ''}
+                  onChange={(e) => setColumnMap({ ...columnMap, [h]: e.target.value })}
+                />
+              )}
             </label>
           ))}
         </div>
