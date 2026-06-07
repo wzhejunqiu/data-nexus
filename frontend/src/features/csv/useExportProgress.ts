@@ -6,19 +6,16 @@ export interface ExportProgressState {
 }
 
 export function useExportProgress(exportId: string | null): ExportProgressState | null {
-  const [progress, setProgress] = useState<ExportProgressState | null>(null)
+  const [progress, setProgress] = useState<{ exportId: string; exported: number } | null>(null)
 
   useEffect(() => {
-    if (!exportId) {
-      setProgress(null)
-      return
-    }
-    setProgress(null)
+    if (!exportId) return
     return EventsOn('export:progress', (payload: { exportId?: string; exported?: number }) => {
       if (payload?.exportId !== exportId) return
-      setProgress({ exported: payload.exported ?? 0 })
+      setProgress({ exportId, exported: payload.exported ?? 0 })
     })
   }, [exportId])
 
-  return progress
+  if (!exportId || progress?.exportId !== exportId) return null
+  return { exported: progress.exported }
 }

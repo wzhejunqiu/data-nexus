@@ -40,11 +40,12 @@ export const connectionApi = {
   rename: (id: string, name: string) =>
     wrap(() => RenameConnection(id, name) as Promise<SavedConnection>),
   updateSQLiteSettings: (id: string, settings: SQLiteSettingsUpdate) =>
-    wrap(() =>
-      UpdateConnectionSQLiteSettings(
-        id,
-        model.SQLiteSettingsUpdate.createFrom(settings),
-      ) as Promise<SavedConnection>,
+    wrap(
+      () =>
+        UpdateConnectionSQLiteSettings(
+          id,
+          model.SQLiteSettingsUpdate.createFrom(settings),
+        ) as Promise<SavedConnection>,
     ),
   getRestoreOpenOnStartup: () => wrap(() => GetRestoreOpenOnStartup() as Promise<boolean>),
   setRestoreOpenOnStartup: (enabled: boolean) => wrap(() => SetRestoreOpenOnStartup(enabled)),

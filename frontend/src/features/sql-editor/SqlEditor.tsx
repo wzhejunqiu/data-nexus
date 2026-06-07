@@ -31,9 +31,38 @@ const PRAGMAS = [
 ]
 
 const SQL_KEYWORDS = [
-  'SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'ON', 'GROUP', 'BY',
-  'ORDER', 'HAVING', 'LIMIT', 'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE', 'CREATE',
-  'TABLE', 'INDEX', 'AND', 'OR', 'NOT', 'NULL', 'AS', 'DISTINCT', 'EXPLAIN', 'WITH', 'PRAGMA',
+  'SELECT',
+  'FROM',
+  'WHERE',
+  'JOIN',
+  'LEFT',
+  'RIGHT',
+  'INNER',
+  'OUTER',
+  'ON',
+  'GROUP',
+  'BY',
+  'ORDER',
+  'HAVING',
+  'LIMIT',
+  'INSERT',
+  'INTO',
+  'VALUES',
+  'UPDATE',
+  'SET',
+  'DELETE',
+  'CREATE',
+  'TABLE',
+  'INDEX',
+  'AND',
+  'OR',
+  'NOT',
+  'NULL',
+  'AS',
+  'DISTINCT',
+  'EXPLAIN',
+  'WITH',
+  'PRAGMA',
 ]
 
 const EMPTY_HISTORY: string[] = []
@@ -306,7 +335,9 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
               </>
             )}
           </div>
-          {result.kind === 'result' && isExplainResult(sql, result) && <ExplainTree result={result} />}
+          {result.kind === 'result' && isExplainResult(sql, result) && (
+            <ExplainTree result={result} />
+          )}
           {result.kind === 'result' && result.columns && !isExplainResult(sql, result) && (
             <table className="w-full text-sm">
               <thead>

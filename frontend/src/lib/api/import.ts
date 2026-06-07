@@ -1,6 +1,11 @@
 import { ImportCSV, ParseCSVPreview } from '../../../wailsjs/go/wails/ImportService'
 import { model } from '../../../wailsjs/go/models'
-import type { CSVPreview, ImportCSVRequest, ImportCSVResult, ParseCSVPreviewRequest } from '../types'
+import type {
+  CSVPreview,
+  ImportCSVRequest,
+  ImportCSVResult,
+  ParseCSVPreviewRequest,
+} from '../types'
 import { mapWailsError } from './errors'
 
 export const importApi = {

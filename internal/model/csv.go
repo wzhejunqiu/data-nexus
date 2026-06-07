@@ -70,10 +70,10 @@ type ParseCSVPreviewRequest struct {
 }
 
 type CSVPreview struct {
-	Headers   []string           `json:"headers"`
-	Rows      []map[string]any   `json:"rows"`
-	RowCount  int                `json:"rowCount"`
-	HasHeader bool               `json:"hasHeader"`
+	Headers   []string         `json:"headers"`
+	Rows      []map[string]any `json:"rows"`
+	RowCount  int              `json:"rowCount"`
+	HasHeader bool             `json:"hasHeader"`
 }
 
 type ImportColumnSpec struct {

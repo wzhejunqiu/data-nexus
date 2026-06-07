@@ -14,12 +14,12 @@ import (
 
 // Iterator streams CSV data rows without loading the entire file into memory.
 type Iterator struct {
-	file        *os.File
-	reader      *csv.Reader
-	format      model.CSVFormatOptions
-	headers     []string
-	pendingRow  []string
-	hasPending  bool
+	file       *os.File
+	reader     *csv.Reader
+	format     model.CSVFormatOptions
+	headers    []string
+	pendingRow []string
+	hasPending bool
 }
 
 func OpenIterator(path string, format model.CSVFormatOptions) (*Iterator, error) {

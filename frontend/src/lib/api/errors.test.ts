@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import i18n from '@/i18n'
-import { formatError, isDialogCancelled, isExportCancelled, mapWailsError, translateAppError } from './errors'
+import {
+  formatError,
+  isDialogCancelled,
+  isExportCancelled,
+  mapWailsError,
+  translateAppError,
+} from './errors'
 
 const KNOWN_ERROR_CODES = [
   'INVALID_REQUEST',

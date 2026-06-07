@@ -28,7 +28,7 @@ export function BatchEditConfirmDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
             {t('common.cancel')}
           </Button>
-            <Button variant="danger" onClick={onConfirm} disabled={busy}>
+          <Button variant="danger" onClick={onConfirm} disabled={busy}>
             {t('common.confirm')}
           </Button>
         </>

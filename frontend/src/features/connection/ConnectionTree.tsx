@@ -142,12 +142,7 @@ export function ConnectionTree() {
           }}
         />
       </aside>
-      <NewConnectionDialog
-        open={newOpen}
-        onOpenChange={setNewOpen}
-        readOnly={readOnly}
-        wal={wal}
-      />
+      <NewConnectionDialog open={newOpen} onOpenChange={setNewOpen} readOnly={readOnly} wal={wal} />
     </>
   )
 }

@@ -65,9 +65,7 @@ describe('buildCreateTableSQL', () => {
           name: { dataType: 'TEXT', primaryKey: false },
         },
       ),
-    ).toBe(
-      'CREATE TABLE "users" (\n  "item_id" INTEGER PRIMARY KEY,\n  "title" TEXT\n)',
-    )
+    ).toBe('CREATE TABLE "users" (\n  "item_id" INTEGER PRIMARY KEY,\n  "title" TEXT\n)')
   })
 
   it('builds composite primary key constraint', () => {
@@ -94,9 +92,7 @@ describe('buildCreateTableSQL', () => {
 describe('buildNewTableColumnSpecs', () => {
   it('infers types from preview rows', () => {
     expect(
-      buildNewTableColumnSpecs(['id', 'score', 'name'], [
-        { id: '1', score: '9.5', name: 'alice' },
-      ]),
+      buildNewTableColumnSpecs(['id', 'score', 'name'], [{ id: '1', score: '9.5', name: 'alice' }]),
     ).toEqual({
       id: { dataType: 'INTEGER', primaryKey: false },
       score: { dataType: 'REAL', primaryKey: false },

@@ -207,7 +207,7 @@ func TestImportServiceLargeCSV(t *testing.T) {
 	var b strings.Builder
 	b.WriteString("id,name\n")
 	for i := 1; i <= rowCount; i++ {
-		b.WriteString(fmt.Sprintf("%d,row%d\n", i, i))
+		fmt.Fprintf(&b, "%d,row%d\n", i, i)
 	}
 	csvPath := writeTempCSV(t, b.String())
 

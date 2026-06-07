@@ -4,13 +4,7 @@ import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { Button } from './ui/Button'
 import { SettingsDialogContainer } from '@/features/settings/SettingsDialog'
 
-export function Header({
-  openCount,
-  wizardTitle,
-}: {
-  openCount: number
-  wizardTitle?: string
-}) {
+export function Header({ openCount, wizardTitle }: { openCount: number; wizardTitle?: string }) {
   const { t } = useTranslation()
   const [settingsOpen, setSettingsOpen] = useState(false)
 

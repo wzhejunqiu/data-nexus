@@ -1,0 +1,9 @@
+#!/bin/sh
+# Runs before git commit. Blocks commit when checks fail.
+set -e
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+echo "pre-commit: running staged format-check, Go/frontend lint, and vuln-check..."
+make pre-commit

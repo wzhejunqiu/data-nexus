@@ -1,4 +1,4 @@
-.PHONY: dev build test test-cover test-perf bench lint generate ci-test fmt-check fmt vuln-check check pre-push install-hooks embed-stub gen-test-db
+.PHONY: dev build test test-cover test-perf bench lint generate ci-test fmt-check fmt-check-go fmt-check-go-staged fmt-check-go-head fmt vuln-check check pre-commit pre-push install-hooks embed-stub gen-test-db
 
 UNAME_S := $(shell uname -s)
 WAILS_TAGS :=
@@ -27,8 +27,43 @@ bench:
 generate: embed-stub
 	wails generate module
 
-fmt-check:
-	@test -z "$$(gofmt -l .)" || (gofmt -l . && exit 1)
+# Tracked .go files on disk (aligned with CI checkout; skips node_modules).
+fmt-check-go:
+	@files=$$(git ls-files '*.go'); \
+	[ -n "$$files" ] || exit 0; \
+	unformatted=$$(echo "$$files" | xargs gofmt -l); \
+	[ -z "$$unformatted" ] || { echo "$$unformatted"; exit 1; }
+
+# Staged .go blob content (what git commit will record).
+fmt-check-go-staged:
+	@staged=$$(git diff --cached --name-only --diff-filter=ACM -- '*.go'); \
+	[ -n "$$staged" ] || exit 0; \
+	failed=0; \
+	for f in $$staged; do \
+		[ -f "$$f" ] || continue; \
+		t=$$(mktemp); g=$$(mktemp); \
+		git show ":$$f" > "$$t"; \
+		gofmt < "$$t" > "$$g"; \
+		if ! cmp -s "$$t" "$$g"; then echo "gofmt (staged): $$f"; failed=1; fi; \
+		rm -f "$$t" "$$g"; \
+	done; \
+	[ $$failed -eq 0 ] || { echo "Run: gofmt -w <file> && git add <file>"; exit 1; }
+
+# HEAD .go blob content (what git push will send when the index is clean).
+fmt-check-go-head:
+	@files=$$(git ls-files '*.go'); \
+	[ -n "$$files" ] || exit 0; \
+	failed=0; \
+	for f in $$files; do \
+		t=$$(mktemp); g=$$(mktemp); \
+		git show "HEAD:$$f" > "$$t" 2>/dev/null || { rm -f "$$t" "$$g"; continue; }; \
+		gofmt < "$$t" > "$$g"; \
+		if ! cmp -s "$$t" "$$g"; then echo "$$f"; failed=1; fi; \
+		rm -f "$$t" "$$g"; \
+	done; \
+	[ $$failed -eq 0 ] || { echo "Committed .go files are not gofmt-formatted (run: make fmt && git add -u '*.go')"; exit 1; }
+
+fmt-check: fmt-check-go
 	cd frontend && npm run format:check
 
 fmt:
@@ -54,16 +89,19 @@ vuln-check:
 
 check: fmt-check lint vuln-check ci-test
 
-# Lightweight gate before git push (matches CI format + security jobs).
+# Lightweight gates before git commit/push (matches CI format + security jobs).
 # embed-stub must finish before lint; the rest run in parallel.
-PRE_PUSH_JOBS ?= 4
+HOOK_JOBS ?= 4
+pre-commit: embed-stub
+	@$(MAKE) -j$(HOOK_JOBS) fmt-check-go-staged fmt-check lint lint-frontend vuln-check
+
 pre-push: embed-stub
-	@$(MAKE) -j$(PRE_PUSH_JOBS) fmt-check lint lint-frontend vuln-check
+	@$(MAKE) -j$(HOOK_JOBS) fmt-check-go-head fmt-check lint lint-frontend vuln-check
 
 install-hooks:
-	@chmod +x .githooks/pre-push
+	@chmod +x .githooks/pre-commit .githooks/pre-push
 	git config core.hooksPath .githooks
-	@echo "Installed git hooks from .githooks (pre-push -> make pre-push)"
+	@echo "Installed git hooks from .githooks (pre-commit -> make pre-commit, pre-push -> make pre-push)"
 
 gen-test-db:
 	./data/generate.sh

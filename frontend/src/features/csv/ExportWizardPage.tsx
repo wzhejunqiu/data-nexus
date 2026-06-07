@@ -67,9 +67,7 @@ export function ExportWizardPage() {
     session.totalRows > CSV_EXPORT_WARN_ROWS
 
   const defaultFileName =
-    source === 'query-result'
-      ? 'query-result.csv'
-      : `${session.tableName ?? 'export'}.csv`
+    source === 'query-result' ? 'query-result.csv' : `${session.tableName ?? 'export'}.csv`
 
   useEffect(() => {
     if (progress?.exported != null) {
@@ -182,7 +180,11 @@ export function ExportWizardPage() {
       return (
         <>
           {source === 'table-all' && exportId && (
-            <Button variant="outline" onClick={() => void handleCancelProgress()} disabled={!running}>
+            <Button
+              variant="outline"
+              onClick={() => void handleCancelProgress()}
+              disabled={!running}
+            >
               {t('common.cancel')}
             </Button>
           )}
@@ -308,10 +310,7 @@ export function ExportWizardPage() {
                 <dl className="space-y-2 rounded border border-border p-4 text-sm">
                   <SummaryRow label={t('csv.filePath')} value={result.filePath ?? '—'} />
                   {result.rowsExported != null && (
-                    <SummaryRow
-                      label={t('csv.rowsExported')}
-                      value={String(result.rowsExported)}
-                    />
+                    <SummaryRow label={t('csv.rowsExported')} value={String(result.rowsExported)} />
                   )}
                   <SummaryRow
                     label={t('csv.summaryColumns')}
@@ -353,13 +352,7 @@ function scopeLabel(t: (key: string) => string, source: ExportSource): string {
   return t('csv.queryResult')
 }
 
-function ResultBanner({
-  result,
-  t,
-}: {
-  result: ExportResult
-  t: (key: string) => string
-}) {
+function ResultBanner({ result, t }: { result: ExportResult; t: (key: string) => string }) {
   const cls =
     result.status === 'success'
       ? 'border-green-600/40 bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300'
@@ -372,7 +365,5 @@ function ResultBanner({
       : result.status === 'cancelled'
         ? t('csv.exportResultCancelled')
         : t('csv.exportResultError')
-  return (
-    <div className={`rounded border px-4 py-3 text-sm font-medium ${cls}`}>{msg}</div>
-  )
+  return <div className={`rounded border px-4 py-3 text-sm font-medium ${cls}`}>{msg}</div>
 }

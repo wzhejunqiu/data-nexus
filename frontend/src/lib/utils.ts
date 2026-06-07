@@ -23,7 +23,13 @@ export function formatCell(value: unknown): string {
 
 function escapeCSVField(s: string, quoteChar: string): string {
   const q = quoteChar || '"'
-  const needsQuote = s.includes(q) || s.includes('\n') || s.includes('\r') || s.includes(',') || s.includes('\t') || s.includes(';')
+  const needsQuote =
+    s.includes(q) ||
+    s.includes('\n') ||
+    s.includes('\r') ||
+    s.includes(',') ||
+    s.includes('\t') ||
+    s.includes(';')
   if (needsQuote) {
     const escaped = s.split(q).join(q + q)
     return `${q}${escaped}${q}`
@@ -97,11 +103,7 @@ export function valuesEqual(original: unknown, newValue: unknown): boolean {
   return String(original) === String(newValue)
 }
 
-export function coerceNewValue(
-  original: unknown,
-  editValue: string,
-  dataType: string,
-): unknown {
+export function coerceNewValue(original: unknown, editValue: string, dataType: string): unknown {
   if (editValue === '') return null
   const upper = dataType.toUpperCase()
   if (upper.includes('INT')) {

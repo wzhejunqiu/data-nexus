@@ -22,13 +22,7 @@ import { formatError } from '@/lib/api/errors'
 import { schemaApi } from '@/lib/api/schema'
 import { tableApi } from '@/lib/api/table'
 import type { PaginatedTableData, PendingEdit } from '@/lib/types'
-import {
-  cellKey,
-  coerceNewValue,
-  formatCell,
-  isBlobValue,
-  valuesEqual,
-} from '@/lib/utils'
+import { cellKey, coerceNewValue, formatCell, isBlobValue, valuesEqual } from '@/lib/utils'
 import { isBatchOverLimit, MAX_BATCH_EDITS } from '@/lib/editBatch'
 import { useStatusStore } from '@/stores/statusStore'
 
@@ -81,9 +75,7 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
   })
 
   const usesRowidKey =
-    pkColumns.length === 0 &&
-    !isView &&
-    (data?.rows.some((r) => r.rowid != null) ?? false)
+    pkColumns.length === 0 && !isView && (data?.rows.some((r) => r.rowid != null) ?? false)
   const canEdit = !readOnly && !isView && (pkColumns.length > 0 || usesRowidKey)
 
   useEffect(() => {
@@ -139,19 +131,16 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
     })
   }
 
-  const commitEdit = useCallback(
-    (edit: PendingEdit) => {
-      const key = cellKey(edit.primaryKey, edit.columnName)
-      const same = valuesEqual(edit.originalValue, edit.newValue)
-      setPendingEdits((prev) => {
-        const next = new Map(prev)
-        if (same) next.delete(key)
-        else next.set(key, edit)
-        return next
-      })
-    },
-    [],
-  )
+  const commitEdit = useCallback((edit: PendingEdit) => {
+    const key = cellKey(edit.primaryKey, edit.columnName)
+    const same = valuesEqual(edit.originalValue, edit.newValue)
+    setPendingEdits((prev) => {
+      const next = new Map(prev)
+      if (same) next.delete(key)
+      else next.set(key, edit)
+      return next
+    })
+  }, [])
 
   const openTableExport = () => {
     if (!data) return
@@ -187,7 +176,12 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
         pendingEdits={pendingEdits}
         submitting={saveBatch.isPending}
         onPageChange={(p) => guardNavigation(() => setPage(p))}
-        onPageSizeChange={(size) => guardNavigation(() => { setPageSize(size); setPage(1) })}
+        onPageSizeChange={(size) =>
+          guardNavigation(() => {
+            setPageSize(size)
+            setPage(1)
+          })
+        }
         onToggleSort={toggleSort}
         onCommitEdit={commitEdit}
         onDiscard={() => setPendingEdits(new Map())}
@@ -271,7 +265,10 @@ function DataGridTable({
 
   const columnNames = data.columns.map((c) => c.name)
   const blobCols = useMemo(
-    () => new Set(data.columns.filter((c) => c.dataType.toUpperCase().includes('BLOB')).map((c) => c.name)),
+    () =>
+      new Set(
+        data.columns.filter((c) => c.dataType.toUpperCase().includes('BLOB')).map((c) => c.name),
+      ),
     [data.columns],
   )
   const systemCols = useMemo(() => {
@@ -292,31 +289,34 @@ function DataGridTable({
     [pkColumns],
   )
 
-  const startEdit = (rowIdx: number, col: string, row: Record<string, unknown>) => {
-    if (readOnly) {
-      pushToast(t('sql.readOnlyBlocked'), 'error')
-      return
-    }
-    if (isView) {
-      pushToast(t('edit.noView'), 'error')
-      return
-    }
-    if (!hasPK && !usesRowidKey) {
-      pushToast(t('edit.noPK'), 'error')
-      return
-    }
-    if (systemCols.has(col)) {
-      if (col === 'rowid') pushToast(t('edit.noRowid'), 'error')
-      else pushToast(t('edit.noBlob'), 'error')
-      return
-    }
-    const pk = getPK(row)
-    const key = cellKey(pk, col)
-    const pending = pendingEdits.get(key)
-    const val = pending ? pending.newValue : row[col]
-    setEditing({ rowIdx, col })
-    setEditValue(val === null || val === undefined ? '' : String(val))
-  }
+  const startEdit = useCallback(
+    (rowIdx: number, col: string, row: Record<string, unknown>) => {
+      if (readOnly) {
+        pushToast(t('sql.readOnlyBlocked'), 'error')
+        return
+      }
+      if (isView) {
+        pushToast(t('edit.noView'), 'error')
+        return
+      }
+      if (!hasPK && !usesRowidKey) {
+        pushToast(t('edit.noPK'), 'error')
+        return
+      }
+      if (systemCols.has(col)) {
+        if (col === 'rowid') pushToast(t('edit.noRowid'), 'error')
+        else pushToast(t('edit.noBlob'), 'error')
+        return
+      }
+      const pk = getPK(row)
+      const key = cellKey(pk, col)
+      const pending = pendingEdits.get(key)
+      const val = pending ? pending.newValue : row[col]
+      setEditing({ rowIdx, col })
+      setEditValue(val === null || val === undefined ? '' : String(val))
+    },
+    [readOnly, pushToast, t, isView, hasPK, usesRowidKey, systemCols, getPK, pendingEdits],
+  )
 
   const cancelEdit = useCallback(() => {
     cancelEditRef.current = true
@@ -357,7 +357,7 @@ function DataGridTable({
         }
       }
     },
-    [columnNames, data.columns, data.rows, editValue, getPK, onCommitEdit, systemCols],
+    [columnNames, data.columns, data.rows, editValue, getPK, onCommitEdit, systemCols, startEdit],
   )
 
   const columns = useMemo<ColumnDef<Record<string, unknown>>[]>(
@@ -410,12 +410,14 @@ function DataGridTable({
           const isBlobCol = blobCols.has(col.name)
           return (
             <span
-              className={[
-                isDirty ? 'border-l-2 border-amber-500 pl-1' : undefined,
-                isBlobCol && canEdit ? 'opacity-60 cursor-not-allowed' : undefined,
-              ]
-                .filter(Boolean)
-                .join(' ') || undefined}
+              className={
+                [
+                  isDirty ? 'border-l-2 border-amber-500 pl-1' : undefined,
+                  isBlobCol && canEdit ? 'opacity-60 cursor-not-allowed' : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(' ') || undefined
+              }
               onDoubleClick={() => startEdit(rowIdx, col.name, row.original)}
               title={
                 isBlobCol && canEdit
@@ -436,7 +438,20 @@ function DataGridTable({
           )
         },
       })),
-    [data.columns, pendingEdits, editing, editValue, canEdit, blobCols, getPK, t, submitting, finishEdit, cancelEdit],
+    [
+      data.columns,
+      pendingEdits,
+      editing,
+      editValue,
+      canEdit,
+      blobCols,
+      getPK,
+      t,
+      submitting,
+      finishEdit,
+      cancelEdit,
+      startEdit,
+    ],
   )
 
   const table = useReactTable({

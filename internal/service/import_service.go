@@ -367,7 +367,7 @@ func (s *ImportService) createTableFromCSV(ctx context.Context, drv interface {
 		if !sqlutil.IsSafeQuotedIdentifier(colName) {
 			return model.ErrInvalidRequest("invalid mapped column: " + colName)
 		}
-		colType := "TEXT"
+		var colType string
 		isPK := false
 		if spec, ok := specs[h]; ok {
 			if spec.DataType != "" {

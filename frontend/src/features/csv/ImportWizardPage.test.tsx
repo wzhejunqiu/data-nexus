@@ -24,9 +24,7 @@ vi.mock('@/lib/api/connection', () => ({
 }))
 
 vi.mock('@/features/sql-editor/SqlCodeView', () => ({
-  SqlCodeView: ({ sql }: { sql: string }) => (
-    <div data-testid="sql-code-view">{sql}</div>
-  ),
+  SqlCodeView: ({ sql }: { sql: string }) => <div data-testid="sql-code-view">{sql}</div>,
 }))
 
 vi.mock('@/lib/api/schema', () => ({

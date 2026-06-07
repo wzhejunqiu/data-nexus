@@ -151,7 +151,6 @@ func TestBrowseTableEmptyTable(t *testing.T) {
 	}
 }
 
-
 func TestQueryRowsZeroRows(t *testing.T) {
 	drv := openTestDB(t)
 	defer func() { _ = drv.Close() }()

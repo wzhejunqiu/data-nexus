@@ -33,7 +33,7 @@ func Validate(cfg Config) error {
 	}
 	path := strings.TrimSpace(cfg.Log.File.Path)
 	if path != "" && strings.Contains(path, "..") {
-		return fmt.Errorf("log file path must not contain ..")
+		return fmt.Errorf("log file path must not contain double-dot segments")
 	}
 	return nil
 }

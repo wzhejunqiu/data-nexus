@@ -44,7 +44,11 @@ export function ExplainTree({ result }: { result: QueryResponse }) {
   const roots = buildExplainTree(result.rows)
   return (
     <div className="rounded border border-border bg-muted/20 p-3">
-      <ul>{roots.map((n) => <ExplainNodeView key={n.id} node={n} depth={0} />)}</ul>
+      <ul>
+        {roots.map((n) => (
+          <ExplainNodeView key={n.id} node={n} depth={0} />
+        ))}
+      </ul>
     </div>
   )
 }

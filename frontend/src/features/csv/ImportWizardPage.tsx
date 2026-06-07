@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { useToastStore } from '@/components/ui/Toast'
@@ -57,12 +57,7 @@ export function ImportWizardPage() {
 
   const createTableSQL = useMemo(() => {
     if (targetMode !== 'new' || !preview) return null
-    return buildCreateTableSQL(
-      newTableName.trim(),
-      preview.headers,
-      columnMap,
-      newColumnSpecs,
-    )
+    return buildCreateTableSQL(newTableName.trim(), preview.headers, columnMap, newColumnSpecs)
   }, [targetMode, preview, newTableName, columnMap, newColumnSpecs])
 
   const { data: connections } = useQuery({
@@ -89,8 +84,7 @@ export function ImportWizardPage() {
     targetMode === 'existing' && importMode === 'update' && !!targetTable && !targetHasPK
 
   const loadPreview = useMutation({
-    mutationFn: () =>
-      importApi.parseCSVPreview({ filePath, maxRows: 20, format }),
+    mutationFn: () => importApi.parseCSVPreview({ filePath, maxRows: 20, format }),
     onSuccess: (res) => {
       setPreview(res)
       setStep('target')
@@ -138,17 +132,6 @@ export function ImportWizardPage() {
     }
   }
 
-  const startImport = () => {
-    if (!hasMappedColumns) {
-      pushToast(t('csv.noMappedColumns'), 'error')
-      return
-    }
-    saveCSVFormatPreference(format)
-    setResult(null)
-    runStarted.current = false
-    setStep('progress')
-  }
-
   const executeImport = useCallback(async () => {
     if (runStarted.current) return
     runStarted.current = true
@@ -193,11 +176,17 @@ export function ImportWizardPage() {
     t,
   ])
 
-  useEffect(() => {
-    if (step === 'progress' && !result) {
-      void executeImport()
+  const startImport = () => {
+    if (!hasMappedColumns) {
+      pushToast(t('csv.noMappedColumns'), 'error')
+      return
     }
-  }, [step, result, executeImport])
+    saveCSVFormatPreference(format)
+    setResult(null)
+    runStarted.current = false
+    setStep('progress')
+    void executeImport()
+  }
 
   const handleClose = () => {
     if (result?.status === 'success') {
@@ -214,8 +203,7 @@ export function ImportWizardPage() {
     setStep(wizardSteps[wizardSteps.length - 1]!)
   }
 
-  const resolvedTarget =
-    targetMode === 'existing' ? targetTable : newTableName.trim()
+  const resolvedTarget = targetMode === 'existing' ? targetTable : newTableName.trim()
 
   const footer = (() => {
     if (step === 'result') {
@@ -263,10 +251,7 @@ export function ImportWizardPage() {
           </Button>
         )}
         {step === 'mapping' && (
-          <Button
-            onClick={startImport}
-            disabled={updateBlocked || !hasMappedColumns}
-          >
+          <Button onClick={startImport} disabled={updateBlocked || !hasMappedColumns}>
             {t('csv.startImport')}
           </Button>
         )}
@@ -274,8 +259,7 @@ export function ImportWizardPage() {
     )
   })()
 
-  const wideContent =
-    step === 'mapping' && targetMode === 'new'
+  const wideContent = step === 'mapping' && targetMode === 'new'
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
@@ -309,9 +293,7 @@ export function ImportWizardPage() {
 
           {step === 'target' && preview && (
             <div className="space-y-3 text-sm">
-              <p className="text-muted">
-                {t('csv.fileRowCount', { count: preview.rowCount })}
-              </p>
+              <p className="text-muted">{t('csv.fileRowCount', { count: preview.rowCount })}</p>
               <div className="max-h-40 overflow-auto rounded border border-border">
                 <PreviewTable preview={preview} />
               </div>
@@ -436,9 +418,7 @@ export function ImportWizardPage() {
                             <input
                               className="w-full min-w-[6rem] rounded border border-border bg-transparent px-2 py-1 font-mono"
                               value={columnMap[h] ?? ''}
-                              onChange={(e) =>
-                                setColumnMap({ ...columnMap, [h]: e.target.value })
-                              }
+                              onChange={(e) => setColumnMap({ ...columnMap, [h]: e.target.value })}
                               placeholder={t('csv.skipColumn')}
                             />
                           </td>
@@ -500,9 +480,7 @@ export function ImportWizardPage() {
             </div>
           )}
 
-          {step === 'progress' && (
-            <p className="text-sm text-muted">{t('csv.importing')}</p>
-          )}
+          {step === 'progress' && <p className="text-sm text-muted">{t('csv.importing')}</p>}
 
           {step === 'result' && result && (
             <div className="space-y-4">
@@ -561,10 +539,7 @@ function ImportSummary({
       <p className="text-muted">{t('csv.confirmHint')}</p>
       <SummaryRow label={t('csv.filePath')} value={filePath} />
       {fileRowCount != null && (
-        <SummaryRow
-          label={t('csv.summaryFileRows')}
-          value={String(fileRowCount)}
-        />
+        <SummaryRow label={t('csv.summaryFileRows')} value={String(fileRowCount)} />
       )}
       <SummaryRow label={t('csv.summaryTarget')} value={resolvedTarget || '—'} />
       <SummaryRow
@@ -588,22 +563,14 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ResultBanner({
-  result,
-  t,
-}: {
-  result: ImportResult
-  t: (key: string) => string
-}) {
+function ResultBanner({ result, t }: { result: ImportResult; t: (key: string) => string }) {
   const cls =
     result.status === 'success'
       ? 'border-green-600/40 bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300'
       : 'border-red-600/40 bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300'
   const msg =
     result.status === 'success' ? t('csv.importResultSuccess') : t('csv.importResultError')
-  return (
-    <div className={`rounded border px-4 py-3 text-sm font-medium ${cls}`}>{msg}</div>
-  )
+  return <div className={`rounded border px-4 py-3 text-sm font-medium ${cls}`}>{msg}</div>
 }
 
 function PreviewTable({ preview }: { preview: CSVPreview }) {
