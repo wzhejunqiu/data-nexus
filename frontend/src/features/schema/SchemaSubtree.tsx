@@ -81,23 +81,30 @@ function SchemaGroup({
     <div>
       <p className="text-xs font-semibold text-muted">{title}</p>
       <ul className="mt-1 space-y-0.5">
-        {items.map((item) => (
-          <li key={item.name}>
-            <button
-              className={`flex w-full items-center justify-between gap-2 truncate rounded px-2 py-1 text-left text-xs hover:bg-muted/40 ${
-                selected === item.name ? 'bg-accent/20 text-accent' : ''
-              }`}
-              onClick={() => onSelect(item.name)}
-            >
-              <span className="truncate">{item.name}</span>
-              {item.type === 'table' && item.rowCount != null && (
-                <span className="shrink-0 text-muted">
-                  {t('data.rowCountShort', { count: item.rowCount })}
-                </span>
-              )}
-            </button>
-          </li>
-        ))}
+        {items.map((item) => {
+          const isSelected = selected === item.name
+          return (
+            <li key={item.name}>
+              <button
+                type="button"
+                aria-current={isSelected ? 'true' : undefined}
+                className={`flex w-full items-center justify-between gap-2 truncate rounded px-2 py-1 text-left text-xs transition-colors ${
+                  isSelected
+                    ? 'bg-accent/20 text-accent hover:bg-accent/30'
+                    : 'hover:bg-muted/40'
+                }`}
+                onClick={() => onSelect(item.name)}
+              >
+                <span className="truncate">{item.name}</span>
+                {item.type === 'table' && item.rowCount != null && (
+                  <span className="shrink-0 text-muted">
+                    {t('data.rowCountShort', { count: item.rowCount })}
+                  </span>
+                )}
+              </button>
+            </li>
+          )
+        })}
       </ul>
     </div>
   )

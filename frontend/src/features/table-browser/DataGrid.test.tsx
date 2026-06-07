@@ -52,6 +52,10 @@ describe('DataGrid', () => {
     await waitFor(() => {
       expect(screen.getAllByText('NULL').length).toBeGreaterThan(0)
     })
+    const nullCells = screen.getAllByText('NULL')
+    nullCells.forEach((cell) => {
+      expect(cell.className).toContain('bg-muted/50')
+    })
     expect(screen.getByText('[BLOB 5 bytes]')).toBeTruthy()
     expect(screen.getByText('ok')).toBeTruthy()
   })
@@ -62,7 +66,7 @@ describe('DataGrid', () => {
 
     renderGrid()
 
-    expect(screen.getByText(/加载/)).toBeTruthy()
+    expect(screen.getByTestId('table-skeleton')).toBeTruthy()
   })
 
   it('shows error state', async () => {

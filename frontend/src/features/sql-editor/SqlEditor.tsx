@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
+import { NullCell } from '@/components/ui/NullCell'
 import { connectionApi } from '@/lib/api/connection'
 import { formatError } from '@/lib/api/errors'
 import { queryApi } from '@/lib/api/query'
@@ -204,9 +205,11 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
                   <tr key={i} className="border-b border-border/40">
                     {result.columns!.map((c) => (
                       <td key={c.name} className="px-2 py-1 font-mono text-xs">
-                        {row[c.name] === null || row[c.name] === undefined
-                          ? t('data.null')
-                          : formatCell(row[c.name])}
+                        {row[c.name] === null || row[c.name] === undefined ? (
+                          <NullCell label={t('data.null')} />
+                        ) : (
+                          formatCell(row[c.name])
+                        )}
                       </td>
                     ))}
                   </tr>

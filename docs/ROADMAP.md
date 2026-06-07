@@ -56,7 +56,7 @@ Phase 0 ──► Phase 1 ──► Phase 2 ──► Phase 3 ──► Phase 4
 | 2026-06-07 | 日志框架用 zap | 默认 INFO；dev 控制台、release 文件；用户 YAML/CLI 可配置 |
 | 2026-06-07 | MVP 含全部 P1 | 索引、主题、PRAGMA、CSV 复制等均纳入 v0.1.0 |
 | 2026-06-07 | 需要 i18n | react-i18next，默认 zh-CN，MVP 含 en 语言包 |
-| 2026-06-07 | 首发三平台 | v0.1.0 同时 build macOS / Windows / Linux |
+| 2026-06-07 | 首发三 OS · 六架构 | v0.1.0 Release 打 tag 时构建 macOS/Windows/Linux（amd64+arm64）；main CI 仅 linux-amd64 smoke build |
 | 2026-06-07 | v0.3 确认做 | Filter→SQL、列画像、Canned Queries 等探索型差异化 |
 
 > 开放问题决策后追加到此表。

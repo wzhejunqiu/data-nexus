@@ -531,9 +531,16 @@ wails build -platform windows/amd64
 wails build -platform linux/amd64
 ```
 
-**v0.1.0 发布要求：** 上述三平台均需构建并通过 smoke test（见 [phase-4-release.md](../implementation/phase-4-release.md)）。
-
 产物位于 `build/bin/`，平台原生格式（macOS `.app`、Windows `.exe`、Linux binary）。
+
+### 10.1 CI 与 Release 工作流
+
+| 触发 | Workflow | 桌面构建范围 |
+|------|----------|--------------|
+| push/PR → `main` | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) | 仅 `smoke-build`：`linux/amd64` |
+| push tag `v*` | [`.github/workflows/release.yml`](../../.github/workflows/release.yml) | 先跑 CI，再矩阵构建 **六平台**（linux/macOS/Windows × amd64/arm64）并发布 Release |
+
+> **注意：** main 分支 CI **不会**额外构建 macOS / Windows；全平台产物仅在打版本 tag 时生成。发布前手动 smoke test 见 [phase-4-release.md](../implementation/phase-4-release.md)。
 
 ---
 
@@ -556,4 +563,4 @@ wails build -platform linux/amd64
 | Electron | 不采用 | 体积与内存劣势；Go 栈统一 |
 | 日志框架 | zap | 默认 INFO；dev 控制台、release 文件；YAML/CLI 可配置 |
 | i18n | react-i18next | 默认 zh-CN，MVP 含 en |
-| 首发平台 | 三平台 | v0.1.0 macOS / Windows / Linux |
+| 首发平台 | 三 OS · 六架构 | v0.1.0 覆盖 macOS / Windows / Linux（各 amd64 + arm64）；Release workflow 打 tag 时构建 |

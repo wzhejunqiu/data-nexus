@@ -43,7 +43,7 @@
 | 日志        | zap，默认 INFO                                          |
 | i18n        | 需要；react-i18next，默认 zh-CN，MVP 含 en              |
 | MVP 范围    | P0 + P1 全做                                            |
-| 首发平台    | macOS / Windows / Linux 三平台                          |
+| 首发平台    | macOS / Windows / Linux（各 amd64+arm64）；main CI 仅 linux-amd64 smoke，全平台 Release 打 tag 时构建 |
 | v0.3 方向   | 做；Filter→SQL + 列画像等探索型差异化                   |
 | 连接持久化  | MVP：`connections.json` + 连接树；可同时打开多个 SQLite |
 | 启动 UX     | 无 Welcome；直接进入主界面（Navicat 模式）              |

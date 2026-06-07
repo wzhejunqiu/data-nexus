@@ -57,8 +57,11 @@ func (a *App) startup(ctx context.Context) {
 	runtime.OnFileDrop(ctx, a.handleFileDrop)
 
 	if a.startupDB != "" {
-		if _, err := a.conn.OpenConnectionFromFile(model.ConnectRequest{FilePath: a.startupDB}); err != nil {
+		if conn, err := a.conn.OpenConnectionFromFile(model.ConnectRequest{FilePath: a.startupDB}); err != nil {
 			a.log.Warn("failed to open startup database", zap.String("path", a.startupDB), zap.Error(err))
+			a.emitError(err)
+		} else {
+			a.emitConnectionOpened(conn.ID)
 		}
 	} else if err := a.mgr.RestoreConnectionsOnStartup(ctx); err != nil {
 		a.log.Warn("failed to restore connections", zap.Error(err))
@@ -74,6 +77,14 @@ func (a *App) shutdown(_ context.Context) {
 
 func (a *App) SetOpenDatabaseHandler(fn func()) {
 	a.onOpenDatabase = fn
+}
+
+func (a *App) emitConnectionOpened(connectionID string) {
+	if a.ctx == nil || connectionID == "" {
+		return
+	}
+	runtime.EventsEmit(a.ctx, "app:connection-opened", map[string]string{"id": connectionID})
+	runtime.EventsEmit(a.ctx, "app:connections-changed")
 }
 
 func (a *App) emitToast(message, variant string) {
@@ -120,12 +131,14 @@ func (a *App) handleFileDrop(_ int, _ int, paths []string) {
 		if ext != ".db" && ext != ".sqlite" && ext != ".sqlite3" {
 			continue
 		}
-		if _, err := a.conn.OpenConnectionFromFile(model.ConnectRequest{FilePath: path}); err != nil {
+		if conn, err := a.conn.OpenConnectionFromFile(model.ConnectRequest{FilePath: path}); err != nil {
 			a.log.Warn("open dropped database failed", zap.String("path", path), zap.Error(err))
+			a.emitError(err)
 			continue
+		} else {
+			a.emitConnectionOpened(conn.ID)
+			return
 		}
-		runtime.EventsEmit(a.ctx, "app:connections-changed")
-		return
 	}
 }
 

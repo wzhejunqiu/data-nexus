@@ -9,7 +9,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/wzhejunqiu/data-nexus/internal/config"
 	"github.com/wzhejunqiu/data-nexus/internal/logger"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
@@ -56,12 +55,13 @@ func main() {
 			log.Warn("open database dialog failed", zap.Error(err))
 			return
 		}
-		if _, err := connWails.OpenConnectionFromFile(model.ConnectRequest{FilePath: path}); err != nil {
+		if conn, err := connWails.OpenConnectionFromFile(model.ConnectRequest{FilePath: path}); err != nil {
 			app.emitError(err)
 			log.Warn("open connection failed", zap.Error(err))
 			return
+		} else {
+			app.emitConnectionOpened(conn.ID)
 		}
-		runtime.EventsEmit(app.ctx, "app:connections-changed")
 	})
 
 	err = wails.Run(&options.App{

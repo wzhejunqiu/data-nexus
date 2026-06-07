@@ -1,15 +1,25 @@
-import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table'
+import {
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  type ColumnDef,
+  type Row,
+} from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useQuery } from '@tanstack/react-query'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
+import { NullCell } from '@/components/ui/NullCell'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { formatError } from '@/lib/api/errors'
 import { tableApi } from '@/lib/api/table'
+import type { PaginatedTableData } from '@/lib/types'
 import { formatCell } from '@/lib/utils'
 import { Pagination } from './Pagination'
 import { useStatusStore } from '@/stores/statusStore'
 
 const PAGE_SIZES = [25, 50, 100, 200]
+const VIRTUAL_ROW_THRESHOLD = 200
 
 export function DataGrid({ connectionId, tableName }: { connectionId: string; tableName: string }) {
   const { t } = useTranslation()
@@ -18,56 +28,31 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
   const [pageSize, setPageSize] = useState(50)
   const [sort, setSort] = useState('')
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
-  const parentRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setPage(1)
+    setSort('')
+    setOrder('asc')
+  }, [connectionId, tableName])
 
   const { data, isLoading, error, isFetching } = useQuery({
     queryKey: ['rows', connectionId, tableName, page, pageSize, sort, order],
-    queryFn: async () => {
-      const result = await tableApi.browseRows({
+    queryFn: () =>
+      tableApi.browseRows({
         connectionId,
         tableName,
         page,
         pageSize,
         sort,
         order,
-      })
-      setStatus('browse', result.pagination.totalRows, null)
-      return result
-    },
+      }),
   })
 
-  const columns = useMemo<ColumnDef<Record<string, unknown>>[]>(() => {
-    if (!data) return []
-    return data.columns.map((col) => ({
-      id: col.name,
-      accessorKey: col.name,
-      header: col.name,
-      cell: ({ getValue }) => {
-        const val = getValue()
-        const isNull = val === null || val === undefined
-        return (
-          <span className={isNull ? 'italic text-muted' : ''}>
-            {isNull ? t('data.null') : formatCell(val)}
-          </span>
-        )
-      },
-    }))
-  }, [data, t])
-
-  const table = useReactTable({
-    data: data?.rows ?? [],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
-
-  const rows = table.getRowModel().rows
-  const useVirtual = rows.length > 200
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 32,
-    overscan: 10,
-  })
+  useEffect(() => {
+    if (data) {
+      setStatus('browse', data.pagination.totalRows, null)
+    }
+  }, [data, setStatus])
 
   const toggleSort = (col: string) => {
     if (sort !== col) {
@@ -82,12 +67,77 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
     setPage(1)
   }
 
-  if (isLoading) return <p className="p-4 text-sm text-muted">{t('common.loading')}</p>
+  if (isLoading) return <TableSkeleton />
   if (error) return <p className="p-4 text-sm text-red-500">{formatError(t, error)}</p>
   if (!data) return null
 
+  return (
+    <DataGridTable
+      data={data}
+      page={page}
+      pageSize={pageSize}
+      sort={sort}
+      order={order}
+      isFetching={isFetching}
+      onPageChange={setPage}
+      onPageSizeChange={(size) => {
+        setPageSize(size)
+        setPage(1)
+      }}
+      onToggleSort={toggleSort}
+    />
+  )
+}
+
+function DataGridTable({
+  data,
+  page,
+  pageSize,
+  sort,
+  order,
+  isFetching,
+  onPageChange,
+  onPageSizeChange,
+  onToggleSort,
+}: {
+  data: PaginatedTableData
+  page: number
+  pageSize: number
+  sort: string
+  order: 'asc' | 'desc'
+  isFetching: boolean
+  onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
+  onToggleSort: (col: string) => void
+}) {
+  const { t } = useTranslation()
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const columns = useMemo<ColumnDef<Record<string, unknown>>[]>(
+    () =>
+      data.columns.map((col) => ({
+        id: col.name,
+        accessorKey: col.name,
+        header: col.name,
+        cell: ({ getValue }) => {
+          const val = getValue()
+          const isNull = val === null || val === undefined
+          return isNull ? <NullCell label={t('data.null')} /> : formatCell(val)
+        },
+      })),
+    [data.columns, t],
+  )
+
+  const table = useReactTable({
+    data: data.rows,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  })
+
+  const rows = table.getRowModel().rows
   const columnNames = data.columns.map((c) => c.name)
   const isEmpty = data.rows.length === 0
+  const useVirtual = rows.length > VIRTUAL_ROW_THRESHOLD
 
   return (
     <div className="flex h-full flex-col p-4">
@@ -97,10 +147,7 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
           <select
             className="rounded border border-border bg-transparent px-2 py-1"
             value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value))
-              setPage(1)
-            }}
+            onChange={(e) => onPageSizeChange(Number(e.target.value))}
           >
             {PAGE_SIZES.map((s) => (
               <option key={s} value={s}>
@@ -123,7 +170,7 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
                   <th
                     key={col}
                     className="cursor-pointer border-b border-border px-3 py-2 text-left font-medium hover:bg-muted/30"
-                    onClick={() => toggleSort(col)}
+                    onClick={() => onToggleSort(col)}
                   >
                     {col}
                     {sort === col ? (order === 'asc' ? ' ▲' : ' ▼') : ''}
@@ -131,50 +178,67 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
                 ))}
               </tr>
             </thead>
-            <tbody
-              style={
-                useVirtual
-                  ? { height: `${virtualizer.getTotalSize()}px`, position: 'relative' }
-                  : undefined
-              }
-            >
-              {useVirtual
-                ? virtualizer.getVirtualItems().map((virtualRow) => {
-                    const row = rows[virtualRow.index]
-                    return (
-                      <tr
-                        key={row.id}
-                        className="border-b border-border/40"
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          transform: `translateY(${virtualRow.start}px)`,
-                        }}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <td key={cell.id} className="px-3 py-2 font-mono text-xs">
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </td>
-                        ))}
-                      </tr>
-                    )
-                  })
-                : rows.map((row) => (
-                    <tr key={row.id} className="border-b border-border/40">
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-3 py-2 font-mono text-xs">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-            </tbody>
+            {useVirtual ? (
+              <VirtualizedTableBody parentRef={parentRef} rows={rows} />
+            ) : (
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id} className="border-b border-border/40">
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-3 py-2 font-mono text-xs">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            )}
           </table>
         </div>
       )}
-      <Pagination pagination={data.pagination} page={page} onPageChange={setPage} />
+      <Pagination pagination={data.pagination} page={page} onPageChange={onPageChange} />
     </div>
+  )
+}
+
+function VirtualizedTableBody({
+  parentRef,
+  rows,
+}: {
+  parentRef: RefObject<HTMLDivElement | null>
+  rows: Row<Record<string, unknown>>[]
+}) {
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 32,
+    overscan: 10,
+  })
+
+  return (
+    <tbody style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+      {virtualizer.getVirtualItems().map((virtualRow) => {
+        const row = rows[virtualRow.index]
+        return (
+          <tr
+            key={row.id}
+            className="border-b border-border/40"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              transform: `translateY(${virtualRow.start}px)`,
+            }}
+          >
+            {row.getVisibleCells().map((cell) => (
+              <td key={cell.id} className="px-3 py-2 font-mono text-xs">
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </td>
+            ))}
+          </tr>
+        )
+      })}
+    </tbody>
   )
 }

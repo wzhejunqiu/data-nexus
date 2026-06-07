@@ -55,6 +55,11 @@ export function AppShell() {
       EventsOn('app:connections-changed', () => {
         qc.invalidateQueries({ queryKey: ['connections'] })
       }),
+      EventsOn('app:connection-opened', (payload: { id?: string }) => {
+        if (payload?.id) {
+          setActiveConnectionId(payload.id)
+        }
+      }),
       EventsOn('app:toast', (payload: { message?: string; variant?: 'error' | 'info' }) => {
         if (payload?.message) {
           pushToast(payload.message, payload.variant ?? 'error')
@@ -75,7 +80,7 @@ export function AppShell() {
       }),
     ]
     return () => unsubs.forEach((u) => u())
-  }, [i18n, qc])
+  }, [i18n, qc, setActiveConnectionId])
 
   const tabs = [
     { id: 'schema', label: t('tabs.schema') },
@@ -130,7 +135,11 @@ export function AppShell() {
                   <SchemaTable connectionId={activeConnectionId} tableName={selectedTable} />
                 )}
                 {activeTab === 'data' && (
-                  <DataGrid connectionId={activeConnectionId} tableName={selectedTable} />
+                  <DataGrid
+                    key={`${activeConnectionId}-${selectedTable}`}
+                    connectionId={activeConnectionId}
+                    tableName={selectedTable}
+                  />
                 )}
                 {activeTab === 'sql' && <SqlEditor connectionId={activeConnectionId} />}
               </>

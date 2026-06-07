@@ -26,32 +26,31 @@ frontend/src/features/
 │   ├── SchemaTable.tsx      # 列定义
 │   └── IndexList.tsx        # P1
 └── table-browser/
-    ├── DataGrid.tsx
-    ├── Pagination.tsx
-    └── useTableRows.ts
+    ├── DataGrid.tsx         # 含 browseRows 查询逻辑（无独立 useTableRows）
+    └── Pagination.tsx
 ```
 
 ### 表结构 Tab
 
-- [ ] `SchemaTable` — 列名、类型、PK、nullable、default
-- [ ] `IndexList`（P1）— 索引名、列、unique
-- [ ] 复制表名/列名（P1）— 按钮或右键
+- [x] `SchemaTable` — 列名、类型、PK、nullable、default
+- [x] `IndexList`（P1）— 索引名、列、unique
+- [x] 复制表名/列名（P1）— 按钮或右键
 
 ### 数据 Tab
 
-- [ ] `BrowseRows` — page / pageSize(25|50|100|200) / sort / order
-- [ ] 列头点击排序（三态：无/asc/desc）
-- [ ] `Pagination` — 首页/末页/页码/总行数
-- [ ] NULL — 灰色斜体 `NULL`
-- [ ] BLOB — `[BLOB N bytes]`
-- [ ] Loading skeleton / Empty / Error
-- [ ] P2：NULL 高亮强化
+- [x] `BrowseRows` — page / pageSize(25|50|100|200) / sort / order
+- [x] 列头点击排序（三态：无/asc/desc）
+- [x] `Pagination` — 首页/末页/页码/总行数
+- [x] NULL — 灰色斜体 `NULL`
+- [x] BLOB — `[BLOB N bytes]`
+- [x] Loading skeleton / Empty / Error
+- [x] P2：NULL 高亮强化
 
 ### 后端（若 Phase 1 未做全）
 
-- [ ] `GetTableSchema` 返回 indexes
-- [ ] `BrowseRows` totalRows COUNT
-- [ ] 表名/列名校验错误 → `TABLE_NOT_FOUND`
+- [x] `GetTableSchema` 返回 indexes
+- [x] `BrowseRows` totalRows COUNT
+- [x] 表名/列名校验错误 → `TABLE_NOT_FOUND`
 
 ---
 
@@ -63,23 +62,22 @@ frontend/src/features/
 
 ```
 frontend/src/features/sql-editor/
-├── SqlEditor.tsx           # Monaco
-├── QueryResultPanel.tsx
+├── SqlEditor.tsx           # Monaco + 结果表格（无独立 QueryResultPanel）
 ├── QueryHistory.tsx        # P1，会话内 max 50
 └── ConfirmDialog.tsx       # 写操作确认
 ```
 
 ### 任务清单
 
-- [ ] Monaco Editor — 最小 8 行，最高 20 行 auto-grow
-- [ ] `Cmd/Ctrl + Enter` 执行
-- [ ] `QueryService.Execute` — SELECT 结果表格 + rowCount + durationMs
-- [ ] INSERT/UPDATE/DELETE — `ConfirmDialog` 二次确认
-- [ ] 只读模式 — 写操作后端 `READ_ONLY` + 前端禁用提示
-- [ ] SQL 错误 — Alert 展示数据库错误原文
-- [ ] `QueryHistory`（P1）— 下拉填充 SQL
-- [ ] 结果集 CSV 复制（P1）—  clipboard
-- [ ] PRAGMA 快捷入口（P1）— 侧边或 SQL Tab 工具栏
+- [x] Monaco Editor — 最小 8 行，最高 20 行 auto-grow
+- [x] `Cmd/Ctrl + Enter` 执行
+- [x] `QueryService.Execute` — SELECT 结果表格 + rowCount + durationMs
+- [x] INSERT/UPDATE/DELETE — `ConfirmDialog` 二次确认
+- [x] 只读模式 — 写操作后端 `READ_ONLY` + 前端禁用提示
+- [x] SQL 错误 — Alert 展示数据库错误原文（`SQL_ERROR` 透传 message）
+- [x] `QueryHistory`（P1）— 下拉填充 SQL
+- [x] 结果集 CSV 复制（P1）— clipboard
+- [x] PRAGMA 快捷入口（P1）— SQL Tab 工具栏下拉
 
 ### 写操作检测
 
@@ -91,25 +89,25 @@ frontend/src/features/sql-editor/
 
 ### 错误场景
 
-- [ ] 文件不存在 → `CONNECTION_FAILED`
-- [ ] 数据库锁定 → `DATABASE_LOCKED`
-- [ ] 未连接调 Schema → `NOT_CONNECTED`
-- [ ] 对话框取消 → 静默，不 Toast
-- [ ] SQL 语法错误 → `SQL_ERROR`
-- [ ] 结果超 maxRows → `RESULT_TOO_LARGE`
+- [x] 文件不存在 → `CONNECTION_FAILED`
+- [x] 数据库锁定 → `DATABASE_LOCKED`
+- [x] 未连接调 Schema → `CONNECTION_NOT_FOUND`（API 已废弃 `NOT_CONNECTED`）
+- [x] 对话框取消 → 静默，不 Toast（`DIALOG_CANCELLED`）
+- [x] SQL 语法错误 → `SQL_ERROR`
+- [x] 结果超 maxRows → `RESULT_TOO_LARGE`
 
 ### 桌面体验
 
-- [ ] StatusBar — 行数、耗时、版本（`AppService.GetVersion`）
-- [ ] 窗口标题 — `Data Nexus — {filename}`
-- [ ] CLI `--db` 启动时 `OpenConnectionFromFile` 并 upsert 到连接列表
-- [ ] `wails build` 本地构建通过
-- [ ] release 模式日志写文件（非控制台）
+- [x] StatusBar — 行数、耗时、版本（`AppService.GetVersion`）
+- [x] 窗口标题 — `Data Nexus — {filename}`
+- [x] CLI `--db` 启动时 `OpenConnectionFromFile` 并 upsert 到连接列表
+- [x] `wails build` 可构建（main/PR CI 仅 `smoke-build` linux/amd64；六平台产物在打 `v*` tag 时由 [release.yml](../../.github/workflows/release.yml) 构建）
+- [x] release 模式日志写文件（非控制台，`logger.New` + `IsDevMode`）
 
 ### 性能抽查
 
-- [ ] 10 万行表首页 pageSize=50 < 500ms
-- [ ] 1 万行 SELECT < 200ms
+- [x] 10 万行表首页 pageSize=50 < 500ms（`query_service_perf_test.go`）
+- [x] 1 万行 SELECT < 200ms（`query_service_perf_test.go`）
 
 ---
 
@@ -136,6 +134,6 @@ frontend/src/features/sql-editor/
 
 ## 完成标准
 
-- [ ] 上述 MVP 对照表全部勾选
+- [x] 上述 MVP 对照表全部勾选
 - [ ] `wails dev` 全流程手动走通
 - [ ] 进入 [phase-4-release.md](./phase-4-release.md)

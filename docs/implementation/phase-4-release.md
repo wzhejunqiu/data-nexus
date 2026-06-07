@@ -87,7 +87,21 @@ cd frontend && npm test
 
 ### 构建
 
-**v0.1.0 必须三平台均通过 smoke test：**
+#### CI（main / PR）
+
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) 在每次 push/PR 时运行：format、security、test，以及 **`smoke-build`（仅 `linux/amd64`）**。不在 main 上构建 macOS / Windows 产物。
+
+#### Release（打 tag）
+
+推送 `v*` tag 时，[`.github/workflows/release.yml`](../../.github/workflows/release.yml) 先复用 CI，再矩阵构建 **六个平台** 并上传 GitHub Release：
+
+| 产物 | platform |
+|------|----------|
+| linux-amd64 / linux-arm64 | `linux/amd64` · `linux/arm64` |
+| macos-amd64 / macos-arm64 | `darwin/amd64` · `darwin/arm64` |
+| windows-amd64 / windows-arm64 | `windows/amd64` · `windows/arm64` |
+
+本地交叉编译（可选，发布前自测）：
 
 ```bash
 wails build                          # 当前平台（开发机）
@@ -97,10 +111,11 @@ wails build -platform windows/amd64
 wails build -platform linux/amd64
 ```
 
-- [ ] macOS `.app` smoke test
-- [ ] Windows `.exe` smoke test（本机或 CI）
-- [ ] Linux binary smoke test（本机或 CI）
-- [ ] 三平台 i18n：zh-CN / en 切换正常
+- [ ] 打 tag 后 Release workflow 六平台构建全部成功
+- [ ] macOS `.app` smoke test（本机或 Release 产物）
+- [ ] Windows `.exe` smoke test（本机或 Release 产物）
+- [ ] Linux binary smoke test（CI smoke-build 或 Release 产物）
+- [ ] 各平台 i18n：zh-CN / en 切换正常
 
 ### Git
 

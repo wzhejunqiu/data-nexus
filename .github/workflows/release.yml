@@ -32,26 +32,29 @@ jobs:
             platform: linux/arm64
             install-linux-deps: true
             build-tags: "-tags webkit2_41"
-          - os: macos-latest
-            name: macos-arm64
-            platform: darwin/arm64
-            install-linux-deps: false
-            build-tags: ""
-          - os: macos-latest
-            name: macos-amd64
-            platform: darwin/amd64
-            install-linux-deps: false
-            build-tags: ""
+          # macOS: disabled until code signing + notarization is configured.
+          # - os: macos-latest
+          #   name: macos-arm64
+          #   platform: darwin/arm64
+          #   install-linux-deps: false
+          #   build-tags: ""
+          # - os: macos-latest
+          #   name: macos-amd64
+          #   platform: darwin/amd64
+          #   install-linux-deps: false
+          #   build-tags: ""
           - os: windows-latest
             name: windows-amd64
             platform: windows/amd64
             install-linux-deps: false
             build-tags: ""
+            nsis-arch: amd64
           - os: windows-latest
             name: windows-arm64
             platform: windows/arm64
             install-linux-deps: false
             build-tags: ""
+            nsis-arch: arm64
     runs-on: ${{ matrix.os }}
     env:
       VERSION: ${{ github.ref_name }}
@@ -89,8 +92,22 @@ jobs:
       - name: Prepare embed assets
         run: make embed-stub
 
-      - name: Build desktop app
+      - name: Install NSIS
+        if: runner.os == 'Windows'
+        run: choco install nsis -y --no-progress
+
+      - name: Add NSIS to PATH
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Add-Content -Path $env:GITHUB_PATH -Value 'C:\Program Files (x86)\NSIS\Bin'
+
+      - name: Build desktop app (Linux)
+        if: runner.os == 'Linux'
         run: wails build -clean ${{ matrix.build-tags }} -platform ${{ matrix.platform }}
+
+      - name: Build desktop app (Windows)
+        if: runner.os == 'Windows'
+        run: wails build -clean -nsis -platform ${{ matrix.platform }}
 
       - name: Package release asset (Linux)
         if: runner.os == 'Linux'
@@ -98,17 +115,24 @@ jobs:
           cd build/bin
           zip "$PACKAGE" data-nexus
 
-      - name: Package release asset (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          cd build/bin
-          zip -r "$PACKAGE" data-nexus.app
+      # macOS packaging — re-enable when macOS matrix entries are restored above.
+      # - name: Package release asset (macOS)
+      #   if: runner.os == 'macOS'
+      #   run: |
+      #     cd build/bin
+      #     zip -r "$PACKAGE" data-nexus.app
 
       - name: Package release asset (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Compress-Archive -Path "build/bin/data-nexus.exe" -DestinationPath "build/bin/$env:PACKAGE" -Force
+          $src = "build/bin/data-nexus-${{ matrix.nsis-arch }}-installer.exe"
+          $dest = "build/bin/data-nexus-$env:VERSION-${{ matrix.name }}-installer.exe"
+          if (-not (Test-Path $src)) {
+            throw "NSIS installer not found: $src"
+          }
+          Copy-Item $src $dest
+          "PACKAGE=data-nexus-$env:VERSION-${{ matrix.name }}-installer.exe" >> $env:GITHUB_ENV
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

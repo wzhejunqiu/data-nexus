@@ -9,6 +9,7 @@ import { connectionApi } from '@/lib/api/connection'
 import { dialogApi } from '@/lib/api/dialog'
 import { formatError, isDialogCancelled, mapWailsError } from '@/lib/api/errors'
 import type { AppError } from '@/lib/types'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 
 export function NewConnectionDialog({
   open,
@@ -22,6 +23,7 @@ export function NewConnectionDialog({
   const { t } = useTranslation()
   const qc = useQueryClient()
   const pushToast = useToastStore((s) => s.push)
+  const setActiveConnectionId = useWorkspaceStore((s) => s.setActiveConnectionId)
   const [filePath, setFilePath] = useState('')
 
   const create = useMutation({
@@ -32,6 +34,7 @@ export function NewConnectionDialog({
     onSuccess: (conn) => {
       setFilePath('')
       onOpenChange(false)
+      setActiveConnectionId(conn.id)
       qc.invalidateQueries({ queryKey: ['connections'] })
       qc.invalidateQueries({ queryKey: ['tables', conn.id] })
     },

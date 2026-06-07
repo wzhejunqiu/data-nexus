@@ -20,6 +20,7 @@ export function ConnectionTree() {
   const [newOpen, setNewOpen] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(260)
   const selectTable = useWorkspaceStore((s) => s.selectTable)
+  const setActiveConnectionId = useWorkspaceStore((s) => s.setActiveConnectionId)
 
   const { data, isLoading } = useQuery({
     queryKey: ['connections'],
@@ -32,6 +33,7 @@ export function ConnectionTree() {
     mutationFn: (id: string) => connectionApi.open(id),
     onSuccess: (conn) => {
       setError(null)
+      setActiveConnectionId(conn.id)
       refresh()
       qc.invalidateQueries({ queryKey: ['tables', conn.id] })
     },
@@ -40,7 +42,14 @@ export function ConnectionTree() {
 
   const closeConn = useMutation({
     mutationFn: (id: string) => connectionApi.close(id),
-    onSuccess: refresh,
+    onSuccess: (_, id) => {
+      const { activeConnectionId, setSelectedTable } = useWorkspaceStore.getState()
+      if (activeConnectionId === id) {
+        setActiveConnectionId(null)
+        setSelectedTable(null)
+      }
+      refresh()
+    },
     onError: (err) => setError(formatError(t, err)),
   })
 

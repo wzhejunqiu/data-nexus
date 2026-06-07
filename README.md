@@ -1,93 +1,107 @@
 # Data Nexus
 
-一款轻量级 **桌面端** 数据库管理应用（Wails + Go + React），MVP 聚焦 SQLite，支持 Navicat 式多连接并存。
+一款轻量级 **桌面端 SQLite 管理工具**，支持同时打开多个数据库，浏览表结构、分页查看数据、执行 SQL。
 
-## 功能（v0.1.0）
+当前版本：**v0.1.0**（MVP）。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-- 启动即主界面，连接树管理多个 SQLite
-- 表结构 / 分页数据 / SQL 编辑器（Monaco）
-- 连接持久化（`~/.data-nexus/connections.json`）
-- 只读模式、查询历史、PRAGMA 快捷、CSV 复制
-- 中英文 i18n、深色/浅色/跟随系统主题
+## 下载
 
-## 环境要求
+从 [GitHub Releases](https://github.com/wzhejunqiu/data-nexus/releases) 下载对应平台的 zip 包：
 
-- Go 1.25+
-- Node.js 20+
-- [Wails v2 CLI](https://wails.io/docs/gettingstarted/installation)
+| 平台 | 文件名 |
+|------|--------|
+| Windows (64-bit) | `data-nexus-v0.1.0-windows-amd64-installer.exe` |
+| Windows (ARM64) | `data-nexus-v0.1.0-windows-arm64-installer.exe` |
+| Linux (64-bit) | `data-nexus-v0.1.0-linux-amd64.zip` |
+| Linux (ARM64) | `data-nexus-v0.1.0-linux-arm64.zip` |
 
-```bash
-go install github.com/wailsapp/wails/v2/cmd/wails@latest
-wails doctor
-```
+> macOS 预构建包暂未发布（待配置代码签名与公证后开启）。macOS 用户可 [从源码构建](#参与开发)。
 
-## 开发
+## 快速开始
 
-```bash
-make dev          # wails dev
-make test         # go test -short ./...（CI 等价，跳过性能测试）
-make test-cover   # 带覆盖率
-make build        # wails build → build/bin/
-```
+1. 解压下载的 zip 包。
+2. 启动应用：
+   - **macOS**：打开 `data-nexus.app`（需从源码构建）
+   - **Windows**：运行 NSIS 安装包，从开始菜单或桌面快捷方式启动
+   - **Linux**：赋予可执行权限后运行 `./data-nexus`
+3. 通过 **File → Open** 选择 `.db` 文件，或将 `.db` 文件拖入窗口。
+4. 在左侧连接树中选择数据库，浏览表结构或数据，或在 SQL 编辑器中执行查询。
 
-发布前本地性能验收：
+也可在启动时直接指定数据库：
 
 ```bash
-make test-perf    # 10 万行 Browse <500ms、1 万行 SELECT <200ms
-make bench        # Go benchmark（可选 profiling）
-make gen-test-db  # 含 data/large.db（10 万行，手动验 UI）
+# macOS
+./data-nexus.app/Contents/MacOS/data-nexus --db /path/to/app.db
+
+# Windows / Linux
+./data-nexus --db /path/to/app.db
 ```
 
-CI：推送到 `main` 或 PR 时运行 [GitHub Actions](.github/workflows/ci.yml)（**格式检查**、**漏洞扫描**、Go/前端测试；`main` 上额外三平台构建）。推送 `v*` tag 时 [Release](.github/workflows/release.yml) 会构建并上传产物。
+## 功能
 
-本地与 CI 对齐：
+- **多连接**：像 Navicat 一样同时管理多个 SQLite 文件
+- **表浏览**：查看列定义、索引，分页浏览数据，支持列排序
+- **SQL 编辑器**：语法高亮，`Cmd/Ctrl + Enter` 执行；写操作需二次确认
+- **只读模式**：连接时可开启，防止误改数据
+- **查询历史**：当前会话内的 SQL 可快速复用
+- **结果导出**：查询结果一键复制为 CSV
+- **PRAGMA 快捷**：常用 SQLite 诊断语句一键插入
+- **主题与语言**：深色 / 浅色 / 跟随系统；界面支持中文与英文
 
-```bash
-make fmt-check    # gofmt + frontend prettier
-make lint         # golangci-lint（Go，需已安装）
-make lint-frontend # eslint（前端）
-make vuln-check   # govulncheck + npm audit
-make check        # 上述 + 测试构建
-make pre-push     # push 前检查：format + Go/前端 lint + vuln（与 CI 格式/安全 job 对齐）
-make install-hooks # 安装 pre-push hook，失败时阻止 push
-```
+## 系统要求
+
+- **macOS** 11+（Apple Silicon 或 Intel）
+- **Windows** 10+（64-bit 或 ARM64）
+- **Linux** 带 GTK 3 与 WebKitGTK 4.1 的桌面环境（Ubuntu 22.04+、Fedora 等常见发行版）
 
 ## 配置
 
-用户配置：`~/.data-nexus/config.yaml`（示例见 [internal/config/config.yaml.example](internal/config/config.yaml.example)）
+用户配置文件位于 `~/.data-nexus/config.yaml`（首次运行后按需创建）。示例：
 
-Release 构建默认日志路径（`log.output: auto`）：
-
-- macOS: `~/Library/Logs/data-nexus/data-nexus.log`
-- Windows: `%LOCALAPPDATA%\data-nexus\logs\data-nexus.log`
-- Linux: `~/.local/share/data-nexus/logs/data-nexus.log`
-
-```bash
-./build/bin/data-nexus.app/Contents/MacOS/data-nexus --log-level debug
-./build/bin/data-nexus.app/Contents/MacOS/data-nexus --db /path/to/app.db
+```yaml
+log:
+  level: info
+  output: auto
 ```
 
-## 发布
+完整选项见 [internal/config/config.yaml.example](internal/config/config.yaml.example)。
 
-MVP 版本 **v0.1.0**。打 tag 前请完成 [手动测试清单](docs/implementation/phase-4-manual-checklist.md)：
+### 命令行参数
 
-```bash
-git tag -a v0.1.0 -m "MVP: SQLite desktop manager"
-git push origin v0.1.0
-```
-
-推送 `v*` tag 后 [Release workflow](.github/workflows/release.yml) 会构建并上传三平台产物。
-
-## 文档
-
-| 文档 | 说明 |
+| 参数 | 说明 |
 |------|------|
-| [PRD](docs/product/PRD.md) | 产品需求 |
-| [ARCHITECTURE](docs/design/ARCHITECTURE.md) | 技术架构 |
-| [API](docs/design/API.md) | Wails Service 契约 |
-| [CONNECTION_UX](docs/design/CONNECTION_UX.md) | 多连接交互 |
-| [实施指南](docs/implementation/README.md) | 分阶段清单 |
+| `--db <path>` | 启动时打开指定 SQLite 文件 |
+| `--log-level` | 日志级别：`debug` / `info` / `warn` / `error` |
+| `--log-output` | 输出目标：`auto` / `console` / `file` / `both` |
+| `--log-file` | 自定义日志文件路径 |
 
-## 状态
+Release 版本默认将日志写入文件（`log.output: auto`）：
 
-**v0.1.0 MVP** — Wails 桌面端可构建运行。
+- **macOS**：`~/Library/Logs/data-nexus/data-nexus.log`
+- **Windows**：`%LOCALAPPDATA%\data-nexus\logs\data-nexus.log`
+- **Linux**：`~/.local/share/data-nexus/logs/data-nexus.log`
+
+连接信息保存在 `~/.data-nexus/connections.json`。
+
+## 已知限制（v0.1.0）
+
+- 仅支持 **SQLite** 本地文件（PostgreSQL / MySQL 计划在后续版本）
+- macOS 预构建包暂未发布（签名/公证就绪后通过 Release 提供）
+
+## 参与开发
+
+如需从源码构建或贡献代码，请参阅 [docs/implementation/README.md](docs/implementation/README.md)。
+
+```bash
+make dev      # 开发模式
+make build    # 构建当前平台产物
+make test     # 运行测试
+```
+
+**CI：** push/PR 到 `main` 时运行测试与 `linux/amd64` smoke build（见 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)）。六个平台的 Release 产物仅在推送 `v*` tag 时构建（见 [`.github/workflows/release.yml`](.github/workflows/release.yml)）。
+
+设计与架构文档见 [docs/](docs/) 目录。
+
+## 许可证
+
+本项目采用 [MIT License](LICENSE) 开源。

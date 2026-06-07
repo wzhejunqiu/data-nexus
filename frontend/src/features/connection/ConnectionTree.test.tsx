@@ -140,6 +140,28 @@ describe('ConnectionTree', () => {
     })
   })
 
+  it('opens a closed connection on double click', async () => {
+    const { connectionApi } = await import('@/lib/api/connection')
+    vi.mocked(connectionApi.list).mockResolvedValue({ items: [closedItem] })
+    vi.mocked(connectionApi.getRestoreOpenOnStartup).mockResolvedValue(false)
+    vi.mocked(connectionApi.open).mockResolvedValue({
+      id: 'c1',
+      type: 'sqlite',
+      displayName: 'app.db',
+      config: closedItem.config,
+      connectedAt: '2026-01-01T00:00:00Z',
+    })
+
+    renderWithProviders(<ConnectionTree />)
+    await waitFor(() => {
+      expect(screen.getByText('app.db')).toBeInTheDocument()
+    })
+    fireEvent.doubleClick(screen.getByText('app.db').closest('div.mb-2')!)
+    await waitFor(() => {
+      expect(connectionApi.open).toHaveBeenCalledWith('c1')
+    })
+  })
+
   it('opens new connection dialog', async () => {
     const { connectionApi } = await import('@/lib/api/connection')
     vi.mocked(connectionApi.list).mockResolvedValue({ items: [] })
