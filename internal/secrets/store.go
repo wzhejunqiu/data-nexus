@@ -36,9 +36,12 @@ type Store interface {
 }
 
 func NewStore(dataDir string) (Store, error) {
-	kc := newKeyringBackend()
-	if kc.Probe() == nil {
-		return &compositeStore{backend: kc, active: BackendKeychain}, nil
+	return newStore(dataDir, func() error { return newKeyringBackend().Probe() })
+}
+
+func newStore(dataDir string, probe func() error) (Store, error) {
+	if probe() == nil {
+		return &compositeStore{backend: newKeyringBackend(), active: BackendKeychain}, nil
 	}
 	vault, err := newVaultBackend(dataDir)
 	if err != nil {

@@ -31,6 +31,7 @@
 | [API.md](../design/API.md) | Service 方法签名与错误码 |
 | [DATA_MODEL.md](../design/DATA_MODEL.md) | Go/TS 数据结构 |
 | [SECRETS.md](../design/SECRETS.md) | 远程连接密码（Keychain / Vault） |
+| [OS_KEYCHAIN.md](../design/OS_KEYCHAIN.md) | OS Keychain 路径详细设计 |
 | [UI_UX.md](../design/UI_UX.md) | 组件与交互 |
 | [PRD.md](../product/PRD.md) | 功能优先级与验收标准 |
 

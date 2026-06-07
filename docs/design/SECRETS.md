@@ -30,9 +30,14 @@
 
 ## 3. Keychain 路径
 
-- Service name: `data-nexus`
-- Account: 连接 `id`（ULID）
+优先 backend。完整设计（架构图、Probe 流程、密码生命周期、前端感知）见 **[OS_KEYCHAIN.md](./OS_KEYCHAIN.md)**。
+
+摘要：
+
+- 库：`zalando/go-keyring`（macOS Keychain / Windows Credential Manager / Linux Secret Service）
+- Service name: `data-nexus`；Account: 连接 `id`（ULID）
 - `SetPassword` / `GetPassword` / `DeletePassword` 按连接 ID 读写
+- Vault 相关接口为 no-op；无需主密码，启动即可 `GetPassword`
 
 ---
 
@@ -115,4 +120,4 @@ AES 数据密钥
 - v1.0 不支持 Touch ID / 生物识别解锁
 - v1.0 不支持证书/IAM 等替代认证
 
-交叉引用：[DATA_MODEL.md](./DATA_MODEL.md) · [API.md](./API.md) · [CONNECTION_UX.md](./CONNECTION_UX.md)
+交叉引用：[OS_KEYCHAIN.md](./OS_KEYCHAIN.md) · [DATA_MODEL.md](./DATA_MODEL.md) · [API.md](./API.md) · [CONNECTION_UX.md](./CONNECTION_UX.md)

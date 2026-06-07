@@ -104,3 +104,156 @@ func TestVaultPersistReload(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestVaultInitShortPassword(t *testing.T) {
+	dir := t.TempDir()
+	v, err := secrets.NewVaultBackendForTest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = v.InitVault("short")
+	if err == nil {
+		t.Fatal("expected error for short password")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_REQUEST" {
+		t.Fatalf("expected INVALID_REQUEST, got %v", err)
+	}
+}
+
+func TestVaultInitAlreadyInitialized(t *testing.T) {
+	dir := t.TempDir()
+	v, err := secrets.NewVaultBackendForTest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := v.InitVault("testpass12"); err != nil {
+		t.Fatal(err)
+	}
+	err = v.InitVault("another12")
+	if err == nil {
+		t.Fatal("expected error on double init")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INVALID_REQUEST" {
+		t.Fatalf("expected INVALID_REQUEST, got %v", err)
+	}
+}
+
+func TestVaultUnlockAlreadyUnlocked(t *testing.T) {
+	dir := t.TempDir()
+	v, err := secrets.NewVaultBackendForTest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := v.InitVault("testpass12"); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.UnlockVault("testpass12"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestVaultChangePassword(t *testing.T) {
+	dir := t.TempDir()
+	v, err := secrets.NewVaultBackendForTest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := v.InitVault("oldpass12"); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.SetPassword("conn1", "secret"); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.ChangeVaultPassword("wrongpass", "newpass12"); err == nil {
+		t.Fatal("expected wrong password error")
+	}
+	if err := v.ChangeVaultPassword("oldpass12", "short"); err == nil {
+		t.Fatal("expected error for short new password")
+	}
+	if err := v.ChangeVaultPassword("oldpass12", "newpass12"); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.LockVault(); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.UnlockVault("newpass12"); err != nil {
+		t.Fatalf("unlock with new password failed: %v", err)
+	}
+	pw, err := v.GetPassword("conn1")
+	if err != nil || pw != "secret" {
+		t.Fatalf("got %q err %v", pw, err)
+	}
+}
+
+func TestVaultChangePasswordWhileLocked(t *testing.T) {
+	dir := t.TempDir()
+	v, err := secrets.NewVaultBackendForTest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := v.InitVault("testpass12"); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.LockVault(); err != nil {
+		t.Fatal(err)
+	}
+	err = v.ChangeVaultPassword("testpass12", "newpass12")
+	if err == nil {
+		t.Fatal("expected locked error")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "SECRETS_VAULT_LOCKED" {
+		t.Fatalf("expected SECRETS_VAULT_LOCKED, got %v", err)
+	}
+}
+
+func TestVaultPasswordOpsBeforeInit(t *testing.T) {
+	dir := t.TempDir()
+	v, err := secrets.NewVaultBackendForTest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, err := range []error{
+		v.SetPassword("c1", "x"),
+		func() error { _, e := v.GetPassword("c1"); return e }(),
+		v.DeletePassword("c1"),
+		v.ChangeVaultPassword("old", "newpass12"),
+	} {
+		if err == nil {
+			t.Fatal("expected not initialized error")
+		}
+		appErr, ok := err.(*model.AppError)
+		if !ok || appErr.Code != "SECRETS_VAULT_NOT_INITIALIZED" {
+			t.Fatalf("expected SECRETS_VAULT_NOT_INITIALIZED, got %v", err)
+		}
+	}
+}
+
+func TestVaultPasswordOpsWhileLocked(t *testing.T) {
+	dir := t.TempDir()
+	v, err := secrets.NewVaultBackendForTest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := v.InitVault("testpass12"); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.LockVault(); err != nil {
+		t.Fatal(err)
+	}
+	for _, err := range []error{
+		v.SetPassword("c1", "x"),
+		func() error { _, e := v.GetPassword("c1"); return e }(),
+		v.DeletePassword("c1"),
+	} {
+		if err == nil {
+			t.Fatal("expected locked error")
+		}
+		appErr, ok := err.(*model.AppError)
+		if !ok || appErr.Code != "SECRETS_VAULT_LOCKED" {
+			t.Fatalf("expected SECRETS_VAULT_LOCKED, got %v", err)
+		}
+	}
+}

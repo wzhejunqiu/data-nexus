@@ -31,9 +31,13 @@ type vaultBackend struct {
 }
 
 func newVaultBackend(dataDir string) (*vaultBackend, error) {
+	return newVaultBackendIn(dataDir, config.VaultDir())
+}
+
+func newVaultBackendIn(dataDir, defaultDir string) (*vaultBackend, error) {
 	dir := dataDir
 	if dir == "" {
-		dir = config.VaultDir()
+		dir = defaultDir
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err

@@ -11,6 +11,8 @@ make test-db-down # 停止并清理
 
 默认凭据：`test` / `test`，数据库 `testdb`，PG 端口 `5432`，MySQL 端口 `3306`。
 
+`make test-db-up` 启动后会自动注入测试表（users、posts、orders、tags、active_users 视图等，与 SQLite demo 结构类似）。
+
 ---
 
 ## 连接与 Secrets

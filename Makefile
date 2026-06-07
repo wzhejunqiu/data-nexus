@@ -150,6 +150,8 @@ test-db-up:
 	$(assert-compose-runtime)
 	@echo "Using $(COMPOSE)"
 	$(COMPOSE) -f $(COMPOSE_FILE) up -d --wait
+	@chmod +x data/testdb/seed.sh
+	@./data/testdb/seed.sh $(COMPOSE_FILE) $(COMPOSE)
 
 test-db-down:
 	$(assert-compose-runtime)
