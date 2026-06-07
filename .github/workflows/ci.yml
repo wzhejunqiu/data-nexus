@@ -158,29 +158,72 @@ jobs:
           - os: ubuntu-latest
             name: linux-amd64
             platform: linux/amd64
-            install-deps: true
+            install-linux-deps: true
+            linux-cross-arm64: false
+            build-tags: "-tags webkit2_41"
+          - os: ubuntu-latest
+            name: linux-arm64
+            platform: linux/arm64
+            install-linux-deps: true
+            linux-cross-arm64: true
+            build-tags: "-tags webkit2_41"
           - os: macos-latest
-            name: macos-universal
-            platform: darwin/universal
-            install-deps: false
+            name: macos-arm64
+            platform: darwin/arm64
+            install-linux-deps: false
+            linux-cross-arm64: false
+            build-tags: ""
+          - os: macos-latest
+            name: macos-amd64
+            platform: darwin/amd64
+            install-linux-deps: false
+            linux-cross-arm64: false
+            build-tags: ""
           - os: windows-latest
             name: windows-amd64
             platform: windows/amd64
-            install-deps: false
+            install-linux-deps: false
+            linux-cross-arm64: false
+            build-tags: ""
+          - os: windows-latest
+            name: windows-arm64
+            platform: windows/arm64
+            install-linux-deps: false
+            linux-cross-arm64: false
+            build-tags: ""
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Linux build dependencies
-        if: matrix.install-deps
+        if: matrix.install-linux-deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            pkg-config \
-            libgtk-3-dev \
-            libwebkit2gtk-4.1-dev
+          if [ "${{ matrix.linux-cross-arm64 }}" = "true" ]; then
+            sudo dpkg --add-architecture arm64
+            sudo apt-get update
+            sudo apt-get install -y \
+              gcc-aarch64-linux-gnu \
+              g++-aarch64-linux-gnu \
+              pkg-config \
+              libgtk-3-dev:arm64 \
+              libwebkit2gtk-4.1-dev:arm64
+          else
+            sudo apt-get install -y \
+              build-essential \
+              pkg-config \
+              libgtk-3-dev \
+              libwebkit2gtk-4.1-dev
+          fi
+
+      - name: Configure Linux ARM64 toolchain
+        if: matrix.linux-cross-arm64
+        run: |
+          echo "CC=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+          echo "CXX=aarch64-linux-gnu-g++" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_SYSROOT_DIR=/" >> "$GITHUB_ENV"
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -202,7 +245,7 @@ jobs:
         run: make embed-stub
 
       - name: Build desktop app
-        run: wails build -platform ${{ matrix.platform }}
+        run: wails build ${{ matrix.build-tags }} -platform ${{ matrix.platform }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

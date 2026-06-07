@@ -1,10 +1,16 @@
-.PHONY: dev build test lint generate ci-test fmt-check fmt vuln-check check embed-stub
+.PHONY: dev build test lint generate ci-test fmt-check fmt vuln-check check embed-stub gen-test-db
+
+UNAME_S := $(shell uname -s)
+WAILS_TAGS :=
+ifeq ($(UNAME_S),Linux)
+WAILS_TAGS := -tags webkit2_41
+endif
 
 dev:
-	wails dev
+	wails dev $(WAILS_TAGS)
 
 build:
-	wails build
+	wails build $(WAILS_TAGS)
 
 test:
 	go test ./...
@@ -34,3 +40,6 @@ vuln-check:
 	cd frontend && npm audit --omit=dev --audit-level=high
 
 check: fmt-check lint vuln-check ci-test
+
+gen-test-db:
+	./data/generate.sh

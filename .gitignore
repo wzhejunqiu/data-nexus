@@ -25,3 +25,8 @@ frontend/wailsjs/
 
 # Logs
 *.log
+
+# Test databases (generated from data/*.sql via data/generate.sh)
+data/*.db
+data/*.sqlite
+data/*.sqlite3
