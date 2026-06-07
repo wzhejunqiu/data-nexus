@@ -105,7 +105,7 @@
 - [x] `DataGrid` 行内编辑模式 + `pendingEdits` 状态条
 - [x] `BatchEditConfirmDialog` — 批量确认
 - [x] `ExportWizardPage` + `CsvFormatFields`
-- [x] `ImportWizard` — 选文件 → 预览 → 目标表/模式 → 执行
+- [x] `ImportWizardPage` — 全屏 5 步向导：文件与格式 → 目标 → 列映射与确认 → 导入 → 结果
 - [x] `SettingsDialog` — 绑定 `ConfigService`
 - [x] Monaco completion provider（表名/列名）
 - [x] Export 按钮（数据 Tab 工具栏 + SQL 结果工具栏）

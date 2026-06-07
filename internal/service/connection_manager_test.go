@@ -188,7 +188,9 @@ func TestConnectionManagerUpdateReadOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	updated, err := mgr.UpdateConnectionReadOnly(context.Background(), conn.ID, true)
+	updated, err := mgr.UpdateConnectionSQLiteSettings(context.Background(), conn.ID, model.SQLiteSettingsUpdate{
+		ReadOnly: true,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

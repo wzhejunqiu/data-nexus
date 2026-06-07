@@ -99,6 +99,7 @@ func (s *ConnectionStore) Upsert(req model.ConnectRequest) (*model.SavedConnecti
 			SQLite: &model.SQLiteConfig{
 				FilePath: req.FilePath,
 				ReadOnly: req.ReadOnly,
+				WAL:      req.WAL,
 			},
 		}
 		existing.UpdatedAt = now
@@ -115,6 +116,7 @@ func (s *ConnectionStore) Upsert(req model.ConnectRequest) (*model.SavedConnecti
 			SQLite: &model.SQLiteConfig{
 				FilePath: req.FilePath,
 				ReadOnly: req.ReadOnly,
+				WAL:      req.WAL,
 			},
 		},
 		CreatedAt:  now,
@@ -147,13 +149,14 @@ func (s *ConnectionStore) Remove(id string) error {
 	return model.ErrSavedNotFound(id)
 }
 
-func (s *ConnectionStore) UpdateReadOnly(id string, readOnly bool) (*model.SavedConnection, error) {
+func (s *ConnectionStore) UpdateSQLiteSettings(id string, update model.SQLiteSettingsUpdate) (*model.SavedConnection, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for i := range s.data.Items {
 		if s.data.Items[i].ID == id {
 			if s.data.Items[i].Config.SQLite != nil {
-				s.data.Items[i].Config.SQLite.ReadOnly = readOnly
+				s.data.Items[i].Config.SQLite.ReadOnly = update.ReadOnly
+				s.data.Items[i].Config.SQLite.WAL = update.WAL && !update.ReadOnly
 			}
 			s.data.Items[i].UpdatedAt = time.Now().UTC()
 			item := s.data.Items[i]

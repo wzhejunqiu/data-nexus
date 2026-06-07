@@ -302,7 +302,7 @@ func TestQueryServiceBrowseInvalidSort(t *testing.T) {
 		TableName:    "t",
 		Page:         1,
 		PageSize:     50,
-		Sort:         "bad-name",
+		Sort:         `bad"name`,
 	})
 	if err == nil {
 		t.Fatal("expected error")

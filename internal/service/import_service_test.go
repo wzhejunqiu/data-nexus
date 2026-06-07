@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -113,6 +114,118 @@ func TestImportServiceUpdateRequiresPK(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "upsert keys") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestImportServiceCreateTableWithColumnSpecs(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+	is := service.NewImportService(qs)
+
+	csvPath := writeTempCSV(t, "id,label\n1,alpha\n2,beta\n")
+	res, err := is.ImportCSV(ctx, model.ImportCSVRequest{
+		ConnectionID: conn.ID,
+		NewTableName: "custom_cols",
+		Mode:         "append",
+		ColumnMap: map[string]string{
+			"id":    "item_id",
+			"label": "title",
+		},
+		NewTableColumns: map[string]model.ImportColumnSpec{
+			"id":    {DataType: "INTEGER", PrimaryKey: true},
+			"label": {DataType: "TEXT", PrimaryKey: false},
+		},
+		FilePath: csvPath,
+		Format:   model.DefaultCSVFormat(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.RowsInserted != 2 {
+		t.Fatalf("expected 2 inserts, got %d", res.RowsInserted)
+	}
+
+	schema, err := qs.GetTableSchema(ctx, conn.ID, "custom_cols")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(schema.Columns) != 2 {
+		t.Fatalf("expected 2 columns, got %d", len(schema.Columns))
+	}
+	byName := map[string]model.ColumnInfo{}
+	for _, c := range schema.Columns {
+		byName[c.Name] = c
+	}
+	if byName["item_id"].DataType != "INTEGER" || !byName["item_id"].PrimaryKey {
+		t.Fatalf("unexpected item_id column: %+v", byName["item_id"])
+	}
+	if byName["title"].DataType != "TEXT" || byName["title"].PrimaryKey {
+		t.Fatalf("unexpected title column: %+v", byName["title"])
+	}
+}
+
+func TestImportServiceCreateTableChineseName(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+	is := service.NewImportService(qs)
+
+	csvPath := writeTempCSV(t, "id,name\n1,alice\n")
+	res, err := is.ImportCSV(ctx, model.ImportCSVRequest{
+		ConnectionID: conn.ID,
+		NewTableName: "发送分",
+		Mode:         "append",
+		ColumnMap: map[string]string{
+			"id":   "id",
+			"name": "name",
+		},
+		FilePath: csvPath,
+		Format:   model.DefaultCSVFormat(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.RowsInserted != 1 {
+		t.Fatalf("expected 1 insert, got %d", res.RowsInserted)
+	}
+
+	schema, err := qs.GetTableSchema(ctx, conn.ID, "发送分")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if schema.Name != "发送分" || len(schema.Columns) != 2 {
+		t.Fatalf("unexpected schema: %+v", schema)
+	}
+}
+
+func TestImportServiceLargeCSV(t *testing.T) {
+	_, qs, conn := newTestEnv(t)
+	ctx := context.Background()
+	is := service.NewImportService(qs)
+
+	const rowCount = 10_000
+	var b strings.Builder
+	b.WriteString("id,name\n")
+	for i := 1; i <= rowCount; i++ {
+		b.WriteString(fmt.Sprintf("%d,row%d\n", i, i))
+	}
+	csvPath := writeTempCSV(t, b.String())
+
+	res, err := is.ImportCSV(ctx, model.ImportCSVRequest{
+		ConnectionID: conn.ID,
+		NewTableName: "large_import",
+		Mode:         "append",
+		ColumnMap: map[string]string{
+			"id":   "id",
+			"name": "name",
+		},
+		FilePath: csvPath,
+		Format:   model.DefaultCSVFormat(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.RowsInserted != rowCount {
+		t.Fatalf("expected %d inserts, got %d", rowCount, res.RowsInserted)
 	}
 }
 

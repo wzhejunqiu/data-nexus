@@ -59,9 +59,9 @@ func (s *ConnectionService) RenameConnection(connectionID string, name string) (
 	})
 }
 
-func (s *ConnectionService) UpdateConnectionReadOnly(connectionID string, readOnly bool) (*model.SavedConnection, error) {
-	return call(s.log, "ConnectionService.UpdateConnectionReadOnly", func() (*model.SavedConnection, error) {
-		return s.mgr.UpdateConnectionReadOnly(context.Background(), connectionID, readOnly)
+func (s *ConnectionService) UpdateConnectionSQLiteSettings(connectionID string, update model.SQLiteSettingsUpdate) (*model.SavedConnection, error) {
+	return call(s.log, "ConnectionService.UpdateConnectionSQLiteSettings", func() (*model.SavedConnection, error) {
+		return s.mgr.UpdateConnectionSQLiteSettings(context.Background(), connectionID, update)
 	})
 }
 

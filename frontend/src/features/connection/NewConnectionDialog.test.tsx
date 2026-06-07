@@ -51,7 +51,7 @@ describe('NewConnectionDialog', () => {
       displayName: 'test.db',
     } as never)
 
-    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly />)
+    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly wal={false} />)
 
     const input = screen.getByPlaceholderText('/path/to/database.db')
     fireEvent.change(input, { target: { value: '/tmp/test.db' } })
@@ -60,6 +60,7 @@ describe('NewConnectionDialog', () => {
     expect(connectionApi.openFromFile).toHaveBeenCalledWith({
       filePath: '/tmp/test.db',
       readOnly: true,
+      wal: false,
     })
   })
 
@@ -72,7 +73,7 @@ describe('NewConnectionDialog', () => {
       displayName: 'app.db',
     } as never)
 
-    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} />)
+    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal />)
     fireEvent.click(screen.getByRole('button', { name: 'connection.open' }))
 
     await waitFor(() => {
@@ -80,6 +81,7 @@ describe('NewConnectionDialog', () => {
       expect(connectionApi.openFromFile).toHaveBeenCalledWith({
         filePath: '/picked/app.db',
         readOnly: false,
+        wal: true,
       })
     })
   })
@@ -88,7 +90,7 @@ describe('NewConnectionDialog', () => {
     const { dialogApi } = await import('@/lib/api/dialog')
     vi.mocked(dialogApi.openDatabaseFile).mockResolvedValue('/picked/browse.db')
 
-    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} />)
+    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
     fireEvent.click(screen.getByRole('button', { name: 'connection.browse' }))
 
     const input = screen.getByPlaceholderText('/path/to/database.db') as HTMLInputElement
@@ -104,7 +106,7 @@ describe('NewConnectionDialog', () => {
       message: 'cancelled',
     })
 
-    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} />)
+    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
     fireEvent.click(screen.getByRole('button', { name: 'connection.browse' }))
 
     expect(pushToast).not.toHaveBeenCalled()
@@ -117,7 +119,7 @@ describe('NewConnectionDialog', () => {
       message: 'bad path',
     })
 
-    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} />)
+    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
     fireEvent.click(screen.getByRole('button', { name: 'connection.browse' }))
 
     await waitFor(() => {

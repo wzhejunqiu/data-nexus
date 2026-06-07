@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -6,6 +6,8 @@ import { CsvFormatFields } from '@/features/csv/CsvFormatFields'
 import { ExportColumnPicker } from '@/features/csv/ExportColumnPicker'
 import {
   getExportSteps,
+  getExportWizardSteps,
+  isInteractiveExportStep,
   isTableExport,
   stepLabelKey,
   type ExportStep,
@@ -27,8 +29,18 @@ export function ExportWizardPage() {
   const session = useExportStore((s) => s.session)!
   const closeExport = useExportStore((s) => s.closeExport)
 
-  const [source, setSource] = useState<ExportSource>(session.source)
-  const [step, setStep] = useState<ExportStep>(() => getExportSteps(session.source)[0])
+  const [source, setSource] = useState<ExportSource>(() => {
+    if (
+      session.source === 'table-page' &&
+      session.totalRows != null &&
+      session.rows != null &&
+      session.totalRows > session.rows.length
+    ) {
+      return 'table-all'
+    }
+    return session.source
+  })
+  const [step, setStep] = useState<ExportStep>('options')
   const [format, setFormat] = useState<CSVFormatOptions>(() => loadCSVFormatPreference())
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(
     () => new Set(session.availableColumns),
@@ -41,16 +53,12 @@ export function ExportWizardPage() {
   const runStarted = useRef(false)
   const exportedCountRef = useRef(0)
 
-  useEffect(() => {
-    if (progress?.exported != null) {
-      exportedCountRef.current = progress.exported
-    }
-  }, [progress?.exported])
-
-  const steps = useMemo(() => getExportSteps(source), [source])
+  const steps = getExportSteps()
+  const wizardSteps = getExportWizardSteps()
   const stepIndex = steps.indexOf(step)
+  const wizardStepIndex = wizardSteps.indexOf(step)
   const orderedSelected = session.availableColumns.filter((c) => selectedColumns.has(c))
-  const canProceedColumns = orderedSelected.length > 0
+  const canProceedOptions = orderedSelected.length > 0
 
   const showLargeWarning =
     isTableExport(source) &&
@@ -62,6 +70,12 @@ export function ExportWizardPage() {
     source === 'query-result'
       ? 'query-result.csv'
       : `${session.tableName ?? 'export'}.csv`
+
+  useEffect(() => {
+    if (progress?.exported != null) {
+      exportedCountRef.current = progress.exported
+    }
+  }, [progress?.exported])
 
   const goNext = useCallback(() => {
     const idx = steps.indexOf(step)
@@ -143,10 +157,12 @@ export function ExportWizardPage() {
     closeExport()
   }
 
-  const handleRetry = () => {
+  const handleBackFromError = () => {
     setResult(null)
     runStarted.current = false
-    setStep('progress')
+    setRunning(false)
+    setExportId(null)
+    setStep(wizardSteps[wizardSteps.length - 1]!)
   }
 
   const footer = (() => {
@@ -154,8 +170,8 @@ export function ExportWizardPage() {
       return (
         <>
           {result?.status === 'error' && (
-            <Button variant="outline" onClick={handleRetry}>
-              {t('csv.retryExport')}
+            <Button variant="outline" onClick={handleBackFromError}>
+              {t('csv.back')}
             </Button>
           )}
           <Button onClick={handleClose}>{t('csv.closeWizard')}</Button>
@@ -183,13 +199,11 @@ export function ExportWizardPage() {
         <Button variant="outline" onClick={handleClose}>
           {t('common.cancel')}
         </Button>
-        {step === 'scope' && <Button onClick={goNext}>{t('csv.next')}</Button>}
-        {step === 'columns' && (
-          <Button onClick={goNext} disabled={!canProceedColumns}>
+        {step === 'options' && (
+          <Button onClick={goNext} disabled={!canProceedOptions}>
             {t('csv.next')}
           </Button>
         )}
-        {step === 'format' && <Button onClick={goNext}>{t('csv.next')}</Button>}
         {step === 'destination' && (
           <>
             <Button variant="outline" onClick={() => void pickFile()}>
@@ -209,53 +223,53 @@ export function ExportWizardPage() {
       <div className="border-b border-border px-6 py-4">
         <h1 className="text-lg font-semibold">{t('csv.exportWizardTitle')}</h1>
         <p className="mt-1 text-sm text-muted">
-          {t('csv.stepOf', {
-            current: stepIndex + 1,
-            total: steps.length,
-            label: t(stepLabelKey(step)),
-          })}
+          {isInteractiveExportStep(step)
+            ? t('csv.stepOf', {
+                current: wizardStepIndex + 1,
+                total: wizardSteps.length,
+                label: t(stepLabelKey(step)),
+              })
+            : t(stepLabelKey(step))}
         </p>
       </div>
 
       <div className="flex-1 overflow-auto px-6 py-6">
         <div className="mx-auto max-w-lg">
-          {step === 'scope' && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted">{t('csv.scopeHint')}</p>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={source === 'table-page'}
-                  onChange={() => setSource('table-page')}
-                />
-                {t('csv.exportPage')}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={source === 'table-all'}
-                  onChange={() => setSource('table-all')}
-                />
-                {t('csv.exportAll')}
-              </label>
-              {showLargeWarning && (
-                <p className="text-sm text-amber-600 dark:text-amber-400">
-                  {t('csv.exportLargeWarning', { total: session.totalRows })}
-                </p>
+          {step === 'options' && (
+            <div className="space-y-6">
+              {isTableExport(source) && (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted">{t('csv.scopeHint')}</p>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      checked={source === 'table-page'}
+                      onChange={() => setSource('table-page')}
+                    />
+                    {t('csv.exportPage')}
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      checked={source === 'table-all'}
+                      onChange={() => setSource('table-all')}
+                    />
+                    {t('csv.exportAll')}
+                  </label>
+                  {showLargeWarning && (
+                    <p className="text-sm text-amber-600 dark:text-amber-400">
+                      {t('csv.exportLargeWarning', { total: session.totalRows })}
+                    </p>
+                  )}
+                </div>
               )}
+              <ExportColumnPicker
+                columns={session.availableColumns}
+                selected={selectedColumns}
+                onChange={setSelectedColumns}
+              />
+              <CsvFormatFields format={format} onChange={setFormat} mode="export" />
             </div>
-          )}
-
-          {step === 'columns' && (
-            <ExportColumnPicker
-              columns={session.availableColumns}
-              selected={selectedColumns}
-              onChange={setSelectedColumns}
-            />
-          )}
-
-          {step === 'format' && (
-            <CsvFormatFields format={format} onChange={setFormat} mode="export" />
           )}
 
           {step === 'destination' && (

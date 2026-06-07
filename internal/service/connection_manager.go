@@ -117,6 +117,7 @@ func (m *ConnectionManager) OpenConnection(ctx context.Context, connectionID str
 	_, _ = m.store.Upsert(model.ConnectRequest{
 		FilePath: saved.Config.SQLite.FilePath,
 		ReadOnly: saved.Config.SQLite.ReadOnly,
+		WAL:      saved.Config.SQLite.WAL,
 	})
 	_ = m.store.Save()
 
@@ -157,8 +158,11 @@ func (m *ConnectionManager) RemoveConnection(ctx context.Context, connectionID s
 	return m.store.Save()
 }
 
-func (m *ConnectionManager) UpdateConnectionReadOnly(ctx context.Context, connectionID string, readOnly bool) (*model.SavedConnection, error) {
-	item, err := m.store.UpdateReadOnly(connectionID, readOnly)
+func (m *ConnectionManager) UpdateConnectionSQLiteSettings(ctx context.Context, connectionID string, update model.SQLiteSettingsUpdate) (*model.SavedConnection, error) {
+	if update.ReadOnly {
+		update.WAL = false
+	}
+	item, err := m.store.UpdateSQLiteSettings(connectionID, update)
 	if err != nil {
 		return nil, err
 	}
@@ -243,6 +247,9 @@ func (m *ConnectionManager) CloseAll() {
 }
 
 func normalizeConnectRequest(req model.ConnectRequest) (model.ConnectRequest, error) {
+	if req.ReadOnly {
+		req.WAL = false
+	}
 	if req.FilePath == "" {
 		return req, model.ErrInvalidPath("file path is required")
 	}

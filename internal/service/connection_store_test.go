@@ -179,13 +179,13 @@ func TestConnectionStore_LoadCorruptJSON(t *testing.T) {
 	}
 }
 
-func TestConnectionStore_UpdateReadOnly_NotFound(t *testing.T) {
+func TestConnectionStore_UpdateSQLiteSettings_NotFound(t *testing.T) {
 	dir := t.TempDir()
 	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = store.UpdateReadOnly("missing", true)
+	_, err = store.UpdateSQLiteSettings("missing", model.SQLiteSettingsUpdate{ReadOnly: true})
 	if err == nil {
 		t.Fatal("expected error")
 	}

@@ -3,13 +3,14 @@ import type { editor, languages, Position } from 'monaco-editor'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { format as formatSQL } from 'sql-formatter'
 import { Button } from '@/components/ui/Button'
 import { NullCell } from '@/components/ui/NullCell'
 import { useToastStore } from '@/components/ui/Toast'
 import { useExportStore } from '@/stores/exportStore'
 import { connectionApi } from '@/lib/api/connection'
 import { formatError } from '@/lib/api/errors'
+import { connectionTypeToSqlDialect } from '@/lib/sql/dialect'
+import { formatSql } from '@/lib/sql/format'
 import { queryApi } from '@/lib/api/query'
 import { schemaApi } from '@/lib/api/schema'
 import type { QueryResponse } from '@/lib/types'
@@ -205,7 +206,8 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
 
   const formatEditorSQL = () => {
     try {
-      const formatted = formatSQL(sql, { language: 'sql' })
+      const dialect = connectionTypeToSqlDialect(activeConnItem?.type)
+      const formatted = formatSql(sql, dialect)
       setSql(formatted)
       editorRef.current?.setValue(formatted)
     } catch {

@@ -5,17 +5,15 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/wzhejunqiu/data-nexus/internal/model"
+	"github.com/wzhejunqiu/data-nexus/internal/sqlutil"
 	_ "modernc.org/sqlite"
 )
 
 const maxRowsDefault = model.MaxQueryRows
-
-var identRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 type Driver struct {
 	db       *sql.DB
@@ -61,7 +59,21 @@ func (d *Driver) Connect(ctx context.Context, cfg model.DriverConfig) error {
 		return model.ErrConnectionFailed(err.Error())
 	}
 	d.db = db
-	return nil
+	return d.applySQLitePragmas(ctx, cfg.SQLite)
+}
+
+func (d *Driver) applySQLitePragmas(ctx context.Context, cfg *model.SQLiteConfig) error {
+	if cfg == nil || d.readOnly || !cfg.WAL {
+		return nil
+	}
+	var mode string
+	if err := d.db.QueryRowContext(ctx, "PRAGMA journal_mode=WAL").Scan(&mode); err != nil {
+		return model.ErrSQL(err.Error())
+	}
+	if strings.EqualFold(mode, "wal") {
+		return nil
+	}
+	return model.ErrSQL("failed to enable WAL journal mode")
 }
 
 func (d *Driver) Close() error {
@@ -126,7 +138,7 @@ func (d *Driver) ListTables(ctx context.Context) ([]model.TableInfo, error) {
 }
 
 func (d *Driver) GetTableSchema(ctx context.Context, tableName string) (*model.TableSchema, error) {
-	if !identRe.MatchString(tableName) {
+	if !sqlutil.IsSafeQuotedIdentifier(tableName) {
 		return nil, model.ErrTableNotFound(tableName)
 	}
 	tableType, err := d.lookupTableType(ctx, tableName)
@@ -287,14 +299,14 @@ func orderClauseForBrowse(opts model.BrowseOptions, order string) (string, error
 	if opts.Sort == "" {
 		return "", nil
 	}
-	if !identRe.MatchString(opts.Sort) {
+	if !sqlutil.IsSafeQuotedIdentifier(opts.Sort) {
 		return "", model.ErrInvalidRequest("invalid sort column")
 	}
 	return fmt.Sprintf(" ORDER BY %q %s", opts.Sort, order), nil
 }
 
 func (d *Driver) BrowseTable(ctx context.Context, tableName string, opts model.BrowseOptions) (*model.PaginatedTableData, error) {
-	if !identRe.MatchString(tableName) {
+	if !sqlutil.IsSafeQuotedIdentifier(tableName) {
 		return nil, model.ErrTableNotFound(tableName)
 	}
 	if _, err := d.lookupTableType(ctx, tableName); err != nil {

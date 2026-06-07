@@ -7,7 +7,7 @@ import type { ConnectionListItem } from '@/lib/types'
 
 vi.mock('@/lib/api/connection', () => ({
   connectionApi: {
-    updateReadOnly: vi.fn(),
+    updateSQLiteSettings: vi.fn(),
   },
 }))
 
@@ -21,7 +21,7 @@ const baseItem: ConnectionListItem = {
   type: 'sqlite',
   config: {
     type: 'sqlite',
-    sqlite: { filePath: '/tmp/test.db', readOnly: false },
+    sqlite: { filePath: '/tmp/test.db', readOnly: false, wal: false },
   },
   status: 'closed',
   lastUsedAt: '2026-01-01T00:00:00Z',
@@ -41,10 +41,11 @@ describe('EditConnectionDialog', () => {
     vi.clearAllMocks()
   })
 
-  it('renders readOnly checkbox with initial value', () => {
+  it('renders readOnly and wal checkboxes with initial values', () => {
     renderDialog()
-    const checkbox = screen.getByRole('checkbox') as HTMLInputElement
-    expect(checkbox.checked).toBe(false)
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[]
+    expect(checkboxes[0].checked).toBe(false)
+    expect(checkboxes[1].checked).toBe(false)
   })
 
   it('shows readOnly checked when connection is read-only', () => {
@@ -52,22 +53,45 @@ describe('EditConnectionDialog', () => {
       ...baseItem,
       config: {
         type: 'sqlite',
-        sqlite: { filePath: '/tmp/test.db', readOnly: true },
+        sqlite: { filePath: '/tmp/test.db', readOnly: true, wal: false },
       },
     })
-    expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true)
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[]
+    expect(checkboxes[0].checked).toBe(true)
+    expect(checkboxes[1].disabled).toBe(true)
   })
 
-  it('calls updateReadOnly when saving toggled checkbox', async () => {
+  it('calls updateSQLiteSettings when saving toggled readOnly', async () => {
     const { connectionApi } = await import('@/lib/api/connection')
-    vi.mocked(connectionApi.updateReadOnly).mockResolvedValue({} as never)
+    vi.mocked(connectionApi.updateSQLiteSettings).mockResolvedValue({} as never)
 
     renderDialog()
-    fireEvent.click(screen.getByRole('checkbox'))
+    const checkboxes = screen.getAllByRole('checkbox')
+    fireEvent.click(checkboxes[0])
     fireEvent.click(screen.getByRole('button', { name: /confirm|确认/i }))
 
     await waitFor(() => {
-      expect(connectionApi.updateReadOnly).toHaveBeenCalledWith('conn-1', true)
+      expect(connectionApi.updateSQLiteSettings).toHaveBeenCalledWith('conn-1', {
+        readOnly: true,
+        wal: false,
+      })
+    })
+  })
+
+  it('calls updateSQLiteSettings with wal enabled', async () => {
+    const { connectionApi } = await import('@/lib/api/connection')
+    vi.mocked(connectionApi.updateSQLiteSettings).mockResolvedValue({} as never)
+
+    renderDialog()
+    const checkboxes = screen.getAllByRole('checkbox')
+    fireEvent.click(checkboxes[1])
+    fireEvent.click(screen.getByRole('button', { name: /confirm|确认/i }))
+
+    await waitFor(() => {
+      expect(connectionApi.updateSQLiteSettings).toHaveBeenCalledWith('conn-1', {
+        readOnly: false,
+        wal: true,
+      })
     })
   })
 })

@@ -17,6 +17,12 @@ vi.mock('@/lib/api/connection', () => ({
   },
 }))
 
+const formatSqlMock = vi.fn((sql: string, _dialect: string) => `FORMATTED:${sql}`)
+
+vi.mock('@/lib/sql/format', () => ({
+  formatSql: (sql: string, dialect: string) => formatSqlMock(sql, dialect),
+}))
+
 vi.mock('@/lib/api/query', () => ({
   queryApi: {
     execute: vi.fn(),
@@ -38,6 +44,7 @@ describe('SqlEditor', () => {
     useQueryHistoryStore.setState({ items: {} })
     useStatusStore.setState({ rowCount: null, durationMs: null, operation: null })
     vi.mocked(navigator.clipboard.writeText).mockClear()
+    formatSqlMock.mockClear()
   })
 
   it('disables run without connection', async () => {
@@ -142,6 +149,24 @@ describe('SqlEditor', () => {
     expect((screen.getByTestId('sql-editor') as HTMLTextAreaElement).value).toBe(
       'PRAGMA foreign_keys;',
     )
+  })
+
+  it('formats sql using shared formatter with connection dialect', async () => {
+    const { connectionApi } = await import('@/lib/api/connection')
+    vi.mocked(connectionApi.list).mockResolvedValue({ items: [openConn] })
+
+    renderWithProviders(<SqlEditor connectionId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'app.db' })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /格式化|Format/i }))
+
+    await waitFor(() => {
+      expect(formatSqlMock).toHaveBeenCalledWith('SELECT 1;', 'sqlite')
+      expect((screen.getByTestId('sql-editor') as HTMLTextAreaElement).value).toBe(
+        'FORMATTED:SELECT 1;',
+      )
+    })
   })
 
   it('shows exec result and copies csv', async () => {

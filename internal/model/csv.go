@@ -76,15 +76,21 @@ type CSVPreview struct {
 	HasHeader bool               `json:"hasHeader"`
 }
 
+type ImportColumnSpec struct {
+	DataType   string `json:"dataType"`
+	PrimaryKey bool   `json:"primaryKey"`
+}
+
 type ImportCSVRequest struct {
-	ConnectionID string            `json:"connectionId"`
-	TargetTable  string            `json:"targetTable"`
-	NewTableName string            `json:"newTableName"`
-	Mode         string            `json:"mode"`
-	ColumnMap    map[string]string `json:"columnMap"`
-	FilePath     string            `json:"filePath"`
-	UpsertKeys   []string          `json:"upsertKeys"`
-	Format       CSVFormatOptions  `json:"format"`
+	ConnectionID    string                      `json:"connectionId"`
+	TargetTable     string                      `json:"targetTable"`
+	NewTableName    string                      `json:"newTableName"`
+	Mode            string                      `json:"mode"`
+	ColumnMap       map[string]string           `json:"columnMap"`
+	NewTableColumns map[string]ImportColumnSpec `json:"newTableColumns,omitempty"`
+	FilePath        string                      `json:"filePath"`
+	UpsertKeys      []string                    `json:"upsertKeys"`
+	Format          CSVFormatOptions            `json:"format"`
 }
 
 type ImportCSVResult struct {

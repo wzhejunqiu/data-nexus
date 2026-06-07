@@ -15,10 +15,12 @@ export function NewConnectionDialog({
   open,
   onOpenChange,
   readOnly,
+  wal,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   readOnly: boolean
+  wal: boolean
 }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
@@ -29,7 +31,7 @@ export function NewConnectionDialog({
   const create = useMutation({
     mutationFn: async () => {
       const path = filePath.trim() || (await dialogApi.openDatabaseFile())
-      return connectionApi.openFromFile({ filePath: path, readOnly })
+      return connectionApi.openFromFile({ filePath: path, readOnly, wal: readOnly ? false : wal })
     },
     onSuccess: (conn) => {
       setFilePath('')

@@ -7,6 +7,7 @@ export interface AppError {
 export interface SQLiteConfig {
   filePath: string
   readOnly: boolean
+  wal?: boolean
 }
 
 export interface DriverConfig {
@@ -17,6 +18,12 @@ export interface DriverConfig {
 export interface ConnectRequest {
   filePath: string
   readOnly: boolean
+  wal?: boolean
+}
+
+export interface SQLiteSettingsUpdate {
+  readOnly: boolean
+  wal: boolean
 }
 
 export interface SavedConnection {

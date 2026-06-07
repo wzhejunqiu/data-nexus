@@ -13,8 +13,8 @@ import { NullCell } from '@/components/ui/NullCell'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Button } from '@/components/ui/Button'
 import { useToastStore } from '@/components/ui/Toast'
-import { ImportWizard } from '@/features/import/ImportWizard'
 import { useExportStore } from '@/stores/exportStore'
+import { useImportStore } from '@/stores/importStore'
 import { BatchEditConfirmDialog } from './BatchEditConfirmDialog'
 import { Pagination } from './Pagination'
 import { connectionApi } from '@/lib/api/connection'
@@ -46,8 +46,8 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
   const [pendingEdits, setPendingEdits] = useState<Map<string, PendingEdit>>(new Map())
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
   const openExport = useExportStore((s) => s.openExport)
+  const openImport = useImportStore((s) => s.openImport)
 
   const { data: connections } = useQuery({
     queryKey: ['connections'],
@@ -200,7 +200,7 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
         }}
         pendingCount={pendingEdits.size}
         onExportCsv={openTableExport}
-        onImport={() => setImportOpen(true)}
+        onImport={() => openImport({ connectionId, defaultTable: tableName })}
       />
       <BatchEditConfirmDialog
         open={confirmOpen}
@@ -209,18 +209,6 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
         onConfirm={() => saveBatch.mutate()}
         busy={saveBatch.isPending}
       />
-      {importOpen && (
-        <ImportWizard
-          connectionId={connectionId}
-          defaultTable={tableName}
-          onClose={() => setImportOpen(false)}
-          onDone={() => {
-            setImportOpen(false)
-            void qc.invalidateQueries({ queryKey: ['rows', connectionId, tableName] })
-            void qc.invalidateQueries({ queryKey: ['schema', connectionId] })
-          }}
-        />
-      )}
     </>
   )
 }

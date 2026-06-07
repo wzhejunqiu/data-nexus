@@ -17,6 +17,7 @@ export function ConnectionTree() {
   const qc = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   const [readOnly, setReadOnly] = useState(false)
+  const [wal, setWal] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(260)
   const selectTable = useWorkspaceStore((s) => s.selectTable)
@@ -84,9 +85,22 @@ export function ConnectionTree() {
             <input
               type="checkbox"
               checked={readOnly}
-              onChange={(e) => setReadOnly(e.target.checked)}
+              onChange={(e) => {
+                const next = e.target.checked
+                setReadOnly(next)
+                if (next) setWal(false)
+              }}
             />
             {t('connection.readOnly')}
+          </label>
+          <label className="flex items-center gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={wal}
+              disabled={readOnly}
+              onChange={(e) => setWal(e.target.checked)}
+            />
+            {t('connection.wal')}
           </label>
           <RestoreOnStartupToggle />
           {error && <p className="text-xs text-red-500">{error}</p>}
@@ -128,7 +142,12 @@ export function ConnectionTree() {
           }}
         />
       </aside>
-      <NewConnectionDialog open={newOpen} onOpenChange={setNewOpen} readOnly={readOnly} />
+      <NewConnectionDialog
+        open={newOpen}
+        onOpenChange={setNewOpen}
+        readOnly={readOnly}
+        wal={wal}
+      />
     </>
   )
 }

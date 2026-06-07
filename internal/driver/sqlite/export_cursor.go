@@ -8,6 +8,7 @@ import (
 
 	"github.com/wzhejunqiu/data-nexus/internal/driver/export"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
+	"github.com/wzhejunqiu/data-nexus/internal/sqlutil"
 )
 
 type sqliteExportCursor struct {
@@ -23,7 +24,7 @@ type sqliteExportCursor struct {
 }
 
 func (d *Driver) OpenTableExport(ctx context.Context, tableName string, opts model.TableExportOptions) (export.TableExportCursor, error) {
-	if !identRe.MatchString(tableName) {
+	if !sqlutil.IsSafeQuotedIdentifier(tableName) {
 		return nil, model.ErrTableNotFound(tableName)
 	}
 	if _, err := d.lookupTableType(ctx, tableName); err != nil {

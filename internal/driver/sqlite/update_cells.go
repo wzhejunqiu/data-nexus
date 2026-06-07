@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/wzhejunqiu/data-nexus/internal/model"
+	"github.com/wzhejunqiu/data-nexus/internal/sqlutil"
 )
 
 func (d *Driver) UpdateCells(ctx context.Context, tableName string, changes []model.CellChange, schema *model.TableSchema) (int, error) {
@@ -41,7 +42,7 @@ func (d *Driver) UpdateCells(ctx context.Context, tableName string, changes []mo
 		if ch.ColumnName == "rowid" {
 			return 0, model.ErrInvalidRequest("cannot edit rowid column")
 		}
-		if !identRe.MatchString(ch.ColumnName) || !colSet[ch.ColumnName] {
+		if !sqlutil.IsSafeQuotedIdentifier(ch.ColumnName) || !colSet[ch.ColumnName] {
 			return 0, model.ErrInvalidRequest("invalid column: " + ch.ColumnName)
 		}
 		if isBlobColumn(schema, ch.ColumnName) {

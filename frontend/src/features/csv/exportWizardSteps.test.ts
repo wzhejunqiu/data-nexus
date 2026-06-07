@@ -1,18 +1,36 @@
 import { describe, expect, it } from 'vitest'
-import { getExportSteps, isTableExport } from './exportWizardSteps'
+import {
+  getExportSteps,
+  getExportWizardSteps,
+  isInteractiveExportStep,
+  isTableExport,
+  stepLabelKey,
+} from './exportWizardSteps'
 import { useExportStore } from '@/stores/exportStore'
 
 describe('getExportSteps', () => {
-  it('includes scope for table exports', () => {
-    expect(getExportSteps('table-page')[0]).toBe('scope')
-    expect(getExportSteps('table-all')).toContain('result')
-    expect(getExportSteps('table-all').at(-1)).toBe('result')
+  it('returns full export flow including progress and result', () => {
+    const steps = getExportSteps()
+    expect(steps).toEqual(['options', 'destination', 'progress', 'result'])
+    expect(steps).toHaveLength(4)
   })
+})
 
-  it('skips scope for query result export', () => {
-    const steps = getExportSteps('query-result')
-    expect(steps[0]).toBe('columns')
-    expect(steps).not.toContain('scope')
+describe('getExportWizardSteps', () => {
+  it('returns only interactive steps for the step indicator', () => {
+    expect(getExportWizardSteps()).toEqual(['options', 'destination'])
+    expect(isInteractiveExportStep('options')).toBe(true)
+    expect(isInteractiveExportStep('destination')).toBe(true)
+    expect(isInteractiveExportStep('progress')).toBe(false)
+    expect(isInteractiveExportStep('result')).toBe(false)
+  })
+})
+
+describe('stepLabelKey', () => {
+  it('maps export steps to i18n keys', () => {
+    expect(stepLabelKey('options')).toBe('csv.stepExportOptions')
+    expect(stepLabelKey('destination')).toBe('csv.stepDestination')
+    expect(stepLabelKey('result')).toBe('csv.stepResult')
   })
 })
 

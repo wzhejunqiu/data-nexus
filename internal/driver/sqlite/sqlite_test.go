@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/wzhejunqiu/data-nexus/internal/driver/sqlite"
@@ -289,7 +290,7 @@ func TestBrowseInvalidSortColumn(t *testing.T) {
 	defer func() { _ = drv.Close() }()
 
 	_, err = drv.BrowseTable(context.Background(), "t", model.BrowseOptions{
-		Page: 1, PageSize: 50, Sort: "bad-name",
+		Page: 1, PageSize: 50, Sort: `bad"name`,
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -307,6 +308,40 @@ func TestDriverTypeAndReadOnly(t *testing.T) {
 	}
 	if drv.ReadOnly() {
 		t.Fatal("expected read-write by default")
+	}
+}
+
+func TestDriverConnectWALMode(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "wal.db")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	drv := sqlite.New()
+	if err := drv.Connect(context.Background(), model.DriverConfig{
+		Type: model.DriverTypeSQLite,
+		SQLite: &model.SQLiteConfig{
+			FilePath: path,
+			WAL:      true,
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	res, err := drv.QueryRows(context.Background(), "PRAGMA journal_mode", nil, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.RowCount != 1 {
+		t.Fatalf("expected 1 row, got %d", res.RowCount)
+	}
+	mode, ok := res.Rows[0]["journal_mode"].(string)
+	if !ok || !strings.EqualFold(mode, "wal") {
+		t.Fatalf("expected wal journal mode, got %+v", res.Rows[0])
 	}
 }
 

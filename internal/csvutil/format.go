@@ -52,6 +52,7 @@ func ReadPreview(path string, maxRows int, opts model.CSVFormatOptions) (*model.
 
 	var headers []string
 	var rows []map[string]any
+	totalRows := 0
 	rowNum := 0
 	for {
 		record, err := reader.Read()
@@ -72,19 +73,19 @@ func ReadPreview(path string, maxRows int, opts model.CSVFormatOptions) (*model.
 				headers[i] = fmt.Sprintf("column_%d", i+1)
 			}
 		}
-		row := make(map[string]any, len(headers))
-		for i, h := range headers {
-			if i < len(record) {
-				row[h] = record[i]
-			} else {
-				row[h] = ""
+		totalRows++
+		if len(rows) < maxRows {
+			row := make(map[string]any, len(headers))
+			for i, h := range headers {
+				if i < len(record) {
+					row[h] = record[i]
+				} else {
+					row[h] = ""
+				}
 			}
+			rows = append(rows, row)
 		}
-		rows = append(rows, row)
 		rowNum++
-		if len(rows) >= maxRows {
-			break
-		}
 	}
 	if headers == nil {
 		headers = []string{}
@@ -95,7 +96,7 @@ func ReadPreview(path string, maxRows int, opts model.CSVFormatOptions) (*model.
 	return &model.CSVPreview{
 		Headers:   headers,
 		Rows:      rows,
-		RowCount:  len(rows),
+		RowCount:  totalRows,
 		HasHeader: opts.HasHeader,
 	}, nil
 }

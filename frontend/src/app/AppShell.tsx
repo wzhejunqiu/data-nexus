@@ -7,12 +7,14 @@ import { Tabs } from '@/components/ui/Tabs'
 import { Toaster, useToastStore } from '@/components/ui/Toast'
 import { ConnectionTree } from '@/features/connection/ConnectionTree'
 import { ExportWizardPage } from '@/features/csv/ExportWizardPage'
+import { ImportWizardPage } from '@/features/csv/ImportWizardPage'
 import { SchemaTable } from '@/features/schema/SchemaTable'
 import { SqlEditor } from '@/features/sql-editor/SqlEditor'
 import { DataGrid } from '@/features/table-browser/DataGrid'
 import { appApi } from '@/lib/api/app'
 import { connectionApi } from '@/lib/api/connection'
 import { useExportStore } from '@/stores/exportStore'
+import { useImportStore } from '@/stores/importStore'
 import { useStatusStore } from '@/stores/statusStore'
 import { resolveTheme, useThemeStore } from '@/stores/themeStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -28,6 +30,7 @@ export function AppShell() {
   const rowCount = useStatusStore((s) => s.rowCount)
   const durationMs = useStatusStore((s) => s.durationMs)
   const exportSession = useExportStore((s) => s.session)
+  const importSession = useImportStore((s) => s.session)
 
   const { data: connections } = useQuery({
     queryKey: ['connections'],
@@ -99,9 +102,20 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
-      <Header openCount={openCount} exportMode={!!exportSession} />
+      <Header
+        openCount={openCount}
+        wizardTitle={
+          exportSession
+            ? t('csv.exportWizardTitle')
+            : importSession
+              ? t('csv.importWizardTitle')
+              : undefined
+        }
+      />
       {exportSession ? (
         <ExportWizardPage />
+      ) : importSession ? (
+        <ImportWizardPage />
       ) : (
         <>
           <div className="flex min-h-0 flex-1">

@@ -23,9 +23,14 @@ function EditConnectionForm({
   const qc = useQueryClient()
   const pushToast = useToastStore((s) => s.push)
   const [readOnly, setReadOnly] = useState(() => item.config.sqlite?.readOnly ?? false)
+  const [wal, setWal] = useState(() => item.config.sqlite?.wal ?? false)
 
   const save = useMutation({
-    mutationFn: () => connectionApi.updateReadOnly(item.id, readOnly),
+    mutationFn: () =>
+      connectionApi.updateSQLiteSettings(item.id, {
+        readOnly,
+        wal: readOnly ? false : wal,
+      }),
     onSuccess: () => {
       onOpenChange(false)
       onSaved()
@@ -63,11 +68,25 @@ function EditConnectionForm({
           <input
             type="checkbox"
             checked={readOnly}
-            onChange={(e) => setReadOnly(e.target.checked)}
+            onChange={(e) => {
+              const next = e.target.checked
+              setReadOnly(next)
+              if (next) setWal(false)
+            }}
           />
           {t('connection.readOnly')}
         </label>
         <p className="text-xs text-muted">{t('connection.readOnlyHint')}</p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={wal}
+            disabled={readOnly}
+            onChange={(e) => setWal(e.target.checked)}
+          />
+          {t('connection.wal')}
+        </label>
+        <p className="text-xs text-muted">{t('connection.walHint')}</p>
       </div>
     </Dialog>
   )

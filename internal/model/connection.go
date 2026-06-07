@@ -14,11 +14,18 @@ type DriverConfig struct {
 type SQLiteConfig struct {
 	FilePath string `json:"filePath"`
 	ReadOnly bool   `json:"readOnly"`
+	WAL      bool   `json:"wal"`
 }
 
 type ConnectRequest struct {
 	FilePath string `json:"filePath"`
 	ReadOnly bool   `json:"readOnly"`
+	WAL      bool   `json:"wal"`
+}
+
+type SQLiteSettingsUpdate struct {
+	ReadOnly bool `json:"readOnly"`
+	WAL      bool `json:"wal"`
 }
 
 type Connection struct {

@@ -39,12 +39,18 @@ export interface CSVPreview {
   hasHeader: boolean
 }
 
+export interface ImportColumnSpec {
+  dataType: string
+  primaryKey: boolean
+}
+
 export interface ImportCSVRequest {
   connectionId: string
   targetTable: string
   newTableName: string
   mode: 'append' | 'update'
   columnMap: Record<string, string>
+  newTableColumns?: Record<string, ImportColumnSpec>
   filePath: string
   upsertKeys: string[]
   format: CSVFormatOptions

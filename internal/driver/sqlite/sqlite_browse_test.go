@@ -75,7 +75,7 @@ func TestInvalidTableName(t *testing.T) {
 	drv := openTestDB(t)
 	defer func() { _ = drv.Close() }()
 
-	_, err := drv.GetTableSchema(context.Background(), "bad-name")
+	_, err := drv.GetTableSchema(context.Background(), `bad"name`)
 	if err == nil {
 		t.Fatal("expected error for invalid table name")
 	}
