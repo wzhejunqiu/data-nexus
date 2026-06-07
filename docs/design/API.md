@@ -1,6 +1,6 @@
 # Data Nexus — Service 绑定 API
 
-> 版本: v0.2 · 通信方式: Wails in-memory Bridge · 最后更新: 2026-06-07
+> 版本: v0.3 · 通信方式: Wails in-memory Bridge · 最后更新: 2026-06-07
 
 前端通过 `wailsjs/go/wails/*` 自动生成的绑定调用 Go Service。所有方法均为 **async**（返回 Promise）。时间戳使用 ISO 8601 UTC。
 
@@ -34,7 +34,9 @@ interface AppError {
 |------|------|
 | `INVALID_REQUEST` | 通用参数校验失败 |
 | `INVALID_PATH` | 文件路径无效 |
-| `NOT_CONNECTED` | 当前无活跃连接 |
+| `NOT_CONNECTED` | 已废弃 → 使用 `CONNECTION_NOT_FOUND` |
+| `CONNECTION_NOT_FOUND` | 连接 ID 不存在或未打开 |
+| `CONNECTION_ALREADY_OPEN` | 连接已处于打开状态 |
 | `CONNECTION_FAILED` | 无法打开数据库 |
 | `DATABASE_LOCKED` | SQLite 数据库被锁定 |
 | `TABLE_NOT_FOUND` | 表/视图不存在 |
@@ -42,6 +44,7 @@ interface AppError {
 | `RESULT_TOO_LARGE` | 结果集超过行数上限 |
 | `READ_ONLY` | 只读模式下拒绝写操作 |
 | `DIALOG_CANCELLED` | 用户取消文件对话框 |
+| `SAVED_NOT_FOUND` | 已保存连接 ID 不存在 |
 | `INTERNAL_ERROR` | 未预期错误 |
 
 ---
@@ -72,79 +75,116 @@ func (s *DialogService) SaveFile(defaultName string, filters []FileFilter) (stri
 
 ## 3. ConnectionService
 
-### 3.1 GetStatus
+管理**多条并存**的活跃连接 + 与 `connections.json` 联动。详见 [CONNECTION_UX.md](./CONNECTION_UX.md)。
+
+### 3.1 ListConnections
 
 ```go
-func (s *ConnectionService) GetStatus() (*ConnectionStatus, error)
+func (s *ConnectionService) ListConnections() (*ConnectionListView, error)
 ```
 
-**返回 — 已连接:**
+返回全部**已保存**连接，并标注是否已打开。
 
 ```json
 {
-  "connected": true,
-  "connection": {
-    "id": "conn_01HX...",
-    "type": "sqlite",
-    "displayName": "app.db",
-    "config": {
-      "filePath": "/Users/dev/project/app.db",
-      "readOnly": false
+  "items": [
+    {
+      "id": "01HX...",
+      "name": "app.db",
+      "type": "sqlite",
+      "config": { "type": "sqlite", "sqlite": { "filePath": "...", "readOnly": false } },
+      "status": "open",
+      "connectedAt": "2026-06-07T08:00:00Z",
+      "lastUsedAt": "2026-06-07T08:00:00Z"
     },
-    "connectedAt": "2026-06-07T08:00:00Z"
-  }
+    {
+      "id": "01HY...",
+      "name": "staging.db",
+      "status": "closed",
+      "lastUsedAt": "2026-06-06T12:00:00Z"
+    }
+  ]
 }
 ```
 
-**返回 — 未连接:**
+`status`: `open` | `closed`
 
-```json
-{
-  "connected": false,
-  "connection": null
-}
-```
-
-### 3.2 Connect
+### 3.2 CreateConnection
 
 ```go
-func (s *ConnectionService) Connect(req ConnectRequest) (*Connection, error)
+func (s *ConnectionService) CreateConnection(req ConnectRequest) (*SavedConnection, error)
 ```
 
-**ConnectRequest:**
+新建连接配置并 **upsert** 到 `connections.json`；**不自动打开**。用户需再调 `OpenConnection`。
 
-```json
-{
-  "type": "sqlite",
-  "sqlite": {
-    "filePath": "/absolute/path/to/database.db",
-    "readOnly": false
-  }
-}
-```
-
-**返回:** `Connection` 对象（同 GetStatus.connection）
-
-**Errors:** `INVALID_PATH`, `CONNECTION_FAILED`, `DATABASE_LOCKED`
-
-### 3.3 Disconnect
+### 3.3 OpenConnection
 
 ```go
-func (s *ConnectionService) Disconnect() error
+func (s *ConnectionService) OpenConnection(connectionId string) (*Connection, error)
 ```
 
-**Errors:** 无连接时静默成功
+打开已保存连接；若已 `open` → `CONNECTION_ALREADY_OPEN`。成功后该连接加入活跃 map，其他连接保持原状。
+
+### 3.4 OpenConnectionFromFile
+
+```go
+func (s *ConnectionService) OpenConnectionFromFile(req ConnectRequest) (*Connection, error)
+```
+
+`CreateConnection` + `OpenConnection` 组合；新建并立即打开（「新建连接」主路径）。
+
+### 3.5 CloseConnection
+
+```go
+func (s *ConnectionService) CloseConnection(connectionId string) error
+```
+
+关闭指定连接，释放 Driver；**保留** saved 配置。
+
+**Errors:** `CONNECTION_NOT_FOUND`（未打开时）
+
+### 3.6 RemoveConnection
+
+```go
+func (s *ConnectionService) RemoveConnection(connectionId string) error
+```
+
+若仍打开则先 `CloseConnection`，再从 `connections.json` 删除。
+
+### 3.7 RenameConnection（P1）
+
+```go
+func (s *ConnectionService) RenameConnection(connectionId string, name string) (*SavedConnection, error)
+```
+
+### 3.8 SetRestoreOpenOnStartup（P1）
+
+```go
+func (s *ConnectionService) SetRestoreOpenOnStartup(enabled bool) error
+```
+
+退出时持久化 `openConnectionIds`；下次启动自动 `OpenConnection`（默认 `false`）。
 
 ---
 
-## 4. SchemaService
+## 4. SavedConnectionService（可选合并）
 
-> 需已连接，否则 `NOT_CONNECTED`。
+> **实施建议:** MVP 可将 §4 合并进 `ConnectionService`，避免重复。下列方法可由 ConnectionService 直接提供。
 
-### 4.1 ListTables
+若独立实现，职责仅为 `connections.json` CRUD；**打开/关闭** 仍在 ConnectionService。
+
+~~原 ListSaved / RemoveSaved / SetAutoConnectLast~~ → 见 §3.1–3.8
+
+---
+
+## 5. SchemaService
+
+> 参数 `connectionId` 必填；连接须为 `open`，否则 `CONNECTION_NOT_FOUND`。
+
+### 5.1 ListTables
 
 ```go
-func (s *SchemaService) ListTables() (*TableList, error)
+func (s *SchemaService) ListTables(connectionId string) (*TableList, error)
 ```
 
 **返回:**
@@ -158,10 +198,10 @@ func (s *SchemaService) ListTables() (*TableList, error)
 }
 ```
 
-### 4.2 GetTableSchema
+### 5.2 GetTableSchema
 
 ```go
-func (s *SchemaService) GetTableSchema(tableName string) (*TableSchema, error)
+func (s *SchemaService) GetTableSchema(connectionId string, tableName string) (*TableSchema, error)
 ```
 
 **返回:**
@@ -195,9 +235,9 @@ func (s *SchemaService) GetTableSchema(tableName string) (*TableSchema, error)
 
 ---
 
-## 5. TableService
+## 6. TableService
 
-### 5.1 BrowseRows
+### 6.1 BrowseRows
 
 ```go
 func (s *TableService) BrowseRows(req BrowseRowsRequest) (*PaginatedTableData, error)
@@ -207,6 +247,7 @@ func (s *TableService) BrowseRows(req BrowseRowsRequest) (*PaginatedTableData, e
 
 ```json
 {
+  "connectionId": "01HX...",
   "tableName": "users",
   "page": 1,
   "pageSize": 50,
@@ -252,9 +293,9 @@ func (s *TableService) BrowseRows(req BrowseRowsRequest) (*PaginatedTableData, e
 
 ---
 
-## 6. QueryService
+## 7. QueryService
 
-### 6.1 Execute
+### 7.1 Execute
 
 ```go
 func (s *QueryService) Execute(req ExecuteQueryRequest) (*QueryResponse, error)
@@ -264,6 +305,7 @@ func (s *QueryService) Execute(req ExecuteQueryRequest) (*QueryResponse, error)
 
 ```json
 {
+  "connectionId": "01HX...",
   "sql": "SELECT * FROM users WHERE id = ?",
   "params": [1],
   "maxRows": 1000
@@ -300,9 +342,9 @@ SQL 类型检测：首关键字 `SELECT`/`WITH`/`PRAGMA`/`EXPLAIN` → result；
 
 ---
 
-## 7. AppService
+## 8. AppService
 
-### 7.1 GetVersion
+### 8.1 GetVersion
 
 ```go
 func (s *AppService) GetVersion() (*VersionInfo, error)
@@ -318,7 +360,7 @@ func (s *AppService) GetVersion() (*VersionInfo, error)
 
 ---
 
-## 8. 前端调用规范
+## 9. 前端调用规范
 
 ### 8.1 封装层
 
@@ -353,7 +395,7 @@ export function useTables() {
 
 ---
 
-## 9. 未来 Headless REST 映射（v1.x 预留）
+## 10. 未来 Headless REST 映射（v1.x 预留）
 
 | Service 方法 | 等价 REST |
 |--------------|-----------|

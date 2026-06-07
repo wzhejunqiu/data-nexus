@@ -112,18 +112,22 @@ go test ./internal/driver/... -v
 ```
 internal/service/
 ├── connection_manager.go
+├── connection_store.go
 └── query_service.go     # 可选，或逻辑放 manager
 ```
 
-- [ ] `ConnectionManager` — 单连接，Connect 前先 Disconnect
+- [ ] `ConnectionManager` — **多活跃连接** `map[id]*Session`；`Open` 不关闭其它连接
+- [ ] `OpenConnection` / `CloseConnection` / `ListConnections` / `OpenConnectionFromFile`
 - [ ] `model.AppError` — 错误码与 [API.md §1.3](../design/API.md) 一致
-- [ ] 集成测试（不启动 Wails UI）
+- [ ] `CreateConnection` / `Open` 成功后 upsert `connections.json`
+- [ ] Schema/Table/Query 通过 `Driver(connectionId)` 路由
+- [ ] `ConnectionStore` 单元测试（临时目录）
 
 ### Wails 绑定层
 
 ```
 internal/wails/
-├── connection.go   # ConnectionService
+├── connection.go        # ConnectionService（含 connections.json CRUD）
 ├── schema.go       # SchemaService
 ├── table.go        # TableService
 ├── query.go        # QueryService
@@ -133,10 +137,10 @@ internal/wails/
 
 | Service | 方法 | 说明 |
 |---------|------|------|
-| `ConnectionService` | `GetStatus`, `Connect`, `Disconnect` | [API §3](../design/API.md) |
-| `SchemaService` | `ListTables`, `GetTableSchema` | [API §4](../design/API.md) |
-| `TableService` | `BrowseRows` | [API §5](../design/API.md) |
-| `QueryService` | `Execute` | [API §6](../design/API.md) |
+| `ConnectionService` | `ListConnections`, `CreateConnection`, `OpenConnection`, `OpenConnectionFromFile`, `CloseConnection`, `RemoveConnection` | [API §3](../design/API.md) |
+| `SchemaService` | `ListTables(connectionId)`, `GetTableSchema(connectionId, tableName)` | [API §5](../design/API.md) |
+| `TableService` | `BrowseRows`（含 `connectionId`） | [API §6](../design/API.md) |
+| `QueryService` | `Execute`（含 `connectionId`） | [API §7](../design/API.md) |
 | `DialogService` | `OpenDatabaseFile` | 过滤器 `*.db;*.sqlite;*.sqlite3` |
 | `AppService` | `GetVersion` | version + platform + arch |
 
@@ -157,13 +161,14 @@ internal/wails/
 ### 前端最小验证页（临时，Phase 2 替换）
 
 ```
-frontend/src/App.tsx  — 三个按钮：
-  GetVersion / OpenDatabaseFile+Connect / ListTables
+frontend/src/App.tsx  — 按钮：
+  GetVersion / OpenConnectionFromFile / ListConnections / ListTables(connectionId)
 ```
 
 - [ ] `wails dev` 可启动
 - [ ] `wailsjs/go/wails/*` 绑定自动生成
-- [ ] 选 `.db` → Connect → ListTables 有数据
+- [ ] 选 `.db` → OpenConnectionFromFile → ListTables(connectionId) 有数据
+- [ ] 再打开第二个 `.db` → 两个 connectionId 均可 ListTables
 
 ---
 

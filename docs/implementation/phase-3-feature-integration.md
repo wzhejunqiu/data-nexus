@@ -102,7 +102,7 @@ frontend/src/features/sql-editor/
 
 - [ ] StatusBar — 行数、耗时、版本（`AppService.GetVersion`）
 - [ ] 窗口标题 — `Data Nexus — {filename}`
-- [ ] CLI `--db /path/to.db` 启动时自动 Connect
+- [ ] CLI `--db` 启动时 `OpenConnectionFromFile` 并 upsert 到连接列表
 - [ ] `wails build` 本地构建通过
 - [ ] release 模式日志写文件（非控制台）
 
@@ -118,6 +118,8 @@ frontend/src/features/sql-editor/
 | 优先级 | 功能 | Phase 3 验收 |
 |--------|------|--------------|
 | P0 | 连接 + 断开 | ✓ |
+| P0 | 连接信息持久化 + 最近连接 | ✓ |
+| P1 | 启动恢复上次连接 | ✓ |
 | P0 | 只读模式 | ✓ |
 | P0 | Schema 列表 + 表结构 | ✓ |
 | P0 | 分页数据 + 排序 | ✓ |

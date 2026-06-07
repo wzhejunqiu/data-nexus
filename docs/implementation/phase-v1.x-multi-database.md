@@ -1,70 +1,50 @@
-# v1.x — 多数据库（PostgreSQL / MySQL）
+# v1.x — Headless 与平台能力
 
-> **预估:** 按驱动分批，每个 7-14 天 · **前置:** v1.0
+> **预估:** 按特性分批 · **前置:** v1.0（PostgreSQL / MySQL 已在 v1.0 落地）
 
 ---
 
 ## 目标
 
-在统一 Driver 抽象上接入 PostgreSQL、MySQL，连接 UI 按类型动态渲染。
+v1.0 完成远程 SQL 库驱动后，v1.x 聚焦 **非桌面 UI** 能力与 **平台级** 扩展。
+
+> **说明:** PostgreSQL / MySQL Driver、连接表单、Schema/SQL 闭环见 [phase-v1.0-multi-connection.md](./phase-v1.0-multi-connection.md)。
 
 ---
 
-## 架构任务
-
-- [ ] `driver/postgres/` — `pgx` 或 `database/sql` + pg driver
-- [ ] `driver/mysql/` — `go-sql-driver/mysql`
-- [ ] `DriverFactory` — 按 `config.type` 创建实例
-- [ ] Schema 差异吸收 — `TableInfo.Schema`、引号规则（见 [DATA_MODEL §6](../design/DATA_MODEL.md)）
-- [ ] 连接测试 — `Ping` + 超时
-
----
-
-## PostgreSQL（首个非 SQLite 驱动）
-
-### 连接配置
-
-```yaml
-type: postgres
-host, port, database, user, password, sslMode, schema
-```
-
-### 任务
-
-- [ ] 连接表单 UI
-- [ ] `ListTables` — `information_schema` 或 pg catalog
-- [ ] `GetTableSchema` / `BrowseRows` / `Execute`
-- [ ] SSL 模式支持
-- [ ] 集成测试 — Docker postgres 或 testcontainers
-
----
-
-## MySQL（第二个驱动）
-
-- [ ] 同上模式实现
-- [ ] `` `identifier` `` 引用
-- [ ] Docker mysql 集成测试
-
----
-
-## 可选：Headless 模式
+## Headless 模式（优先）
 
 - [ ] `--server` flag 启动 chi REST
 - [ ] 映射 [API.md Headless 表](../design/API.md) 到同一 service 层
-- [ ] 用于 CI / 脚本
+- [ ] 用于 CI / 脚本 / 内网共享
+- [ ] 可选 Basic Auth
+
+---
+
+## 驱动深化（按需）
+
+- [ ] 连接池与超时策略统一
+- [ ] 大结果集流式导出
+- [ ] 更多 SSL / 认证方式（证书、IAM 等，按需求）
 
 ---
 
 ## 平台能力（v2.0 候选）
 
 - [ ] ER 图
-- [ ] Basic Auth（内网共享）
 - [ ] 插件扩展点
+- [ ] 连接配置 keychain 集成（跨平台）
 
 ---
 
 ## 完成标准
 
-- [ ] PostgreSQL 连接 → 浏览 → SQL 闭环
-- [ ] MySQL 同上
-- [ ] tag `v1.1.0` / `v1.2.0` 分批
+- [ ] Headless：`--server` 下 REST 与桌面 Service 行为一致
+- [ ] tag `v1.1.0` 起按特性分批发布
+
+---
+
+## 相关文档
+
+- [ARCHITECTURE.md §2.3](../design/ARCHITECTURE.md) — Headless 扩展说明
+- [DATA_MODEL.md §6](../design/DATA_MODEL.md) — 跨库 Schema 差异

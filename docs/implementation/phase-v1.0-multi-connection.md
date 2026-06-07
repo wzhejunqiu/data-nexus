@@ -1,54 +1,56 @@
-# v1.0 — 多连接
+# v1.0 — 远程数据库（PostgreSQL / MySQL）
 
-> **预估:** 7-10 天 · **前置:** v0.3 · **参考:** [ROADMAP](../ROADMAP.md)
+> **预估:** 10-14 天 · **前置:** v0.3 · **参考:** [ROADMAP](../ROADMAP.md)
 
 ---
 
 ## 目标
 
-同时管理多个数据库连接，Tab 化工作区。
+在 MVP 已具备的 **Navicat 式多 SQLite 连接** 基础上，扩展 PostgreSQL / MySQL 驱动与连接表单。
+
+> **说明:** 多连接并存、连接树 UI、`connectionId` 路由已在 MVP（v0.1）实现；本版本不再重复「多连接」主题。
 
 ---
 
 ## 功能清单
 
-### 连接管理
+### Driver 层
 
-- [ ] `ConnectionManager` 重构 — `map[id]*Connection` 多实例
-- [ ] 持久化 — `~/.data-nexus/connections.json` 升级 schema
-- [ ] 连接别名 `displayName`
-- [ ] Sidebar 顶部连接切换 dropdown
-- [ ] 「+ 新建连接」— 不关闭已有连接
+- [ ] `PostgresDriver` — `pgx` 或 `database/sql` + `pgx/stdlib`
+- [ ] `MySQLDriver` — `go-sql-driver/mysql`
+- [ ] Driver 工厂按 `DriverType` 分发
 
-### API 变更
+### 连接配置
 
-- [ ] `ConnectionService.List` — 全部连接
-- [ ] `ConnectionService.Activate(id)` — 切换活跃连接
-- [ ] `ConnectionService.Remove(id)`
-- [ ] Schema/Table/Query 方法增加 `connectionId` 或 implicit active
+- [ ] `NewConnectionDialog` 支持类型切换（SQLite / PostgreSQL / MySQL）
+- [ ] 远程连接表单：host、port、database、user、password、SSL
+- [ ] 密码加密存储（`connections.json` 或 keychain，待定）
+- [ ] 连接测试（Ping）按钮
+
+### Schema 差异
+
+- [ ] PostgreSQL schema 列表（`public` 等）
+- [ ] MySQL database 切换
+- [ ] 类型映射扩展（见 [DATA_MODEL.md](../design/DATA_MODEL.md)）
 
 ### UI
 
-- [ ] 连接列表面板
-- [ ] 多 Tab SQL 编辑器（每 Tab 绑定 connection + sql）
-- [ ] 窗口标题反映当前连接
-
-### 迁移
-
-- [ ] v0.x 单连接配置自动迁移
+- [ ] 连接树图标区分数据库类型
+- [ ] 远程连接错误提示（网络、认证失败）
 
 ---
 
 ## 非目标（v1.0）
 
-- 多数据库类型（仍 SQLite only）
-- Headless REST（可并行规划）
+- Headless REST（可并行规划 v1.x）
+- Redis / Mongo 等非 SQL 引擎
 
 ---
 
 ## 完成标准
 
-- [ ] 同时保存 ≥3 个 SQLite 连接并切换
+- [ ] 同时打开 SQLite + PostgreSQL（或 MySQL）各至少 1 个
+- [ ] Schema 浏览与 SQL 执行在两种远程库上可用
 - [ ] tag `v1.0.0`
 
 ---

@@ -14,8 +14,6 @@
 
 ### 连接与文件
 
-- [ ] 连接历史持久化 — `~/.data-nexus/connections.json`
-- [ ] 最近打开列表 — Welcome 页快捷入口
 - [ ] 双击 `.db` 文件关联 — 安装器 / 启动参数
 - [ ] 拖拽 `.db` 到窗口打开（Wails OnFileDrop）
 
@@ -45,7 +43,6 @@
 
 ## 后端任务
 
-- [ ] `ConnectionStore` — 读写 connections.json
 - [ ] `TableService.UpdateCell` — 行内编辑（或通用 Exec 封装）
 - [ ] `ExportService` — CSV 生成（可选独立 Service）
 - [ ] `ImportService` — CSV → INSERT（v0.2 末）
@@ -55,7 +52,6 @@
 ## 前端任务
 
 - [ ] Settings 面板
-- [ ] Recent connections 组件
 - [ ] DataGrid inline edit 模式
 - [ ] Monaco completion provider
 - [ ] Export 按钮（表 Tab + SQL 结果）

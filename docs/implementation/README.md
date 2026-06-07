@@ -18,8 +18,8 @@
 |------|------|------|
 | v0.2 | [phase-v0.2-enhancements.md](./phase-v0.2-enhancements.md) | 体验增强（CSV、行内编辑、自动补全等） |
 | v0.3 | [phase-v0.3-exploration.md](./phase-v0.3-exploration.md) | 探索型差异化（列画像、Filter→SQL 等） |
-| v1.0 | [phase-v1.0-multi-connection.md](./phase-v1.0-multi-connection.md) | 多连接 |
-| v1.x | [phase-v1.x-multi-database.md](./phase-v1.x-multi-database.md) | PostgreSQL / MySQL |
+| v1.0 | [phase-v1.0-multi-connection.md](./phase-v1.0-multi-connection.md) | PostgreSQL / MySQL |
+| v1.x | [phase-v1.x-multi-database.md](./phase-v1.x-multi-database.md) | Headless REST、ER 等 |
 
 ## 设计文档速查
 

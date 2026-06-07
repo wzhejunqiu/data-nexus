@@ -12,6 +12,7 @@
 | [API 设计](docs/design/API.md) | Wails Service 绑定契约与错误码 |
 | [数据模型](docs/design/DATA_MODEL.md) | 连接配置、Schema 抽象、多数据库扩展策略 |
 | [UI/UX 设计](docs/design/UI_UX.md) | 页面结构、交互流程、组件规范 |
+| [连接交互（Navicat 模式）](docs/design/CONNECTION_UX.md) | 启动即主界面、多连接并存 |
 | [实施路线图](docs/ROADMAP.md) | 分阶段交付计划与里程碑 |
 | [分阶段实施指南](docs/implementation/README.md) | **实施时直接查阅** — 各 Phase 详细任务清单 |
 
@@ -19,7 +20,7 @@
 
 - **桌面壳**: [Wails v2](https://wails.io/)（系统 WebView，单二进制）
 - **后端**: Go 1.22+ · 日志 [zap](https://github.com/uber-go/zap)（默认 INFO，dev 控制台 / release 文件）
-- **前端**: TypeScript + React + Vite（`frontend/`）
+- **前端**: TypeScript + React + Vite + **i18next**（默认 zh-CN，含 en）
 - **通信**: Wails in-memory Bridge（Go Service ↔ TypeScript 绑定）
 - **MVP 数据库**: SQLite（`database/sql` + `modernc.org/sqlite`）
 

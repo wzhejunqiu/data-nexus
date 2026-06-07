@@ -4,7 +4,7 @@
 
 ## 1. 设计目标
 
-1. **MVP 极简**: 单 SQLite 连接，功能闭环可交付
+1. **MVP 极简**: 多 SQLite 连接并存（Navicat 模式），功能闭环可交付
 2. **扩展优先**: 连接管理、Driver 层、Schema 抽象从第一天分离
 3. **桌面原生**: Wails 单二进制桌面应用，系统 WebView 渲染，无浏览器 Tab
 4. **开发者友好**: Go Service 绑定 + 自动生成 TypeScript 类型，业务层可独立测试
@@ -24,7 +24,7 @@
 │                              │ In-memory Bridge (<1ms)          │
 │  ┌───────────────────────────▼───────────────────────────────┐  │
 │  │  Wails Services（绑定层）                                  │  │
-│  │  ConnectionService · SchemaService · TableService         │  │
+│  │  ConnectionService · SchemaService · TableService …         │  │
 │  │  QueryService · DialogService · AppService                │  │
 │  └───────────────────────────┬───────────────────────────────┘  │
 │                              │                                  │
@@ -115,9 +115,28 @@ wails build
 | 构建 | Vite 5 | Wails 模板默认 |
 | 后端调用 | `wailsjs/go/services/*` | 替代 fetch/axios |
 | 状态 | Zustand + TanStack Query | Query 包装 Service 调用 |
+| i18n | react-i18next + i18next | 默认 zh-CN，MVP 含 en；文案禁止硬编码 |
 | UI 组件 | shadcn/ui + Tailwind CSS | 可定制、现代风格 |
 | SQL 编辑器 | Monaco Editor | VS Code 同款体验 |
 | 表格 | TanStack Table | 虚拟滚动、排序、分页 |
+
+#### i18n（MVP 必做）
+
+| 项 | 约定 |
+|----|------|
+| 库 | `react-i18next` + `i18next` |
+| 默认语言 | `zh-CN` |
+| MVP 语言包 | `zh-CN`、`en` |
+| 资源位置 | `frontend/src/locales/{lang}/` |
+| 后端错误 | `AppError.message` 为 i18n key 或 code；前端按 code 映射文案 |
+| 语言切换 | Header 或 Settings（P1 主题旁），持久化到 `localStorage` |
+
+```typescript
+// 示例：frontend/src/locales/zh-CN/common.json
+{ "connect.openDatabase": "打开数据库", "connect.readOnly": "只读模式" }
+```
+
+用户切换语言后无需重启；Monaco SQL 关键字高亮与 UI 语言独立。
 
 ### 3.4 开发工具链
 
@@ -218,6 +237,7 @@ data-nexus/
 ├── internal/
 │   ├── wails/                   # Wails 绑定层（薄封装）
 │   │   ├── connection.go        # ConnectionService
+│   │   ├── connection.go      # ConnectionService
 │   │   ├── schema.go            # SchemaService
 │   │   ├── table.go             # TableService
 │   │   ├── query.go             # QueryService
@@ -225,6 +245,7 @@ data-nexus/
 │   │   └── app.go               # AppService（版本、主题同步）
 │   ├── service/                 # 业务逻辑（UI 无关）
 │   │   ├── connection_manager.go
+│   │   ├── connection_store.go  # connections.json 读写
 │   │   └── query_service.go
 │   ├── driver/
 │   │   ├── driver.go
@@ -268,8 +289,8 @@ data-nexus/
 
 | Service | 职责 |
 |---------|------|
-| `ConnectionService` | Connect / Disconnect / GetStatus |
-| `SchemaService` | ListTables / GetTableSchema |
+| `ConnectionService` | ListConnections / Open / Close / Remove / Create |
+| `SchemaService` | ListTables / GetTableSchema（均带 `connectionId`） |
 | `TableService` | BrowseTableRows |
 | `QueryService` | ExecuteSQL |
 | `DialogService` | OpenDatabaseFile / SaveFile / ShowMessage |
@@ -285,32 +306,32 @@ type ConnectionService struct {
     mgr *service.ConnectionManager
 }
 
-func NewConnectionService(mgr *service.ConnectionManager) *ConnectionService {
-    return &ConnectionService{mgr: mgr}
+func (s *ConnectionService) OpenConnectionFromFile(req model.ConnectRequest) (*model.Connection, error) {
+    return s.mgr.OpenFromFile(context.Background(), req)
 }
 
-func (s *ConnectionService) Connect(req model.ConnectRequest) (*model.Connection, error) {
-    return s.mgr.Connect(context.Background(), req)
+func (s *ConnectionService) OpenConnection(connectionId string) (*model.Connection, error) {
+    return s.mgr.Open(context.Background(), connectionId)
 }
 
-func (s *ConnectionService) Disconnect() error {
-    return s.mgr.Disconnect(context.Background())
+func (s *ConnectionService) CloseConnection(connectionId string) error {
+    return s.mgr.Close(context.Background(), connectionId)
 }
 
-func (s *ConnectionService) GetStatus() (*model.ConnectionStatus, error) {
-    return s.mgr.Status(), nil
+func (s *ConnectionService) ListConnections() (*model.ConnectionListView, error) {
+    return s.mgr.List(), nil
 }
 ```
 
 ```typescript
 // frontend/src/lib/api/connection.ts
-import { Connect, Disconnect, GetStatus } from '../../../wailsjs/go/wails/ConnectionService'
+import { OpenConnectionFromFile, OpenConnection, ListConnections } from '../../../wailsjs/go/wails/ConnectionService'
 
-export async function connect(req: ConnectRequest) {
+export async function openDatabase(req: ConnectRequest) {
   try {
-    return await Connect(req)
+    return await OpenConnectionFromFile(req)
   } catch (e) {
-    throw mapWailsError(e) // Go error → AppError
+    throw mapWailsError(e)
   }
 }
 ```
@@ -341,15 +362,30 @@ func main() {
 
 ### 5.4 ConnectionManager
 
-（与 v0.1 设计相同，不变）
-
 ```go
 type ConnectionManager struct {
-    mu     sync.RWMutex
-    active *Connection
-    driver driver.Driver
+    mu      sync.RWMutex
+    store   *ConnectionStore
+    active  map[string]*Session   // id -> open session
+}
+
+type Session struct {
+    Connection *Connection
+    Driver     driver.Driver
+}
+
+func (m *ConnectionManager) Open(ctx context.Context, id string) (*Connection, error) {
+    // load from store, create driver, add to active (no close others)
+}
+
+func (m *ConnectionManager) Driver(connectionId string) (driver.Driver, error) {
+    // lookup active map; used by Schema/Table/Query services
 }
 ```
+
+- **多连接并存**：`Open` 不关闭其它 session
+- Schema / Table / Query 通过 `connectionId` 路由到对应 Driver
+- 退出时可持久化 `openConnectionIds`（P1 `restoreOpenOnStartup`）
 
 ### 5.5 Driver 接口
 
@@ -406,15 +442,15 @@ sequenceDiagram
     participant C as ConnectionService
     participant S as SQLiteDriver
 
-    U->>F: 点击「打开数据库」
+    U->>F: 点击「新建连接」
     F->>D: OpenDatabaseFile()
     D->>D: OS Native File Dialog
     D-->>F: "/Users/dev/app.db"
-    F->>C: Connect({ filePath, readOnly })
+    F->>C: OpenConnectionFromFile({ filePath, readOnly })
     C->>S: Connect + Ping
     S-->>C: OK
-    C-->>F: Connection
-    F->>F: 加载 Schema 侧边栏
+    C-->>F: Connection { id, status: open }
+    F->>F: 连接树展开 Schema
 ```
 
 ### 6.2 表数据浏览
@@ -495,13 +531,15 @@ wails build -platform windows/amd64
 wails build -platform linux/amd64
 ```
 
+**v0.1.0 发布要求：** 上述三平台均需构建并通过 smoke test（见 [phase-4-release.md](../implementation/phase-4-release.md)）。
+
 产物位于 `build/bin/`，平台原生格式（macOS `.app`、Windows `.exe`、Linux binary）。
 
 ---
 
 ## 11. 多数据库扩展路径
 
-（与 v0.1 相同：Driver 接口 + ConnectionManager，MVP 仅 SQLite）
+（Driver 接口见 [DATA_MODEL.md](./DATA_MODEL.md)；MVP 仅 SQLite，ConnectionManager 支持多 session）
 
 扩展步骤不变；远程数据库（PostgreSQL/MySQL）在桌面模式下通过连接表单输入 host/port，无需 HTTP sidecar。
 
@@ -517,3 +555,5 @@ wails build -platform linux/amd64
 | 前端目录 | `frontend/` | Wails 惯例，非 `web/` |
 | Electron | 不采用 | 体积与内存劣势；Go 栈统一 |
 | 日志框架 | zap | 默认 INFO；dev 控制台、release 文件；YAML/CLI 可配置 |
+| i18n | react-i18next | 默认 zh-CN，MVP 含 en |
+| 首发平台 | 三平台 | v0.1.0 macOS / Windows / Linux |

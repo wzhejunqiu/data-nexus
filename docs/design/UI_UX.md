@@ -21,7 +21,7 @@
 |------|------|
 | 窗口 | 默认 1280×800，最小 960×600 |
 | 标题栏 | `Data Nexus — app.db`（连接后显示文件名） |
-| 菜单栏 | File（Open / Close / Quit）、View（Theme）、Help（About） |
+| 菜单栏 | File（Open / Close / Quit）、View（Theme / **Language**）、Help（About） |
 | 文件打开 | 系统原生对话框 |
 | 拖拽 | 拖 `.db` 到窗口打开（P1） |
 
@@ -71,19 +71,15 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  Header: Logo | 连接状态 Chip | 断开按钮 | 主题切换              │
+│  Header: Logo | 已打开连接数 | 主题切换                         │
 ├──────────────┬───────────────────────────────────────────────────┤
-│              │  Tab Bar: [表结构] [数据] [SQL]                    │
-│   Sidebar    ├───────────────────────────────────────────────────┤
-│              │                                                   │
-│  ┌ 表/视图 ─┐ │              Main Content Area                    │
-│  │ users    │ │                                                   │
-│  │ orders   │ │                                                   │
-│  │ v_active │ │                                                   │
-│  └──────────┘ │                                                   │
-│              │                                                   │
-│  [+ 连接]    │                                                   │
-│  (v1.0)      │                                                   │
+│              │  Tab Bar: [表结构] [数据] [SQL]  连接: app.db ▾   │
+│ Connection   ├───────────────────────────────────────────────────┤
+│ Tree         │                                                   │
+│ [+ 新建连接] │              Main Content Area                    │
+│ ▼ ● app.db   │                                                   │
+│     users    │                                                   │
+│ ○ staging.db │                                                   │
 ├──────────────┴───────────────────────────────────────────────────┤
 │  Status Bar: 行数 | 耗时 | 版本                                  │
 └──────────────────────────────────────────────────────────────────┘
@@ -93,54 +89,44 @@
 
 | 路径 | 页面 | MVP |
 |------|------|-----|
-| `/` | 工作台（有连接时）或欢迎页 | ✓ |
-| `/connect` | 连接对话框（也可 modal） | ✓ |
+| `/` | 主工作台（连接树 + 主内容区） | ✓ |
 
-MVP 采用单页应用，无复杂路由；连接前显示 Welcome，连接后显示 Workspace。
+MVP 采用单页应用；**无 Welcome 页**，启动即进入主工作台。见 [CONNECTION_UX.md](./CONNECTION_UX.md)。
 
 ---
 
 ## 4. 关键页面与交互
 
-### 4.1 Welcome / 未连接状态
+### 4.1 主界面 — 连接树（Navicat 模式）
 
-**布局:** 居中卡片（Wails 窗口内，非浏览器页）
+**启动即显示本布局**（无 Welcome）。
 
 ```
-        ┌─────────────────────────────┐
-        │      Data Nexus             │
-        │  打开 SQLite 数据库开始      │
-        │                             │
-        │   [ 打开数据库... ]          │  ← 调用 DialogService
-        │                             │
-        │  ─── 或 ───                 │
-        │                             │
-        │  文件路径                    │
-        │  ┌─────────────────────┐    │
-        │  │ /path/to/app.db     │    │
-        │  └─────────────────────┘    │
-        │  ☐ 只读模式                  │
-        │                             │
-        │      [ 连接 ]               │
-        └─────────────────────────────┘
+├─ Sidebar: ConnectionTree ─────┬─ Main: Tabs ──────────────────┤
+│  [+ 新建连接]                  │  [结构|数据|SQL]  连接: app.db ▾│
+│  ▼ ● app.db          [关闭]   ├───────────────────────────────┤
+│      users                     │                               │
+│      orders                    │      Content                  │
+│  ○ staging.db        [打开]    │                               │
+│  ○ analytics.db      [打开]    │                               │
+└────────────────────────────────┴───────────────────────────────┘
 ```
 
 **交互:**
-- 「打开数据库」→ Wails 原生文件对话框（MVP 主路径）
-- 菜单 **File → Open** 同上
-- 路径输入框支持粘贴（高级用户）
-- 连接中：按钮 loading，禁用操作
-- 对话框取消：不提示错误（`DIALOG_CANCELLED` 静默）
-- 失败：inline 错误，保留用户输入
+- **新建连接** → `OpenConnectionFromFile` 或 表单创建后打开
+- **○ 未打开** → 显示「打开」；**● 已打开** → 展开 Schema，显示「关闭」
+- 可同时多个 ●；点击表名 → 主区绑定 `connectionId + tableName`
+- SQL Tab 顶部显示当前连接下拉；切换连接切换 SQL 上下文
+- 删除连接 → `RemoveConnection`（打开中需确认）
 
-### 4.2 已连接 — Header
+### 4.2 Header（精简）
 
 ```
-[Data Nexus]  ● app.db  /Users/dev/project/app.db  [只读]  [断开]
+[Data Nexus]  已打开 2 个连接                    [🌙]
 ```
 
-- 绿色圆点 = 已连接；灰色 = 断开中
-- 路径过长 truncate + tooltip 显示完整路径
+- 连接详情（名称、路径、只读）在连接树节点或主区 Tab 上下文展示
+- 关闭连接在连接树节点操作，非全局「断开」
 - 「断开」需二次确认（若 SQL 编辑器有未保存内容，P2 提示）
 
 ### 4.3 Sidebar — Schema 树
@@ -231,8 +217,9 @@ VIEWS (2)
 | 组件 | 用途 | 优先级 |
 |------|------|--------|
 | `AppShell` | 整体布局框架 | P0 |
-| `ConnectionForm` | 打开文件 + 路径连接 | P0 |
-| `OpenDatabaseButton` | 调用 DialogService | P0 |
+| `ConnectionTree` | Navicat 式连接 + Schema 树 | P0 |
+| `NewConnectionDialog` | 新建连接（文件对话框 + 只读） | P0 |
+| `ConnectionTreeItem` | 打开/关闭/删除 | P0 |
 | `ConnectionStatus` | Header 状态 Chip | P0 |
 | `SchemaSidebar` | 表/视图列表 | P0 |
 | `SchemaTable` | 列定义表格 | P0 |
@@ -243,6 +230,7 @@ VIEWS (2)
 | `Pagination` | 分页控件 | P0 |
 | `EmptyState` | 空状态 | P0 |
 | `ThemeToggle` | 主题切换 | P1 |
+| `LanguageToggle` | 语言切换 zh-CN / en | P1（i18n 必做） |
 | `IndexList` | 索引展示 | P1 |
 | `QueryHistory` | SQL 历史 | P1 |
 | `ConnectionTree` | 多连接树 | v1.0 |
@@ -267,7 +255,8 @@ VIEWS (2)
 | 连接失败 | 表单 inline error |
 | API 错误 | Toast + 可展开详情（Wails Service 抛错） |
 | SQL 错误 | 结果区 Alert， monospace 展示错误信息 |
-| 未连接访问 | 重定向到 Welcome |
+| 未打开连接访问表/SQL | 提示「请先打开该连接」 |
+| 无已打开连接 | 主区 Empty：「新建或打开一个连接开始」 |
 
 ### 6.3 空状态
 
@@ -302,20 +291,18 @@ MVP 目标：**桌面窗口**（Wails 默认窗口，≥ 960px 宽）
 
 ## 9. 线框图参考
 
-MVP 核心态 — 已连接 + 数据浏览：
+MVP 核心态 — 多连接 + 数据浏览：
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ ■ Data Nexus    ● app.db                    [断开]  [🌙]        │
+│ ■ Data Nexus    已打开 2 个连接                          [🌙]   │
 ├──────────┬──────────────────────────────────────────────────────┤
-│ 🔍       │  users    │ 表结构 │ 数据 │ SQL                         │
-│          ├──────────────────────────────────────────────────────┤
-│ users ◀  │  id ▲ │ email          │ created_at                    │
-│ orders   │  ─────┼────────────────┼──────────────                 │
-│ products │    1  │ a@example.com  │ 2026-01-01...                 │
-│          │    2  │ b@example.com  │ NULL                          │
-│          │                                                      │
-│          │              ◀  1  2  3 ... 31  ▶    每页 50            │
+│[+ 新建]  │  users @ app.db  │ 表结构 │ 数据 │ SQL              │
+│▼ ● app.db│──────────────────────────────────────────────────────│
+│  users ◀ │  id ▲ │ email          │ created_at                    │
+│  orders  │  ─────┼────────────────┼──────────────                 │
+│○ staging │    1  │ a@example.com  │ 2026-01-01...                 │
+│  [打开]  │                                                      │
 ├──────────┴──────────────────────────────────────────────────────┤
 │ 1,523 rows · page 1/31                          data-nexus v0.1 │
 └─────────────────────────────────────────────────────────────────┘
@@ -327,7 +314,7 @@ MVP 核心态 — 已连接 + 数据浏览：
 
 | PRD 功能 | UI 入口 |
 |----------|---------|
-| 连接 SQLite | Welcome「打开数据库」+ File 菜单 + ConnectionForm |
+| 连接 SQLite | 连接树「新建/打开」+ File 菜单 + NewConnectionDialog |
 | Schema 浏览 | Sidebar + 表结构 Tab |
 | 表数据浏览 | 数据 Tab + DataGrid |
 | SQL 编辑器 | SQL Tab |

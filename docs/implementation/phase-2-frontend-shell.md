@@ -23,6 +23,9 @@
 - [ ] Tailwind CSS 配置
 - [ ] shadcn/ui 初始化（Button、Input、Tabs、Toast、Dialog、Table 等）
 - [ ] ESLint + Prettier
+- [ ] **i18n**：`react-i18next` + `i18next`，`locales/zh-CN` + `locales/en`，默认 zh-CN
+- [ ] `LanguageToggle` — Header 语言切换，持久化 `localStorage`
+- [ ] 所有 UI 文案走 `t('key')`，禁止硬编码中文/英文
 - [ ] 字体：Inter（UI）+ JetBrains Mono（代码区预留）
 - [ ] TanStack Query Provider
 - [ ] Zustand：`connectionStore`（connected、connection、readOnly）
@@ -34,6 +37,7 @@
 frontend/src/lib/
 ├── api/
 │   ├── connection.ts
+│   ├── saved-connection.ts
 │   ├── schema.ts
 │   ├── dialog.ts
 │   ├── app.ts
@@ -52,15 +56,19 @@ frontend/src/lib/
 
 ### 组件
 
+## 2.1 连接 UI（Navicat 模式）
+
+**参考:** [CONNECTION_UX.md](../design/CONNECTION_UX.md) · [UI_UX §4.1](../design/UI_UX.md)
+
 ```
 frontend/src/
 ├── app/
 │   └── AppShell.tsx
 ├── features/connection/
-│   ├── WelcomePage.tsx
-│   ├── ConnectionForm.tsx
-│   ├── OpenDatabaseButton.tsx
-│   └── ConnectionStatus.tsx
+│   ├── ConnectionTree.tsx
+│   ├── ConnectionTreeItem.tsx
+│   ├── NewConnectionDialog.tsx
+│   └── useConnections.ts       # TanStack Query
 └── components/
     ├── Header.tsx
     ├── StatusBar.tsx
@@ -69,40 +77,42 @@ frontend/src/
 
 ### 任务清单
 
-- [ ] `AppShell` — Header + Sidebar + Main + StatusBar
-- [ ] 未连接 → `WelcomePage`；已连接 → 工作台布局
-- [ ] `OpenDatabaseButton` → `DialogService.OpenDatabaseFile()` → `Connect`
-- [ ] `ConnectionForm` — 路径输入 + 只读勾选 + 连接按钮
-- [ ] 菜单 **File → Open** 触发同上流程
-- [ ] `ConnectionStatus` — 文件名、路径 truncate、断开按钮
-- [ ] 断开需确认；断开后清空 Sidebar
+- [ ] `AppShell` — 启动即主工作台（**无 WelcomePage**）
+- [ ] `ConnectionTree` — `ListConnections`；展示 open/closed 状态
+- [ ] `NewConnectionDialog` → `OpenConnectionFromFile`（文件对话框 + 只读）
+- [ ] 节点「打开」→ `OpenConnection(id)`；「关闭」→ `CloseConnection(id)`
+- [ ] 删除 → `RemoveConnection`（已打开需确认）
+- [ ] 已打开连接下嵌套 Schema 子树（见 §2.3）
+- [ ] 菜单 **File → Open** → 新建并打开连接
+- [ ] **P1:** `SetRestoreOpenOnStartup` — 启动恢复上次已打开连接
 - [ ] `ThemeToggle` + 跟随系统
 - [ ] Loading / 错误 inline + Toast
 
 ### 验收
 
-- [ ] 文件对话框选库 → 连接成功 → Header 显示状态
-- [ ] 无效路径 → 明确错误
-- [ ] 只读模式勾选 → 后端 `readOnly: true`
+- [ ] 启动即见连接列表（可为空）
+- [ ] 新建连接 → 打开 → Schema 展开
+- [ ] 同时打开 ≥2 个 SQLite，互不影响
+- [ ] 关闭单个连接后列表条目仍在
 
 ---
 
-## 2.3 Schema 侧边栏
+## 2.3 Schema 侧边栏（嵌入连接树）
 
 ```
 frontend/src/features/schema/
-├── SchemaSidebar.tsx
-└── useTables.ts          # TanStack Query
+├── SchemaSubtree.tsx      # 某 connectionId 下的表/视图
+└── useTables.ts           # TanStack Query，key 含 connectionId
 ```
 
 ### 任务清单
 
-- [ ] `useTables` — `SchemaService.ListTables`，连接后自动 fetch
+- [ ] `useTables(connectionId)` — 仅对已 `open` 连接 fetch
 - [ ] 分组：**TABLES** / **VIEWS**
-- [ ] 搜索框 — 前端 filter
-- [ ] 点击表名 — 选中高亮，写入 store（`selectedTable`）
+- [ ] 搜索框 — 前端 filter（按当前连接）
+- [ ] 点击表名 — 写入 store（`activeConnectionId` + `selectedTable`）
 - [ ] 空库 Empty State
-- [ ] Sidebar skeleton loading
+- [ ] 加载 skeleton
 
 ### 主内容区 Tab 栏（骨架）
 

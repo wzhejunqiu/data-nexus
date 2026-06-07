@@ -43,11 +43,14 @@ cd frontend && npm test
 
 - [ ] 冷启动窗口可见 < 1s
 - [ ] File → Open 选有效 `.db` → 连接成功
-- [ ] Welcome 页路径输入连接
+- [ ] 连接树「新建连接」+ 路径输入（高级）
 - [ ] 无效路径 → 错误提示
 - [ ] 只读模式 → 写 SQL 被拒绝
 - [ ] 断开 → 重连
-- [ ] `--db /path/to.db` 启动自动连接
+- [ ] 连接成功后出现在最近连接；重启应用仍在
+- [ ] 最近连接一键打开，无需输入路径
+- [ ] 删除最近连接条目
+- [ ] P1：启动自动连接上次库（文件存在时）
 
 ### Schema & 数据
 
@@ -84,15 +87,20 @@ cd frontend && npm test
 
 ### 构建
 
+**v0.1.0 必须三平台均通过 smoke test：**
+
 ```bash
-wails build                          # 当前平台
-wails build -platform darwin/arm64   # 按需
+wails build                          # 当前平台（开发机）
+wails build -platform darwin/arm64   # macOS Apple Silicon
+wails build -platform darwin/amd64   # macOS Intel（按需）
 wails build -platform windows/amd64
 wails build -platform linux/amd64
 ```
 
-- [ ] `build/bin/` 产物可双击运行
-- [ ] macOS `.app` / Windows `.exe`  smoke test
+- [ ] macOS `.app` smoke test
+- [ ] Windows `.exe` smoke test（本机或 CI）
+- [ ] Linux binary smoke test（本机或 CI）
+- [ ] 三平台 i18n：zh-CN / en 切换正常
 
 ### Git
 

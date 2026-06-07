@@ -28,10 +28,31 @@ type Connection struct {
 
 | 字段 | MVP | v1.0+ |
 |------|-----|-------|
-| `ID` | ULID | 持久化连接 ID |
+| `ID` | ULID | 同左 |
 | `Type` | `"sqlite"` | `"postgres"`, `"mysql"` |
 | `DisplayName` | 文件名 | 用户自定义别名 |
 | `Config` | SQLiteConfig | 联合类型 |
+
+> **活跃连接** 与 **已保存连接** 共用 `id`：保存于 `connections.json`；`OpenConnection` 后在内存中挂载 Driver。
+
+**ConnectionManager（MVP）:**
+
+```go
+type ConnectionManager struct {
+    mu      sync.RWMutex
+    store   *ConnectionStore      // connections.json
+    active  map[string]*Session   // id -> open driver session
+}
+
+type Session struct {
+    Connection *Connection
+    Driver     driver.Driver
+}
+```
+
+- 支持 **多条** `active` 并存
+- `OpenConnection(id)` 向 map 添加；`CloseConnection(id)` 移除并 `Driver.Close()`
+- `ListConnections` 合并 store 与 active 状态 → `open` | `closed`
 
 ### 2.2 DriverConfig（联合配置）
 
@@ -59,20 +80,51 @@ interface PostgresConfig {
 }
 ```
 
-### 2.3 SavedConnection（v1.0 持久化，MVP 不实现）
+### 2.3 SavedConnection（MVP 持久化）
 
 ```go
 type SavedConnection struct {
-    ID        string
-    Name      string
-    Type      DriverType
-    Config    DriverConfig  // 敏感字段加密存储
-    CreatedAt time.Time
-    UpdatedAt time.Time
+    ID         string       `json:"id"`
+    Name       string       `json:"name"`       // 默认文件名，可改
+    Type       DriverType   `json:"type"`
+    Config     DriverConfig `json:"config"`
+    CreatedAt  time.Time    `json:"createdAt"`
+    UpdatedAt  time.Time    `json:"updatedAt"`
+    LastUsedAt time.Time    `json:"lastUsedAt"`
 }
 ```
 
-存储：本地 JSON 文件 `~/.data-nexus/connections.json` 或 SQLite 配置库。
+**存储文件:** `~/.data-nexus/connections.json`
+
+```json
+{
+  "version": 1,
+  "restoreOpenOnStartup": false,
+  "openConnectionIds": [],
+  "items": [
+    {
+      "id": "01HX...",
+      "name": "app.db",
+      "type": "sqlite",
+      "config": {
+        "type": "sqlite",
+        "sqlite": {
+          "filePath": "/Users/dev/project/app.db",
+          "readOnly": false
+        }
+      },
+      "lastUsedAt": "2026-06-07T08:00:00Z"
+    }
+  ]
+}
+```
+
+**规则:**
+- `CreateConnection` / `OpenConnectionFromFile` → upsert `items`
+- `OpenConnection` → 加入 `active`；退出时可选写入 `openConnectionIds`
+- `CloseConnection` → 从 `active` 移除；`items` 保留
+- `RemoveConnection` → 关闭 + 从 `items` 删除
+- 同一路径新建 → 可复用已有 `id` 或提示已存在（MVP：复用并更新）
 
 ### 2.4 AppConfig（应用配置，含日志）
 
@@ -336,4 +388,4 @@ interface QueryHistoryItem {
 }
 ```
 
-Zustand store + TanStack Query 管理后端状态；通过 `frontend/src/lib/api/` 调用 Wails Service 绑定（非 HTTP fetch）。MVP 不持久化到 localStorage。
+Zustand store + TanStack Query 管理后端状态；通过 `frontend/src/lib/api/` 调用 Wails Service 绑定。连接列表由后端 `connections.json` 持久化，前端不单独存连接配置。
