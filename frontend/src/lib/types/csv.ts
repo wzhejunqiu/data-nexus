@@ -20,6 +20,7 @@ export interface ExportTableCSVRequest {
   connectionId: string
   tableName: string
   format: CSVFormatOptions
+  columns?: string[]
   defaultPath?: string
   exportId?: string
 }

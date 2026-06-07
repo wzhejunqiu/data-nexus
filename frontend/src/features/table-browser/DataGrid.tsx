@@ -13,25 +13,19 @@ import { NullCell } from '@/components/ui/NullCell'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Button } from '@/components/ui/Button'
 import { useToastStore } from '@/components/ui/Toast'
-import { ExportCsvDialog } from '@/features/csv/ExportCsvDialog'
 import { ImportWizard } from '@/features/import/ImportWizard'
+import { useExportStore } from '@/stores/exportStore'
 import { BatchEditConfirmDialog } from './BatchEditConfirmDialog'
 import { Pagination } from './Pagination'
 import { connectionApi } from '@/lib/api/connection'
-import { dialogApi } from '@/lib/api/dialog'
-import { exportApi } from '@/lib/api/export'
-import { formatError, isDialogCancelled, isExportCancelled, mapWailsError } from '@/lib/api/errors'
-import { fileApi } from '@/lib/api/file'
+import { formatError } from '@/lib/api/errors'
 import { schemaApi } from '@/lib/api/schema'
 import { tableApi } from '@/lib/api/table'
 import type { PaginatedTableData, PendingEdit } from '@/lib/types'
-import type { CSVFormatOptions } from '@/lib/types/csv'
-import { saveCSVFormatPreference } from '@/lib/types/csv'
 import {
   cellKey,
   formatCell,
   isBlobValue,
-  rowsToCSV,
 } from '@/lib/utils'
 import { useStatusStore } from '@/stores/statusStore'
 
@@ -50,9 +44,8 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
   const [pendingEdits, setPendingEdits] = useState<Map<string, PendingEdit>>(new Map())
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [exportOpen, setExportOpen] = useState(false)
-  const [exportMode, setExportMode] = useState<'page' | 'all'>('page')
   const [importOpen, setImportOpen] = useState(false)
+  const openExport = useExportStore((s) => s.openExport)
 
   const { data: connections } = useQuery({
     queryKey: ['connections'],
@@ -155,44 +148,16 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
     [],
   )
 
-  const handleExport = async (format: CSVFormatOptions, exportId: string | null) => {
-    saveCSVFormatPreference(format)
-    try {
-      if (exportMode === 'all') {
-        const path = await dialogApi.saveFile(`${tableName}.csv`, [
-          { displayName: 'CSV', pattern: '*.csv' },
-        ])
-        await exportApi.exportTableCSV({
-          connectionId,
-          tableName,
-          format,
-          defaultPath: path,
-          exportId: exportId ?? undefined,
-        })
-        pushToast(t('csv.exportSuccess'), 'info')
-        return
-      }
-      if (!data) return
-      const columns = data.columns.map((c) => c.name)
-      const csv = rowsToCSV(columns, data.rows, format)
-      const path = await dialogApi.saveFile(`${tableName}.csv`, [
-        { displayName: 'CSV', pattern: '*.csv' },
-      ])
-      await fileApi.writeTextFile(path, csv, format.encoding)
-      pushToast(t('csv.exportSuccess'), 'info')
-    } catch (err) {
-      const appErr = mapWailsError(err)
-      if (isExportCancelled(appErr)) {
-        pushToast(t('csv.exportCancelled'), 'info')
-      } else if (!isDialogCancelled(appErr)) {
-        pushToast(formatError(t, appErr), 'error')
-      }
-      throw err
-    }
-  }
-
-  const handleCancelExport = async (exportId: string) => {
-    await exportApi.cancelExportTableCSV(exportId)
+  const openTableExport = () => {
+    if (!data) return
+    openExport({
+      source: 'table-page',
+      connectionId,
+      tableName,
+      availableColumns: data.columns.map((c) => c.name),
+      rows: data.rows,
+      totalRows: data.pagination.totalRows,
+    })
   }
 
   if (isLoading) return <TableSkeleton />
@@ -228,8 +193,7 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
           setConfirmOpen(true)
         }}
         pendingCount={pendingEdits.size}
-        onExportPage={() => { setExportMode('page'); setExportOpen(true) }}
-        onExportAll={() => { setExportMode('all'); setExportOpen(true) }}
+        onExportCsv={openTableExport}
         onImport={() => setImportOpen(true)}
       />
       <BatchEditConfirmDialog
@@ -238,15 +202,6 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
         onOpenChange={setConfirmOpen}
         onConfirm={() => saveBatch.mutate()}
         busy={saveBatch.isPending}
-      />
-      <ExportCsvDialog
-        open={exportOpen}
-        title={exportMode === 'all' ? t('csv.exportAll') : t('csv.exportPage')}
-        mode={exportMode}
-        totalRows={data.pagination.totalRows}
-        onOpenChange={setExportOpen}
-        onExport={handleExport}
-        onCancelExport={handleCancelExport}
       />
       {importOpen && (
         <ImportWizard
@@ -285,8 +240,7 @@ function DataGridTable({
   onCommitEdit,
   onDiscard,
   onSave,
-  onExportPage,
-  onExportAll,
+  onExportCsv,
   onImport,
 }: {
   data: PaginatedTableData
@@ -309,8 +263,7 @@ function DataGridTable({
   onCommitEdit: (edit: PendingEdit) => void
   onDiscard: () => void
   onSave: () => void
-  onExportPage: () => void
-  onExportAll: () => void
+  onExportCsv: () => void
   onImport: () => void
 }) {
   const { t } = useTranslation()
@@ -470,11 +423,8 @@ function DataGridTable({
         <span className="text-muted">{t('data.total', { count: data.pagination.totalRows })}</span>
         {isFetching && <span className="text-muted">{t('common.loading')}</span>}
         <div className="ml-auto flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={onExportPage}>
-            {t('csv.exportPage')}
-          </Button>
-          <Button size="sm" variant="outline" onClick={onExportAll}>
-            {t('csv.exportAll')}
+          <Button size="sm" variant="outline" onClick={onExportCsv}>
+            {t('csv.export')}
           </Button>
           {!readOnly && (
             <Button size="sm" variant="outline" onClick={onImport}>

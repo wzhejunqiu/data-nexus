@@ -6,11 +6,13 @@ import { Header, StatusBar } from '@/components/Header'
 import { Tabs } from '@/components/ui/Tabs'
 import { Toaster, useToastStore } from '@/components/ui/Toast'
 import { ConnectionTree } from '@/features/connection/ConnectionTree'
+import { ExportWizardPage } from '@/features/csv/ExportWizardPage'
 import { SchemaTable } from '@/features/schema/SchemaTable'
 import { SqlEditor } from '@/features/sql-editor/SqlEditor'
 import { DataGrid } from '@/features/table-browser/DataGrid'
 import { appApi } from '@/lib/api/app'
 import { connectionApi } from '@/lib/api/connection'
+import { useExportStore } from '@/stores/exportStore'
 import { useStatusStore } from '@/stores/statusStore'
 import { resolveTheme, useThemeStore } from '@/stores/themeStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -25,6 +27,7 @@ export function AppShell() {
   const selectedTable = useWorkspaceStore((s) => s.selectedTable)
   const rowCount = useStatusStore((s) => s.rowCount)
   const durationMs = useStatusStore((s) => s.durationMs)
+  const exportSession = useExportStore((s) => s.session)
 
   const { data: connections } = useQuery({
     queryKey: ['connections'],
@@ -96,58 +99,64 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
-      <Header openCount={openCount} />
-      <div className="flex min-h-0 flex-1">
-        <ConnectionTree />
-        <main className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-center justify-between border-b border-border pr-3">
-            <Tabs
-              tabs={tabs}
-              active={activeTab}
-              onChange={(id) => setActiveTab(id as typeof activeTab)}
-            />
-            <label className="flex items-center gap-2 text-sm text-muted">
-              {t('tabs.activeConnection')}
-              <select
-                className="rounded border border-border bg-transparent px-2 py-1 text-sm text-foreground"
-                value={activeConnectionId ?? ''}
-                onChange={(e) => setActiveConnectionId(e.target.value || null)}
-              >
-                <option value="">—</option>
-                {openConnections.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="min-h-0 flex-1 overflow-auto">
-            {!activeConnectionId || !selectedTable ? (
-              activeTab !== 'sql' ? (
-                <p className="p-6 text-sm text-muted">{t('data.selectTable')}</p>
-              ) : (
-                <SqlEditor connectionId={activeConnectionId} />
-              )
-            ) : (
-              <>
-                {activeTab === 'schema' && (
-                  <SchemaTable connectionId={activeConnectionId} tableName={selectedTable} />
+      <Header openCount={openCount} exportMode={!!exportSession} />
+      {exportSession ? (
+        <ExportWizardPage />
+      ) : (
+        <>
+          <div className="flex min-h-0 flex-1">
+            <ConnectionTree />
+            <main className="flex min-w-0 flex-1 flex-col">
+              <div className="flex items-center justify-between border-b border-border pr-3">
+                <Tabs
+                  tabs={tabs}
+                  active={activeTab}
+                  onChange={(id) => setActiveTab(id as typeof activeTab)}
+                />
+                <label className="flex items-center gap-2 text-sm text-muted">
+                  {t('tabs.activeConnection')}
+                  <select
+                    className="rounded border border-border bg-transparent px-2 py-1 text-sm text-foreground"
+                    value={activeConnectionId ?? ''}
+                    onChange={(e) => setActiveConnectionId(e.target.value || null)}
+                  >
+                    <option value="">—</option>
+                    {openConnections.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="min-h-0 flex-1 overflow-auto">
+                {!activeConnectionId || !selectedTable ? (
+                  activeTab !== 'sql' ? (
+                    <p className="p-6 text-sm text-muted">{t('data.selectTable')}</p>
+                  ) : (
+                    <SqlEditor connectionId={activeConnectionId} />
+                  )
+                ) : (
+                  <>
+                    {activeTab === 'schema' && (
+                      <SchemaTable connectionId={activeConnectionId} tableName={selectedTable} />
+                    )}
+                    {activeTab === 'data' && (
+                      <DataGrid
+                        key={`${activeConnectionId}-${selectedTable}`}
+                        connectionId={activeConnectionId}
+                        tableName={selectedTable}
+                      />
+                    )}
+                    {activeTab === 'sql' && <SqlEditor connectionId={activeConnectionId} />}
+                  </>
                 )}
-                {activeTab === 'data' && (
-                  <DataGrid
-                    key={`${activeConnectionId}-${selectedTable}`}
-                    connectionId={activeConnectionId}
-                    tableName={selectedTable}
-                  />
-                )}
-                {activeTab === 'sql' && <SqlEditor connectionId={activeConnectionId} />}
-              </>
-            )}
+              </div>
+            </main>
           </div>
-        </main>
-      </div>
-      <StatusBar text={statusParts.join(' · ')} />
+          <StatusBar text={statusParts.join(' · ')} />
+        </>
+      )}
       <Toaster />
     </div>
   )

@@ -57,9 +57,9 @@ func (s *ExportService) ExportTableToFile(
 	}()
 
 	columns := cursor.Columns()
-	columnNames := make([]string, len(columns))
-	for i, c := range columns {
-		columnNames[i] = c.Name
+	columnNames, err := resolveExportColumns(columns, req.Columns)
+	if err != nil {
+		return err
 	}
 
 	rowWriter, err := csvutil.NewRowWriter(w, columnNames, format)
@@ -116,4 +116,34 @@ func DefaultCSVFilename(tableName string) string {
 		return '_'
 	}, tableName)
 	return fmt.Sprintf("%s.csv", safe)
+}
+
+func resolveExportColumns(all []model.ColumnMeta, requested []string) ([]string, error) {
+	if len(requested) == 0 {
+		names := make([]string, len(all))
+		for i, c := range all {
+			names[i] = c.Name
+		}
+		return names, nil
+	}
+	available := make(map[string]struct{}, len(all))
+	for _, c := range all {
+		available[c.Name] = struct{}{}
+	}
+	out := make([]string, 0, len(requested))
+	seen := make(map[string]struct{}, len(requested))
+	for _, name := range requested {
+		if _, ok := available[name]; !ok {
+			return nil, model.ErrInvalidRequest("invalid export column: " + name)
+		}
+		if _, dup := seen[name]; dup {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, name)
+	}
+	if len(out) == 0 {
+		return nil, model.ErrInvalidRequest("at least one column is required")
+	}
+	return out, nil
 }

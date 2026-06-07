@@ -105,6 +105,33 @@ func TestExportServiceExportTableBeyondQueryLimit(t *testing.T) {
 	}
 }
 
+func TestExportServiceExportSelectedColumns(t *testing.T) {
+	qs, connID := setupExportDB(t, 3)
+	exportSvc := service.NewExportService(qs)
+
+	out := filepath.Join(t.TempDir(), "items-name-only.csv")
+	err := exportSvc.ExportTableToFile(context.Background(), model.ExportTableCSVRequest{
+		ConnectionID: connID,
+		TableName:    "items",
+		Format:       model.DefaultCSVFormat(),
+		Columns:      []string{"name"},
+	}, out, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(content)
+	if strings.Contains(text, "\nid,") || strings.HasPrefix(text, "id,") {
+		t.Fatalf("id column should not be exported: %q", text)
+	}
+	if !strings.Contains(text, "name") || strings.Count(text, "row-") != 3 {
+		t.Fatalf("expected name column with 3 rows: %q", text)
+	}
+}
+
 func TestExportServiceExportCancelled(t *testing.T) {
 	qs, connID := setupExportDB(t, 5000)
 	exportSvc := service.NewExportService(qs)

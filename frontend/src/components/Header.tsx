@@ -5,7 +5,13 @@ import { Button } from './ui/Button'
 import { SettingsDialogContainer } from '@/features/settings/SettingsDialog'
 import { useThemeStore, resolveTheme, type ThemeMode } from '@/stores/themeStore'
 
-export function Header({ openCount }: { openCount: number }) {
+export function Header({
+  openCount,
+  exportMode = false,
+}: {
+  openCount: number
+  exportMode?: boolean
+}) {
   const { t, i18n } = useTranslation()
   const { mode, setMode } = useThemeStore()
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -36,7 +42,11 @@ export function Header({ openCount }: { openCount: number }) {
     <header className="flex h-12 items-center justify-between border-b border-border px-4">
       <div className="flex items-center gap-3">
         <span className="font-semibold">{t('app.title')}</span>
-        <span className="text-sm text-muted">{t('app.openCount', { count: openCount })}</span>
+        {exportMode ? (
+          <span className="text-sm text-muted">{t('csv.exportWizardTitle')}</span>
+        ) : (
+          <span className="text-sm text-muted">{t('app.openCount', { count: openCount })}</span>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={toggleLang}>

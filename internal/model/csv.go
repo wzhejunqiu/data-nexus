@@ -51,6 +51,7 @@ type ExportTableCSVRequest struct {
 	ConnectionID string           `json:"connectionId"`
 	TableName    string           `json:"tableName"`
 	Format       CSVFormatOptions `json:"format"`
+	Columns      []string         `json:"columns,omitempty"` // empty = all table columns
 	DefaultPath  string           `json:"defaultPath,omitempty"`
 	ExportID     string           `json:"exportId,omitempty"`
 }

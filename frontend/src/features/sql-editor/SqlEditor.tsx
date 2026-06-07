@@ -7,16 +7,13 @@ import { format as formatSQL } from 'sql-formatter'
 import { Button } from '@/components/ui/Button'
 import { NullCell } from '@/components/ui/NullCell'
 import { useToastStore } from '@/components/ui/Toast'
-import { ExportCsvDialog } from '@/features/csv/ExportCsvDialog'
+import { useExportStore } from '@/stores/exportStore'
 import { connectionApi } from '@/lib/api/connection'
-import { dialogApi } from '@/lib/api/dialog'
 import { formatError } from '@/lib/api/errors'
-import { fileApi } from '@/lib/api/file'
 import { queryApi } from '@/lib/api/query'
 import { schemaApi } from '@/lib/api/schema'
 import type { QueryResponse } from '@/lib/types'
-import type { CSVFormatOptions } from '@/lib/types/csv'
-import { loadCSVFormatPreference, saveCSVFormatPreference } from '@/lib/types/csv'
+import { loadCSVFormatPreference } from '@/lib/types/csv'
 import { formatCell, rowsToCSV } from '@/lib/utils'
 import { useQueryHistoryStore } from '@/stores/queryHistoryStore'
 import { resolveTheme, useThemeStore } from '@/stores/themeStore'
@@ -54,7 +51,7 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const [error, setError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingRun, setPendingRun] = useState(false)
-  const [exportOpen, setExportOpen] = useState(false)
+  const openExport = useExportStore((s) => s.openExport)
   const [editorHeight, setEditorHeight] = useState(MIN_EDITOR_LINES * EDITOR_LINE_HEIGHT)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const addHistory = useQueryHistoryStore((s) => s.add)
@@ -224,15 +221,14 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
     navigator.clipboard.writeText(rowsToCSV(resultColumns, result.rows, format))
   }
 
-  const handleExportCsv = async (format: CSVFormatOptions) => {
-    if (!result?.columns || !result.rows) return
-    saveCSVFormatPreference(format)
-    const csv = rowsToCSV(resultColumns, result.rows, format)
-    const path = await dialogApi.saveFile('query-result.csv', [
-      { displayName: 'CSV', pattern: '*.csv' },
-    ])
-    await fileApi.writeTextFile(path, csv, format.encoding)
-    pushToast(t('csv.exportSuccess'), 'info')
+  const openQueryExport = () => {
+    if (!result?.columns || !result.rows || !activeConn) return
+    openExport({
+      source: 'query-result',
+      connectionId: activeConn,
+      availableColumns: resultColumns,
+      rows: result.rows,
+    })
   }
 
   return (
@@ -302,7 +298,7 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
                 <Button size="sm" variant="outline" onClick={copyCsv}>
                   {t('sql.copyCsv')}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setExportOpen(true)}>
+                <Button size="sm" variant="outline" onClick={openQueryExport}>
                   {t('csv.export')}
                 </Button>
               </>
@@ -351,13 +347,6 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
           if (pendingRun) execute.mutate()
           setPendingRun(false)
         }}
-      />
-      <ExportCsvDialog
-        open={exportOpen}
-        title={t('csv.export')}
-        mode="page"
-        onOpenChange={setExportOpen}
-        onExport={(format) => handleExportCsv(format)}
       />
     </div>
   )

@@ -215,31 +215,28 @@ VIEWS (2)
 - Esc：取消当前格编辑（未提交到 pending 则丢弃；已在 pending 则恢复原值）
 - 切换表 / 分页 / 关闭连接：若有 pending → 确认是否放弃
 
-### 4.6 导出 CSV（v0.2）
+### 4.6 导出 CSV（v0.2+）
 
 **入口:**
-- 数据 Tab 工具栏「导出 CSV」
-- SQL 结果区工具栏「导出 CSV」（v0.1 已有复制，v0.2 增加写文件）
+- 数据 Tab 工具栏「导出 CSV」→ 当前页 / 全表
+- SQL 结果区工具栏「导出 CSV」
 
-**ExportDialog 字段:**
+**布局:** 全屏子页面（覆盖连接树与主内容，仅保留顶栏），多步骤向导 `ExportWizardPage`。
 
-| 选项 | 说明 |
+**步骤（表导出）:** 范围 → 列 → 格式 → 保存路径 → 导出中 → **结果**（SQL 结果跳过「范围」）
+
+| 步骤 | 内容 |
 |------|------|
-| 范围 | 当前页 / 全表（SQL 结果仅当前结果集） |
-| 分隔符 | `,` `\t` `;` 自定义 |
-| 引号 | `"` 或 `'` |
-| 包含表头 | 开关 |
-| NULL 表示 | 默认空字符串 |
-| 编码 | UTF-8 / UTF-8 BOM |
+| 范围 | 当前页 / 全表；>1 万行非阻塞警告 |
+| 列 | 多选列，默认全选 |
+| 格式 | 分隔符、引号、表头、编码等 |
+| 保存 | `SaveFile` 选路径 + 摘要 |
+| 导出中 | 全表：不确定进度条 + 已导出行数 + 可取消 |
+| 结果 | 路径、行数、列数、耗时；**不自动关闭**，用户点「关闭」回主界面 |
 
-**流程:** 配置选项 → 系统 `SaveFile` 对话框 → 后端分批 Export + 写盘 → Toast「已导出」
+**流程:** 向导配置 → 选路径 → 开始导出 → 结果页确认 → 关闭回主界面（成功不再 Toast）
 
-**全表导出交互（v0.2+）:**
-
-- 表行数 > 10,000 时显示非阻塞黄色警告，仍可继续。
-- 导出中显示不确定进度条与已导出行数（`exported`）；不预先整表 `COUNT(*)`。
-- 导出中「取消」调用 `CancelExportTableCSV`，删除半成品文件；Toast「导出已取消」。
-- 取消或失败时对话框保持打开，便于重试。
+**全表导出:** 不预先 `COUNT(*)`；取消调用 `CancelExportTableCSV` 删除半成品文件，结果页展示「已取消」。
 
 ### 4.7 设置页（v0.2）
 
@@ -316,7 +313,7 @@ VIEWS (2)
 | `SchemaTable` | 列定义表格 | P0 |
 | `DataGrid` | 分页数据表格 | P0 |
 | `EditBatchBar` | 待提交编辑条 + 提交/放弃 | v0.2 |
-| `ExportDialog` | CSV 导出选项 + 范围 | v0.2 |
+| `ExportWizardPage` | CSV 导出全屏多步向导 + 结果页 | v0.2+ |
 | `ImportWizard` | CSV 导入多步向导 | v0.2 |
 | `SettingsPanel` | 应用配置（日志等） | v0.2 |
 | `SqlEditor` | Monaco 包装 | P0 |
@@ -422,6 +419,6 @@ MVP 核心态 — 多连接 + 数据浏览：
 | 写操作确认 | ConfirmDialog |
 | 批量编辑确认 | ConfirmDialog（变更摘要） |
 | 查询历史 | SQL Tab 历史下拉 |
-| CSV 导出/导入 | ExportDialog / ImportWizard |
+| CSV 导出/导入 | ExportWizardPage / ImportWizard |
 | 应用设置 | SettingsPanel |
 | 深色主题 | Header ThemeToggle |
