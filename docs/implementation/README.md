@@ -4,13 +4,13 @@
 
 ## 阶段索引
 
-| 阶段 | 文件 | 目标 | 预估 |
-|------|------|------|------|
-| Phase 0 | [phase-0-review.md](./phase-0-review.md) | 文档评审，确认后开工 | 1-2 天 |
-| Phase 1 | [phase-1-wails-backend.md](./phase-1-wails-backend.md) | Wails 骨架 + Driver + Services | 3-5 天 |
-| Phase 2 | [phase-2-frontend-shell.md](./phase-2-frontend-shell.md) | 前端骨架 + 连接 + Schema 侧边栏 | 3-4 天 |
-| Phase 3 | [phase-3-feature-integration.md](./phase-3-feature-integration.md) | 表浏览 + SQL 编辑器 + 联调 | 4-6 天 |
-| Phase 4 | [phase-4-release.md](./phase-4-release.md) | 测试 + 打包 + v0.1.0 发布 | 2-3 天 |
+| 阶段 | 文件 | 目标 | 状态 | 预估 |
+|------|------|------|------|------|
+| Phase 0 | [phase-0-review.md](./phase-0-review.md) | 文档评审，确认后开工 | ✅ 已完成 | 1-2 天 |
+| Phase 1 | [phase-1-wails-backend.md](./phase-1-wails-backend.md) | Wails 骨架 + Driver + Services | ✅ 已完成 | 3-5 天 |
+| Phase 2 | [phase-2-frontend-shell.md](./phase-2-frontend-shell.md) | 前端骨架 + 连接 + Schema 侧边栏 | ✅ 已完成 | 3-4 天 |
+| Phase 3 | [phase-3-feature-integration.md](./phase-3-feature-integration.md) | 表浏览 + SQL 编辑器 + 联调 | ✅ 已完成 | 4-6 天 |
+| Phase 4 | [phase-4-release.md](./phase-4-release.md) | 测试 + 打包 + v0.1.0 发布 | 🔄 进行中 | 2-3 天 |
 
 ## MVP 后版本
 
@@ -34,7 +34,7 @@
 ## 推荐实施顺序
 
 ```
-Phase 0 ✓ → Phase 1 → Phase 2 → Phase 3 → Phase 4 → tag v0.1.0
-                                              ↓
-                                    v0.2 → v0.3 → v1.0 → v1.x
+Phase 0 ✓ → Phase 1 ✓ → Phase 2 ✓ → Phase 3 ✓ → Phase 4（进行中）→ tag v0.1.0
+                                                          ↓
+                                                v0.2 → v0.3 → v1.0 → v1.x
 ```

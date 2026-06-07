@@ -1,6 +1,6 @@
 # Phase 3 — 功能集成（MVP 闭环）
 
-> **预估:** 4-6 天 · **前置:** [phase-2-frontend-shell.md](./phase-2-frontend-shell.md) · **下一阶段:** [phase-4-release.md](./phase-4-release.md)
+> **预估:** 4-6 天 · **状态:** 已完成（待本机 `wails dev` 全流程走查） · **前置:** [phase-2-frontend-shell.md](./phase-2-frontend-shell.md) · **下一阶段:** [phase-4-release.md](./phase-4-release.md)
 
 ---
 
@@ -101,7 +101,7 @@ frontend/src/features/sql-editor/
 - [x] StatusBar — 行数、耗时、版本（`AppService.GetVersion`）
 - [x] 窗口标题 — `Data Nexus — {filename}`
 - [x] CLI `--db` 启动时 `OpenConnectionFromFile` 并 upsert 到连接列表
-- [x] `wails build` 可构建（main/PR CI 仅 `smoke-build` linux/amd64；六平台产物在打 `v*` tag 时由 [release.yml](../../.github/workflows/release.yml) 构建）
+- [x] `wails build` 可构建（main/PR CI 仅 `smoke-build` linux/amd64；四平台 Release 产物（macOS 延后）在打 `v*` tag 时由 [release.yml](../../.github/workflows/release.yml) 构建）
 - [x] release 模式日志写文件（非控制台，`logger.New` + `IsDevMode`）
 
 ### 性能抽查
@@ -136,4 +136,4 @@ frontend/src/features/sql-editor/
 
 - [x] 上述 MVP 对照表全部勾选
 - [ ] `wails dev` 全流程手动走通
-- [ ] 进入 [phase-4-release.md](./phase-4-release.md)
+- [x] 进入 [phase-4-release.md](./phase-4-release.md)

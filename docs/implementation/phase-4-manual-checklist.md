@@ -6,7 +6,7 @@
 
 ## Startup & Connections
 
-- [ ] ⏳ Cold start window visible < 1s
+- [x] ⏳ Cold start window visible < 1s
 - [x] File → Open selects valid `.db` and opens connection
 - [x] New connection dialog supports path input + browse
 - [x] Invalid path shows localized error
@@ -25,6 +25,7 @@
 - [x] Pagination 25/50/100/200
 - [x] Column sort asc/desc/clear
 - [x] NULL and BLOB display correctly
+- [x] Empty table shows Empty State
 
 ## SQL
 
@@ -42,4 +43,4 @@
 - [x] Theme light/dark/system
 - [x] Language zh-CN / en
 - [x] Release build logs to platform default file path
-- [ ] ⏳ Release 产物或本机 `wails build` smoke test 通过（目标平台；main CI 仅覆盖 linux-amd64）
+- [x] ⏳ Release 产物或本机 `wails build` smoke test 通过（目标平台；main CI 仅覆盖 linux-amd64）

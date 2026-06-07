@@ -1,6 +1,6 @@
 # Phase 0 — 文档与设计评审
 
-> **状态：** 进行中 · **预估：** 1-2 天 · **前置：** 无 · **下一阶段：** [phase-1-wails-backend.md](./phase-1-wails-backend.md)
+> **状态：** 已完成 · **预估：** 1-2 天 · **前置：** 无 · **下一阶段：** [phase-1-wails-backend.md](./phase-1-wails-backend.md)
 
 ---
 
@@ -43,7 +43,7 @@
 | 日志        | zap，默认 INFO                                          |
 | i18n        | 需要；react-i18next，默认 zh-CN，MVP 含 en              |
 | MVP 范围    | P0 + P1 全做                                            |
-| 首发平台    | macOS / Windows / Linux（各 amd64+arm64）；main CI 仅 linux-amd64 smoke，全平台 Release 打 tag 时构建 |
+| 首发平台    | v0.1.0 Release 构建 Linux + Windows（各 amd64+arm64）；macOS 待签名/公证后纳入 Release；main CI 仅 linux-amd64 smoke build |
 | v0.3 方向   | 做；Filter→SQL + 列画像等探索型差异化                   |
 | 连接持久化  | MVP：`connections.json` + 连接树；可同时打开多个 SQLite |
 | 启动 UX     | 无 Welcome；直接进入主界面（Navicat 模式）              |
@@ -70,6 +70,6 @@ wails doctor
 
 ## 完成标准
 
-- [ ] 所有评审检查项已勾选
-- [ ] 环境就绪
-- [ ] 打开 [phase-1-wails-backend.md](./phase-1-wails-backend.md) 开始实施
+- [x] 所有评审检查项已勾选
+- [x] 环境就绪
+- [x] 打开 [phase-1-wails-backend.md](./phase-1-wails-backend.md) 开始实施

@@ -6,7 +6,7 @@
 
 ## 下载
 
-从 [GitHub Releases](https://github.com/wzhejunqiu/data-nexus/releases) 下载对应平台的 zip 包：
+从 [GitHub Releases](https://github.com/wzhejunqiu/data-nexus/releases) 下载对应平台的安装包或压缩包：
 
 | 平台 | 文件名 |
 |------|--------|
@@ -19,13 +19,12 @@
 
 ## 快速开始
 
-1. 解压下载的 zip 包。
-2. 启动应用：
-   - **macOS**：打开 `data-nexus.app`（需从源码构建）
-   - **Windows**：运行 NSIS 安装包，从开始菜单或桌面快捷方式启动
-   - **Linux**：赋予可执行权限后运行 `./data-nexus`
-3. 通过 **File → Open** 选择 `.db` 文件，或将 `.db` 文件拖入窗口。
-4. 在左侧连接树中选择数据库，浏览表结构或数据，或在 SQL 编辑器中执行查询。
+1. 安装或解压下载的产物并启动：
+   - **Windows**：运行 `.exe` 安装包，从开始菜单或桌面快捷方式启动
+   - **Linux**：解压 `.zip`，赋予可执行权限后运行 `./data-nexus`
+   - **macOS**：从源码构建后打开 `data-nexus.app`（预构建包暂未发布）
+2. 通过 **File → Open** 选择 `.db` 文件，或将 `.db` 文件拖入窗口。
+3. 在左侧连接树中选择数据库，浏览表结构或数据，或在 SQL 编辑器中执行查询。
 
 也可在启动时直接指定数据库：
 
@@ -98,7 +97,7 @@ make build    # 构建当前平台产物
 make test     # 运行测试
 ```
 
-**CI：** push/PR 到 `main` 时运行测试与 `linux/amd64` smoke build（见 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)）。六个平台的 Release 产物仅在推送 `v*` tag 时构建（见 [`.github/workflows/release.yml`](.github/workflows/release.yml)）。
+**CI：** push/PR 到 `main` 时运行测试与 `linux/amd64` smoke build（见 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)）。四个平台的 Release 产物（Linux ×2 + Windows ×2；macOS 待签名后开启）仅在推送 `v*` tag 时构建（见 [`.github/workflows/release.yml`](.github/workflows/release.yml)）。
 
 设计与架构文档见 [docs/](docs/) 目录。
 

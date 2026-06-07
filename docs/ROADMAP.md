@@ -9,18 +9,18 @@
 ## 阶段概览
 
 ```
-Phase 0 ──► Phase 1 ──► Phase 2 ──► Phase 3 ──► Phase 4
+Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ ──► Phase 4（进行中）
  文档评审     Wails+Driver   前端骨架      功能集成      桌面端发布
            → phase-1        → phase-2     → phase-3     → phase-4
 ```
 
-| 阶段 | 实施文档 | 预估 |
-|------|----------|------|
-| [Phase 0](./implementation/phase-0-review.md) | 文档评审 | 1-2 天 |
-| [Phase 1](./implementation/phase-1-wails-backend.md) | Wails + Driver + Services | 3-5 天 |
-| [Phase 2](./implementation/phase-2-frontend-shell.md) | 连接树 + Schema 子树 + 主区骨架 | 3-4 天 |
-| [Phase 3](./implementation/phase-3-feature-integration.md) | MVP 功能闭环 | 4-6 天 |
-| [Phase 4](./implementation/phase-4-release.md) | 测试 + v0.1.0 | 2-3 天 |
+| 阶段 | 实施文档 | 状态 | 预估 |
+|------|----------|------|------|
+| [Phase 0](./implementation/phase-0-review.md) | 文档评审 | ✅ 已完成 | 1-2 天 |
+| [Phase 1](./implementation/phase-1-wails-backend.md) | Wails + Driver + Services | ✅ 已完成 | 3-5 天 |
+| [Phase 2](./implementation/phase-2-frontend-shell.md) | 连接树 + Schema 子树 + 主区骨架 | ✅ 已完成 | 3-4 天 |
+| [Phase 3](./implementation/phase-3-feature-integration.md) | MVP 功能闭环 | ✅ 已完成 | 4-6 天 |
+| [Phase 4](./implementation/phase-4-release.md) | 测试 + v0.1.0 | 🔄 进行中 | 2-3 天 |
 
 **MVP 合计:** 13-20 天（1 人全职）
 
@@ -56,7 +56,8 @@ Phase 0 ──► Phase 1 ──► Phase 2 ──► Phase 3 ──► Phase 4
 | 2026-06-07 | 日志框架用 zap | 默认 INFO；dev 控制台、release 文件；用户 YAML/CLI 可配置 |
 | 2026-06-07 | MVP 含全部 P1 | 索引、主题、PRAGMA、CSV 复制等均纳入 v0.1.0 |
 | 2026-06-07 | 需要 i18n | react-i18next，默认 zh-CN，MVP 含 en 语言包 |
-| 2026-06-07 | 首发三 OS · 六架构 | v0.1.0 Release 打 tag 时构建 macOS/Windows/Linux（amd64+arm64）；main CI 仅 linux-amd64 smoke build |
+| 2026-06-07 | 首发三 OS · 六架构 | v0.1.0 Release 打 tag 时构建 macOS/Windows/Linux（amd64+arm64）；main CI 仅 linux-amd64 smoke build → v0.1.0 实际见下行修正 |
+| 2026-06-07 | v0.1.0 首发四架构，macOS 延后 | 代码签名/公证未就绪；Release 仅构建 Linux + Windows（amd64+arm64）；macOS 用户从源码构建 |
 | 2026-06-07 | v0.3 确认做 | Filter→SQL、列画像、Canned Queries 等探索型差异化 |
 
 > 开放问题决策后追加到此表。

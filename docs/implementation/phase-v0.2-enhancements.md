@@ -15,7 +15,7 @@
 ### 连接与文件
 
 - [ ] 双击 `.db` 文件关联 — 安装器 / 启动参数
-- [ ] 拖拽 `.db` 到窗口打开（Wails OnFileDrop）
+- [x] 拖拽 `.db` 到窗口打开（Wails OnFileDrop）— **已在 MVP 实现**
 
 ### 数据编辑
 
