@@ -1,6 +1,6 @@
 # Data Nexus — 数据模型
 
-> 版本: v0.3 · 描述后端领域模型与多数据库扩展策略
+> 版本: v1.0 · 描述后端领域模型与多数据库扩展策略
 
 ---
 
@@ -60,23 +60,33 @@ type Session struct {
 // 前端 TypeScript 类型示意
 type DriverConfig =
   | { type: 'sqlite'; sqlite: SQLiteConfig }
-  // | { type: 'postgres'; postgres: PostgresConfig }
-  // | { type: 'mysql'; mysql: MySQLConfig }
+  | { type: 'postgres'; postgres: PostgresConfig }
+  | { type: 'mysql'; mysql: MySQLConfig }
 
 interface SQLiteConfig {
   filePath: string
   readOnly?: boolean
+  wal?: boolean
 }
 
-// v1.x 预留
 interface PostgresConfig {
   host: string
   port: number
   database: string
   user: string
-  password?: string
+  // password 仅运行时注入，不持久化 — 见 SECRETS.md
   sslMode?: 'disable' | 'require' | 'verify-full'
   schema?: string  // default "public"
+  readOnly: boolean
+}
+
+interface MySQLConfig {
+  host: string
+  port: number
+  database: string
+  user: string
+  tls: boolean
+  readOnly: boolean
 }
 ```
 
@@ -84,15 +94,18 @@ interface PostgresConfig {
 
 ```go
 type SavedConnection struct {
-    ID         string       `json:"id"`
-    Name       string       `json:"name"`       // 默认文件名，可改
-    Type       DriverType   `json:"type"`
-    Config     DriverConfig `json:"config"`
-    CreatedAt  time.Time    `json:"createdAt"`
-    UpdatedAt  time.Time    `json:"updatedAt"`
-    LastUsedAt time.Time    `json:"lastUsedAt"`
+    ID              string          `json:"id"`
+    Name            string          `json:"name"`
+    Type            DriverType      `json:"type"`
+    Config          DriverConfig    `json:"config"`
+    SecretsBackend  SecretsBackend  `json:"secretsBackend,omitempty"` // keychain | vault；SQLite 为空
+    CreatedAt       time.Time       `json:"createdAt"`
+    UpdatedAt       time.Time       `json:"updatedAt"`
+    LastUsedAt      time.Time       `json:"lastUsedAt"`
 }
 ```
+
+**密码边界:** 远程连接 password 存于 Keychain 或 `~/.data-nexus/vault/`，**不**出现在 `connections.json`。见 [SECRETS.md](./SECRETS.md).
 
 **存储文件:** `~/.data-nexus/connections.json`
 

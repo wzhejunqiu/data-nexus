@@ -1,4 +1,4 @@
-.PHONY: dev build test test-cover test-perf bench lint generate sync-version ci-test fmt-check fmt-check-go fmt-check-go-staged fmt-check-go-head fmt vuln-check check pre-commit pre-push install-hooks embed-stub gen-test-db
+.PHONY: dev build test test-cover test-perf bench lint generate sync-version ci-test fmt-check fmt-check-go fmt-check-go-staged fmt-check-go-head fmt vuln-check check pre-commit pre-push install-hooks embed-stub gen-test-db test-db-up test-db-down test-db-integration
 
 UNAME_S := $(shell uname -s)
 WAILS_TAGS :=
@@ -114,3 +114,49 @@ install-hooks:
 
 gen-test-db:
 	./data/generate.sh
+
+# Prefer a running docker compose; else podman compose. Override: make test-db-up COMPOSE="podman compose"
+COMPOSE ?= $(shell \
+	docker_ready=0; podman_ready=0; \
+	if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && docker info >/dev/null 2>&1; then \
+		docker_ready=1; \
+	fi; \
+	if command -v podman >/dev/null 2>&1 && podman compose version >/dev/null 2>&1 && podman info >/dev/null 2>&1; then \
+		podman_ready=1; \
+	fi; \
+	if [ "$$docker_ready" = 1 ]; then printf '%s\n' 'docker compose'; \
+	elif [ "$$podman_ready" = 1 ]; then printf '%s\n' 'podman compose'; \
+	fi)
+COMPOSE_FILE := docker-compose.test.yml
+
+define assert-compose-runtime
+	@if [ -z "$(COMPOSE)" ]; then \
+		echo "No running container runtime found (need docker compose or podman compose)."; \
+		if command -v docker >/dev/null 2>&1; then \
+			if ! docker info >/dev/null 2>&1; then \
+				echo "  Docker: installed but daemon/VM not running — start Docker Desktop."; \
+			fi; \
+		fi; \
+		if command -v podman >/dev/null 2>&1; then \
+			if ! podman info >/dev/null 2>&1; then \
+				echo "  Podman: installed but machine not running — try: podman machine start"; \
+			fi; \
+		fi; \
+		exit 1; \
+	fi
+endef
+
+test-db-up:
+	$(assert-compose-runtime)
+	@echo "Using $(COMPOSE)"
+	$(COMPOSE) -f $(COMPOSE_FILE) up -d --wait
+
+test-db-down:
+	$(assert-compose-runtime)
+	$(COMPOSE) -f $(COMPOSE_FILE) down -v
+
+test-db-integration: test-db-up
+	TEST_POSTGRES_DSN='postgres://test:test@127.0.0.1:5432/testdb?sslmode=disable' \
+	TEST_MYSQL_DSN='test:test@tcp(127.0.0.1:3306)/testdb?parseTime=true' \
+	go test ./internal/driver/postgres/... ./internal/driver/mysql/... -run Integration -count=1
+	$(MAKE) test-db-down

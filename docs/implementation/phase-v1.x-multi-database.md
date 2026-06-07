@@ -25,7 +25,7 @@ v1.0 完成远程 SQL 库驱动后，v1.x 聚焦 **非桌面 UI** 能力与 **�
 
 - [ ] 连接池与超时策略统一
 - [x] SQLite 整表 CSV keyset 流式导出（v0.2+ / Phase 1 cursor 重构）
-- [ ] PostgreSQL / MySQL 整表导出（见 [EXPORT_MULTI_DIALECT.md](../design/EXPORT_MULTI_DIALECT.md)）
+- [x] PostgreSQL / MySQL 整表导出（v1.0，见 [EXPORT_MULTI_DIALECT.md](../design/EXPORT_MULTI_DIALECT.md)）
 - [ ] 更多 SSL / 认证方式（证书、IAM 等，按需求）
 
 ---
@@ -34,7 +34,7 @@ v1.0 完成远程 SQL 库驱动后，v1.x 聚焦 **非桌面 UI** 能力与 **�
 
 - [ ] ER 图
 - [ ] 插件扩展点
-- [ ] 连接配置 keychain 集成（跨平台）
+- [x] 连接配置 keychain / vault 集成（v1.0，见 [SECRETS.md](../design/SECRETS.md)）
 
 ---
 

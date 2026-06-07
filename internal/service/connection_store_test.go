@@ -8,7 +8,6 @@ import (
 
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
-	"go.uber.org/zap"
 )
 
 func TestConnectionStoreSaveLoad(t *testing.T) {
@@ -45,7 +44,7 @@ func TestConnectionStoreRenameRemove(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	item, err := store.Upsert(model.ConnectRequest{FilePath: dbPath})
+	item, err := store.UpsertSQLite(model.ConnectRequest{FilePath: dbPath})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,13 +68,13 @@ func TestConnectionManagerOpenMissingFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	missing := filepath.Join(dir, "missing.db")
-	item, err := store.Upsert(model.ConnectRequest{FilePath: missing})
+	item, err := store.UpsertSQLite(model.ConnectRequest{FilePath: missing})
 	if err != nil {
 		t.Fatal(err)
 	}
 	_ = store.Save()
 
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	_, err = mgr.OpenConnection(context.Background(), item.ID)
 	if err == nil {
 		t.Fatal("expected error")
@@ -92,7 +91,7 @@ func TestConnectionManagerRestoreSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	if mgr.GetRestoreOpenOnStartup() {
 		t.Fatal("expected false by default")
 	}
@@ -117,7 +116,7 @@ func TestConnectionManagerRename(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
 	if err != nil {
 		t.Fatal(err)
@@ -144,7 +143,7 @@ func TestConnectionStore_FindByFilePath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	item, err := store.Upsert(model.ConnectRequest{FilePath: dbPath})
+	item, err := store.UpsertSQLite(model.ConnectRequest{FilePath: dbPath})
 	if err != nil {
 		t.Fatal(err)
 	}

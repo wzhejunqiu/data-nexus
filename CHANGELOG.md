@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- PostgreSQL and MySQL drivers (`internal/driver/postgres`, `internal/driver/mysql`) with schema browse, data grid, SQL, profiling, and PK-based table export
+- Remote connection form in `NewConnectionDialog` (SQLite / PostgreSQL / MySQL tabs) with **Test connection**
+- Secrets storage: OS Keychain preferred, RSA/AES file vault fallback with user master password ([docs/design/SECRETS.md](docs/design/SECRETS.md))
+- `SecretsService` Wails bindings and on-demand `VaultDialog`
+- `CreateRemoteConnection`, `TestConnection`, `UpdateConnectionPostgresSettings`, `UpdateConnectionMySQLSettings`
+- PostgreSQL schema / MySQL database switcher in connection tree sidebar
+- `docker-compose.test.yml` and CI Postgres/MySQL service containers for integration tests
+
+### Changed
+
+- Connection tree shows type badge (SQL/PG/MY) and remote connection subtitle
+- Attach database UI limited to SQLite connections
+
 ## [0.3.0] - 2026-06-07
 
 ### Added

@@ -22,7 +22,44 @@
     "confirmRemoveOpen": "Connection is open. Close and remove \"{{name}}\"?",
     "tables": "TABLES",
     "views": "VIEWS",
-    "search": "Search tables..."
+    "search": "Search tables...",
+    "type": {
+      "sqlite": "SQLite",
+      "postgres": "PostgreSQL",
+      "mysql": "MySQL"
+    },
+    "host": "Host",
+    "port": "Port",
+    "database": "Database",
+    "user": "User",
+    "password": "Password",
+    "passwordOptional": "New password (optional)",
+    "schema": "Schema",
+    "displayName": "Display name",
+    "test": "Test connection",
+    "testSuccess": "Connection successful",
+    "saveAndOpen": "Save and open",
+    "saveSuccess": "Connection saved",
+    "applyNamespace": "Apply",
+    "sqliteOptionsHint": "Read-only / WAL apply to new SQLite connections",
+    "error": {
+      "auth": "Authentication failed",
+      "network": "Network connection failed",
+      "database": "Database not found"
+    }
+  },
+  "vault": {
+    "initTitle": "Set vault master password",
+    "unlockTitle": "Unlock vault",
+    "masterPassword": "Master password",
+    "confirmPassword": "Confirm password",
+    "initHint": "Required to store remote connection passwords when OS keychain is unavailable.",
+    "unlockHint": "Enter your master password to open this remote connection.",
+    "initAction": "Create vault",
+    "unlockAction": "Unlock",
+    "initSuccess": "Vault created",
+    "unlockSuccess": "Vault unlocked",
+    "wrongPassword": "Incorrect master password"
   },
   "tabs": {
     "schema": "Schema",
@@ -265,6 +302,9 @@
     "READ_ONLY": "Write operation rejected in read-only mode",
     "DIALOG_CANCELLED": "Cancelled",
     "SAVED_NOT_FOUND": "Saved connection not found",
+    "SECRETS_VAULT_LOCKED": "Vault is locked",
+    "SECRETS_VAULT_NOT_INITIALIZED": "Vault is not initialized",
+    "SECRETS_VAULT_WRONG_PASSWORD": "Incorrect vault password",
     "INTERNAL_ERROR": "Internal error"
   },
   "common": {

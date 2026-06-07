@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/wzhejunqiu/data-nexus/internal/model"
+	"github.com/wzhejunqiu/data-nexus/internal/secrets"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -27,11 +28,11 @@ func TestConnectionStoreUpsertSamePath(t *testing.T) {
 	}
 	_ = f.Close()
 
-	first, err := store.Upsert(req)
+	first, err := store.UpsertSQLite(req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := store.Upsert(req)
+	second, err := store.UpsertSQLite(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +58,7 @@ func TestConnectionManagerMultipleOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 
 	c1, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: db1})
 	if err != nil {
@@ -101,7 +102,7 @@ func TestConnectionManagerPersistOpenConnections(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
 	if err != nil {
 		t.Fatal(err)
@@ -128,7 +129,7 @@ func TestConnectionManagerRemoveOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
 	if err != nil {
 		t.Fatal(err)
@@ -155,7 +156,7 @@ func TestConnectionManagerCreateWithoutOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	saved, err := mgr.CreateConnection(context.Background(), model.ConnectRequest{FilePath: dbPath})
 	if err != nil {
 		t.Fatal(err)
@@ -182,7 +183,7 @@ func TestConnectionManagerUpdateReadOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
 	if err != nil {
 		t.Fatal(err)
@@ -213,7 +214,7 @@ func TestOpenConnectionFromFile_EmptyPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 
 	_, err = mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{})
 	if err == nil {
@@ -231,7 +232,7 @@ func TestOpenConnectionFromFile_Directory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 
 	_, err = mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dir})
 	if err == nil {
@@ -249,7 +250,7 @@ func TestOpenConnectionFromFile_FileNotExist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 
 	_, err = mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{
 		FilePath: filepath.Join(dir, "missing.db"),
@@ -285,7 +286,7 @@ func TestOpenConnectionFromFile_RelativePath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbName})
 	if err != nil {
@@ -309,7 +310,7 @@ func TestOpenConnection_AlreadyOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
 	if err != nil {
 		t.Fatal(err)
@@ -331,7 +332,7 @@ func TestCloseConnection_NotOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 
 	err = mgr.CloseConnection(context.Background(), "nonexistent")
 	if err == nil {
@@ -349,7 +350,7 @@ func TestRestoreConnectionsOnStartup_Disabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	if err := mgr.RestoreConnectionsOnStartup(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -369,7 +370,7 @@ func TestRestoreConnectionsOnStartup_RestoresOpenConnection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
 	if err != nil {
 		t.Fatal(err)
@@ -386,7 +387,7 @@ func TestRestoreConnectionsOnStartup_RestoresOpenConnection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr2 := service.NewConnectionManager(store2, zap.NewNop())
+	mgr2 := service.NewTestConnectionManager(store2)
 	if err := mgr2.RestoreConnectionsOnStartup(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -408,7 +409,7 @@ func TestRestoreConnectionsOnStartup_MissingFileLogsWarning(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	item, err := store.Upsert(model.ConnectRequest{FilePath: missing})
+	item, err := store.UpsertSQLite(model.ConnectRequest{FilePath: missing})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -419,7 +420,7 @@ func TestRestoreConnectionsOnStartup_MissingFileLogsWarning(t *testing.T) {
 	}
 
 	core, logs := observer.New(zap.WarnLevel)
-	mgr := service.NewConnectionManager(store, zap.New(core))
+	mgr := service.NewConnectionManager(store, secrets.NewMockStore(), zap.New(core))
 	if err := mgr.RestoreConnectionsOnStartup(context.Background()); err != nil {
 		t.Fatal(err)
 	}

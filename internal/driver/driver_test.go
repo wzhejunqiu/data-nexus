@@ -17,8 +17,18 @@ func TestNewDriverSQLite(t *testing.T) {
 	}
 }
 
+func TestNewDriverPostgres(t *testing.T) {
+	drv, err := driver.NewDriver(model.DriverTypePostgres)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if drv.Type() != model.DriverTypePostgres {
+		t.Fatalf("unexpected type %s", drv.Type())
+	}
+}
+
 func TestNewDriverUnsupported(t *testing.T) {
-	_, err := driver.NewDriver(model.DriverType("postgres"))
+	_, err := driver.NewDriver(model.DriverType("unknown"))
 	if err == nil {
 		t.Fatal("expected error")
 	}

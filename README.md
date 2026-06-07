@@ -1,8 +1,8 @@
 # Data Nexus
 
-一款轻量级 **桌面端 SQLite 管理工具**，支持同时打开多个数据库，浏览表结构、分页查看数据、执行 SQL。
+一款轻量级 **桌面端数据库管理工具**，支持 **SQLite、PostgreSQL、MySQL**，可同时打开多个连接，浏览表结构、分页查看数据、执行 SQL。
 
-当前版本：**v0.3.0**。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本：**v0.3.0**（v1.0 远程数据库功能开发中）。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 下载
 
@@ -38,7 +38,9 @@
 
 ## 功能
 
-- **多连接**：像 Navicat 一样同时管理多个 SQLite 文件；支持 ATTACH / DETACH 附加库并按库分组浏览
+- **多连接**：像 Navicat 一样同时管理多个 **SQLite / PostgreSQL / MySQL** 连接
+- **远程连接**：host/port/database/user/password、SSL/TLS、**测试连接**；密码存 Keychain 或本地 Vault（见 [docs/design/SECRETS.md](docs/design/SECRETS.md)）
+- **SQLite 专属**：ATTACH / DETACH 附加库并按库分组浏览
 - **表浏览**：查看列定义、索引，分页浏览数据，支持列排序
 - **行内编辑**：多单元格编辑、待提交栏、批量提交（事务回滚）
 - **CSV 导入 / 导出**：数据 Tab 与 SQL 结果均支持，可配置分隔符、编码等格式
@@ -93,8 +95,14 @@ Release 版本默认将日志写入文件（`log.output: auto`）：
 
 ## 已知限制
 
-- 仅支持 **SQLite** 本地文件（PostgreSQL / MySQL 计划在后续版本）
 - macOS 预构建包暂未发布（签名/公证就绪后通过 Release 提供）
+
+### 本地远程数据库测试（可选）
+
+```bash
+make test-db-up              # docker compose up
+make test-db-integration     # PG + MySQL 集成测试
+```
 
 ## 参与开发
 

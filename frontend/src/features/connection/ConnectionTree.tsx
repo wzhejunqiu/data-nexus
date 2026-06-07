@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { useToastStore } from '@/components/ui/Toast'
 import { connectionApi } from '@/lib/api/connection'
-import { formatError } from '@/lib/api/errors'
+import { formatError, mapWailsError } from '@/lib/api/errors'
+import { isVaultLockedError } from '@/lib/api/secrets'
+import { connectionSubtitle, connectionTypeLabel } from '@/lib/connectionDisplay'
 import type { ConnectionListItem } from '@/lib/types'
 import { SchemaSubtree } from '@/features/schema/SchemaSubtree'
 import { SavedQueries } from '@/features/saved-queries/SavedQueries'
 import { NewConnectionDialog } from './NewConnectionDialog'
 import { EditConnectionDialog } from './EditConnectionDialog'
+import { VaultDialog, type VaultDialogMode } from './VaultDialog'
 import { RenameDialog } from '@/features/schema/IndexList'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 
@@ -21,6 +24,9 @@ export function ConnectionTree() {
   const [wal, setWal] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(260)
+  const [vaultOpen, setVaultOpen] = useState(false)
+  const [vaultMode, setVaultMode] = useState<VaultDialogMode>('unlock')
+  const [pendingOpenId, setPendingOpenId] = useState<string | null>(null)
   const selectTable = useWorkspaceStore((s) => s.selectTable)
   const setActiveConnectionId = useWorkspaceStore((s) => s.setActiveConnectionId)
 
@@ -39,8 +45,29 @@ export function ConnectionTree() {
       refresh()
       qc.invalidateQueries({ queryKey: ['tables', conn.id] })
     },
-    onError: (err) => setError(formatError(t, err)),
   })
+
+  const handleOpen = (id: string) => {
+    openConn.mutate(id, {
+      onError: (err) => {
+        const appErr = mapWailsError(err)
+        if (isVaultLockedError(err)) {
+          setPendingOpenId(id)
+          setVaultMode(appErr.code === 'SECRETS_VAULT_NOT_INITIALIZED' ? 'init' : 'unlock')
+          setVaultOpen(true)
+          return
+        }
+        setError(formatError(t, err))
+      },
+    })
+  }
+
+  const retryOpenAfterVault = useCallback(() => {
+    if (pendingOpenId) {
+      openConn.mutate(pendingOpenId)
+      setPendingOpenId(null)
+    }
+  }, [pendingOpenId, openConn])
 
   const closeConn = useMutation({
     mutationFn: (id: string) => connectionApi.close(id),
@@ -82,6 +109,7 @@ export function ConnectionTree() {
       >
         <div className="flex flex-col gap-2 border-b border-border p-3">
           <Button onClick={() => setNewOpen(true)}>{t('connection.new')}</Button>
+          <p className="text-xs text-muted">{t('connection.sqliteOptionsHint')}</p>
           <label className="flex items-center gap-2 text-xs text-muted">
             <input
               type="checkbox"
@@ -116,7 +144,7 @@ export function ConnectionTree() {
             <ConnectionTreeItem
               key={item.id}
               item={item}
-              onOpen={() => openConn.mutate(item.id)}
+              onOpen={() => handleOpen(item.id)}
               onClose={() => closeConn.mutate(item.id)}
               onRemove={() => removeConn.mutate(item)}
               onSelectTable={(table) => selectTable(item.id, table)}
@@ -145,6 +173,12 @@ export function ConnectionTree() {
         />
       </aside>
       <NewConnectionDialog open={newOpen} onOpenChange={setNewOpen} readOnly={readOnly} wal={wal} />
+      <VaultDialog
+        open={vaultOpen}
+        mode={vaultMode}
+        onOpenChange={setVaultOpen}
+        onSuccess={retryOpenAfterVault}
+      />
     </>
   )
 }
@@ -204,7 +238,7 @@ function ConnectionTreeItem({
   const { t } = useTranslation()
   const pushToast = useToastStore((s) => s.push)
   const isOpen = item.status === 'open'
-  const path = item.config.sqlite?.filePath ?? ''
+  const subtitle = connectionSubtitle(item)
   const [renameOpen, setRenameOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [name, setName] = useState(item.name)
@@ -229,11 +263,17 @@ function ConnectionTreeItem({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1 text-sm font-medium">
+            <span
+              className="rounded bg-muted/40 px-1 text-[10px] font-bold text-muted"
+              title={item.type}
+            >
+              {connectionTypeLabel(item.type)}
+            </span>
             <span className={isOpen ? 'text-green-500' : 'text-muted'}>{isOpen ? '●' : '○'}</span>
             <span className="truncate">{item.name}</span>
           </div>
-          <p className="truncate text-xs text-muted" title={path}>
-            {path}
+          <p className="truncate text-xs text-muted" title={subtitle}>
+            {subtitle}
           </p>
         </div>
         <div className="flex flex-col gap-1">
@@ -246,13 +286,7 @@ function ConnectionTreeItem({
               {t('connection.open')}
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setRenameOpen(true)
-            }}
-          >
+          <Button size="sm" variant="outline" onClick={() => setRenameOpen(true)}>
             {t('connection.rename')}
           </Button>
           <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
@@ -263,7 +297,15 @@ function ConnectionTreeItem({
           </Button>
         </div>
       </div>
-      {isOpen && <SchemaSubtree connectionId={item.id} onSelectTable={onSelectTable} />}
+      {isOpen && (
+        <SchemaSubtree
+          connectionId={item.id}
+          connectionType={item.type}
+          connectionConfig={item.config}
+          onConnectionUpdated={onRenamed}
+          onSelectTable={onSelectTable}
+        />
+      )}
       <RenameDialog
         open={renameOpen}
         name={name}

@@ -11,7 +11,6 @@ import (
 
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
-	"go.uber.org/zap"
 )
 
 func setupExportDB(t *testing.T, rowCount int) (*service.QueryService, string) {
@@ -28,7 +27,7 @@ func setupExportDB(t *testing.T, rowCount int) (*service.QueryService, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
 	if err != nil {
 		t.Fatal(err)

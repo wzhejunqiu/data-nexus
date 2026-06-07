@@ -78,3 +78,19 @@ func ErrInvalidPath(message string) *AppError {
 func ErrInternal(message string) *AppError {
 	return NewAppError("INTERNAL_ERROR", message, nil)
 }
+
+func ErrSecretsVaultLocked() *AppError {
+	return NewAppError("SECRETS_VAULT_LOCKED", "secrets vault is locked", nil)
+}
+
+func ErrSecretsVaultNotInitialized() *AppError {
+	return NewAppError("SECRETS_VAULT_NOT_INITIALIZED", "secrets vault is not initialized", nil)
+}
+
+func ErrSecretsVaultWrongPassword() *AppError {
+	return NewAppError("SECRETS_VAULT_WRONG_PASSWORD", "incorrect vault master password", nil)
+}
+
+func ErrConnectionFailedWithReason(message, reason string) *AppError {
+	return NewAppError("CONNECTION_FAILED", message, map[string]any{"reason": reason})
+}

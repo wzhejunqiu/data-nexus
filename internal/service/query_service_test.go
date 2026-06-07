@@ -25,7 +25,7 @@ func TestQueryServiceReadOnlyBlocksWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{
 		FilePath: path,
 		ReadOnly: true,
@@ -61,7 +61,7 @@ func TestQueryServiceSelectReturnsResult(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
 	if err != nil {
 		t.Fatal(err)
@@ -93,7 +93,7 @@ func TestQueryServiceDescTableReturnsSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +133,7 @@ func TestQueryServiceWithDeleteUsesExecPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
 	if err != nil {
 		t.Fatal(err)
@@ -173,7 +173,7 @@ func TestQueryServiceClassifySQL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
 	if err != nil {
 		t.Fatal(err)
@@ -327,7 +327,7 @@ func TestQueryServiceInvalidDescReturnsSQLError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
 	if err != nil {
 		t.Fatal(err)
@@ -603,7 +603,7 @@ func TestQueryServiceExecuteRecordsExecution(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
 	if err != nil {
 		t.Fatal(err)

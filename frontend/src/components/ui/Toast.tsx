@@ -3,7 +3,7 @@ import { create } from 'zustand'
 export interface ToastItem {
   id: string
   message: string
-  variant?: 'error' | 'info'
+  variant?: 'error' | 'info' | 'success'
 }
 
 interface ToastState {
@@ -34,7 +34,9 @@ export function Toaster() {
           className={`rounded border px-3 py-2 text-sm shadow ${
             item.variant === 'error'
               ? 'border-red-500/40 bg-red-500/10 text-red-500'
-              : 'border-border bg-card text-foreground'
+              : item.variant === 'success'
+                ? 'border-green-500/40 bg-green-500/10 text-green-600'
+                : 'border-border bg-card text-foreground'
           }`}
           onClick={() => dismiss(item.id)}
         >

@@ -13,6 +13,7 @@ import (
 	"github.com/wzhejunqiu/data-nexus/internal/executionlog"
 	"github.com/wzhejunqiu/data-nexus/internal/logger"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
+	"github.com/wzhejunqiu/data-nexus/internal/secrets"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
 	wailssvc "github.com/wzhejunqiu/data-nexus/internal/wails"
 	"go.uber.org/zap"
@@ -40,7 +41,11 @@ func main() {
 	if err != nil {
 		log.Fatal("query store", zap.Error(err))
 	}
-	mgr := service.NewConnectionManager(store, log)
+	secretStore, err := secrets.NewStore(config.VaultDir())
+	if err != nil {
+		log.Fatal("secrets store", zap.Error(err))
+	}
+	mgr := service.NewConnectionManager(store, secretStore, log)
 	execLog, err := executionlog.NewStore(config.DefaultExecutionLogConfig())
 	if err != nil {
 		log.Fatal("execution log store", zap.Error(err))
@@ -53,6 +58,7 @@ func main() {
 	importSvc := service.NewImportService(querySvc)
 
 	connWails := wailssvc.NewConnectionService(mgr, log)
+	secretsWails := wailssvc.NewSecretsService(mgr, log)
 	schemaWails := wailssvc.NewSchemaService(querySvc, log)
 	tableWails := wailssvc.NewTableService(querySvc, log)
 	queryWails := wailssvc.NewQueryService(querySvc, log)
@@ -111,6 +117,7 @@ func main() {
 		Windows: &windows.Options{},
 		Bind: []interface{}{
 			connWails,
+			secretsWails,
 			schemaWails,
 			tableWails,
 			queryWails,

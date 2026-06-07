@@ -16,28 +16,29 @@
 
 ### Driver 层
 
-- [ ] `PostgresDriver` — `pgx` 或 `database/sql` + `pgx/stdlib`
-- [ ] `MySQLDriver` — `go-sql-driver/mysql`
-- [ ] `OpenTableExport` — 各方言 `TableExportCursor`（PG/MySQL 见 [EXPORT_MULTI_DIALECT.md](../design/EXPORT_MULTI_DIALECT.md)）
-- [ ] Driver 工厂按 `DriverType` 分发
+- [x] `PostgresDriver` — `database/sql` + `pgx/stdlib`
+- [x] `MySQLDriver` — `go-sql-driver/mysql`
+- [x] `OpenTableExport` — PG/MySQL `TableExportCursor`（PK keyset）
+- [x] Driver 工厂按 `DriverType` 分发
 
 ### 连接配置
 
-- [ ] `NewConnectionDialog` 支持类型切换（SQLite / PostgreSQL / MySQL）
-- [ ] 远程连接表单：host、port、database、user、password、SSL
-- [ ] 密码加密存储（`connections.json` 或 keychain，待定）
-- [ ] 连接测试（Ping）按钮
+- [x] `NewConnectionDialog` 支持类型切换（SQLite / PostgreSQL / MySQL）
+- [x] 远程连接表单：host、port、database、user、password、SSL
+- [x] 密码存储：**Keychain 优先**，不可用时 **Vault fallback**（RSA/AES + 用户主密码），见 [SECRETS.md](../design/SECRETS.md)
+- [x] 连接测试（Ping）按钮
 
 ### Schema 差异
 
-- [ ] PostgreSQL schema 列表（`public` 等）
-- [ ] MySQL database 切换
-- [ ] 类型映射扩展（见 [DATA_MODEL.md](../design/DATA_MODEL.md)）
+- [x] PostgreSQL schema 切换（`UpdateConnectionPostgresSettings` + 侧边栏）
+- [x] MySQL database 切换
+- [x] 类型映射扩展（见 [DATA_MODEL.md](../design/DATA_MODEL.md)）
 
 ### UI
 
-- [ ] 连接树图标区分数据库类型
-- [ ] 远程连接错误提示（网络、认证失败）
+- [x] 连接树图标/标签区分数据库类型（SQL / PG / MY）
+- [x] 远程连接错误提示（网络、认证失败）
+- [x] `VaultDialog` 按需解锁（非启动弹窗）
 
 ---
 
@@ -50,7 +51,7 @@
 
 ## 完成标准
 
-- [ ] 同时打开 SQLite + PostgreSQL（或 MySQL）各至少 1 个
+- [ ] 同时打开 SQLite + PostgreSQL（或 MySQL）各至少 1 个（见 [phase-v1.0-manual-checklist.md](./phase-v1.0-manual-checklist.md)）
 - [ ] Schema 浏览与 SQL 执行在两种远程库上可用
 - [ ] tag `v1.0.0`
 

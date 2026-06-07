@@ -27,7 +27,7 @@ func newWailsTestEnv(t *testing.T) (*service.ConnectionManager, *service.QuerySe
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: dbPath})
 	if err != nil {
 		t.Fatal(err)

@@ -26,17 +26,18 @@
 │  │  Wails Services（绑定层）                                  │  │
 │  │  ConnectionService · SchemaService · TableService · QueryService │
 │  │  DialogService · FileService · ExportService · ImportService     │
-│  │  ConfigService · AppService                                     │
+│  │  ConfigService · AppService · SecretsService                     │
 │  └───────────────────────────┬───────────────────────────────┘  │
 │                              │                                  │
 │  ┌───────────────────────────▼───────────────────────────────┐  │
 │  │  Business Layer（与 UI 无关，可单测）                       │  │
-│  │  ConnectionManager · QueryService                         │  │
+│  │  ConnectionManager · QueryService                         │
+│  │  SecretsStore (Keychain / Vault)                          │  │
 │  └───────────────────────────┬───────────────────────────────┘  │
 │                              │                                  │
 │  ┌───────────────────────────▼───────────────────────────────┐  │
 │  │  Driver Interface                                         │  │
-│  │  └── SQLiteDriver (MVP)                                     │  │
+│  │  ├── SQLiteDriver · PostgresDriver · MySQLDriver          │  │
 │  └───────────────────────────┬───────────────────────────────┘  │
 └──────────────────────────────┼──────────────────────────────────┘
                                │

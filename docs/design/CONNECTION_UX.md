@@ -85,8 +85,56 @@
 
 ---
 
-## 6. 相关文档
+## 7. 远程连接（v1.0）
+
+### 7.1 新建连接 Tab
+
+`NewConnectionDialog`：**SQLite | PostgreSQL | MySQL**
+
+- SQLite：文件路径 + 浏览（不变）
+- 远程：host / port / database / user / password / SSL / 只读
+- **[测试连接]**：临时 Connect+Ping，不触发 vault
+- **[保存并打开]**：写入 `connections.json` + Secrets + 可选立即 Open
+
+### 7.2 Vault 按需解锁
+
+当 Secrets backend 为 **vault** 时：
+
+- **不**在应用启动时弹窗
+- 打开远程连接 / 保存远程连接 / 编辑密码 → 若 locked → `VaultDialog`（Init 或 Unlock）→ retry 原操作
+- 同会话解锁后打开多个远程连接不再重复询问
+
+详见 [SECRETS.md](./SECRETS.md)。
+
+### 7.3 连接树展示
+
+| 类型 | 标签 | 副标题 |
+|------|------|--------|
+| SQLite | SQL | 文件路径 |
+| PostgreSQL | PG | `user@host:port/database` |
+| MySQL | MY | `user@host:port/database` |
+
+### 7.4 Schema / Database 切换
+
+- **PostgreSQL**：侧边栏 schema 输入 + 应用 → `UpdateConnectionPostgresSettings` → 重连 → 刷新表列表
+- **MySQL**：database 切换同理
+- **Attach**：仅 SQLite 连接显示
+
+### 7.5 连接失败文案
+
+`CONNECTION_FAILED` + `details.reason`：
+
+| reason | 用户文案 |
+|--------|----------|
+| `network` | 网络连接失败 |
+| `auth` | 认证失败 |
+| `database` | 数据库不存在 |
+
+---
+
+## 8. 相关文档
 
 - API：[API.md](./API.md) §3–§7（均带 `connectionId`）
+- 密码存储：[SECRETS.md](./SECRETS.md)
 - 数据模型：[DATA_MODEL.md](./DATA_MODEL.md) §2
 - UI 组件：[UI_UX.md](./UI_UX.md)

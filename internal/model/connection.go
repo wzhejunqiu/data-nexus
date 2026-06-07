@@ -1,14 +1,30 @@
 package model
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 type DriverType string
 
-const DriverTypeSQLite DriverType = "sqlite"
+const (
+	DriverTypeSQLite   DriverType = "sqlite"
+	DriverTypePostgres DriverType = "postgres"
+	DriverTypeMySQL    DriverType = "mysql"
+)
+
+type SecretsBackend string
+
+const (
+	SecretsBackendKeychain SecretsBackend = "keychain"
+	SecretsBackendVault    SecretsBackend = "vault"
+)
 
 type DriverConfig struct {
-	Type   DriverType    `json:"type"`
-	SQLite *SQLiteConfig `json:"sqlite,omitempty"`
+	Type     DriverType      `json:"type"`
+	SQLite   *SQLiteConfig   `json:"sqlite,omitempty"`
+	Postgres *PostgresConfig `json:"postgres,omitempty"`
+	MySQL    *MySQLConfig    `json:"mysql,omitempty"`
 }
 
 type SQLiteConfig struct {
@@ -17,15 +33,101 @@ type SQLiteConfig struct {
 	WAL      bool   `json:"wal"`
 }
 
+type PostgresConfig struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Database string `json:"database"`
+	User     string `json:"user"`
+	Password string `json:"-"`
+	SSLMode  string `json:"sslMode"`
+	Schema   string `json:"schema"`
+	ReadOnly bool   `json:"readOnly"`
+}
+
+type MySQLConfig struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Database string `json:"database"`
+	User     string `json:"user"`
+	Password string `json:"-"`
+	TLS      bool   `json:"tls"`
+	ReadOnly bool   `json:"readOnly"`
+}
+
+func (c *PostgresConfig) NormalizedPort() int {
+	if c.Port <= 0 {
+		return 5432
+	}
+	return c.Port
+}
+
+func (c *PostgresConfig) NormalizedSchema() string {
+	if c.Schema == "" {
+		return "public"
+	}
+	return c.Schema
+}
+
+func (c *PostgresConfig) NormalizedSSLMode() string {
+	if c.SSLMode == "" {
+		return "disable"
+	}
+	return c.SSLMode
+}
+
+func (c *MySQLConfig) NormalizedPort() int {
+	if c.Port <= 0 {
+		return 3306
+	}
+	return c.Port
+}
+
 type ConnectRequest struct {
 	FilePath string `json:"filePath"`
 	ReadOnly bool   `json:"readOnly"`
 	WAL      bool   `json:"wal"`
 }
 
+type RemoteConnectRequest struct {
+	Type     DriverType      `json:"type"`
+	Name     string          `json:"name"`
+	Password string          `json:"password"`
+	Postgres *PostgresConfig `json:"postgres,omitempty"`
+	MySQL    *MySQLConfig    `json:"mysql,omitempty"`
+	Open     bool            `json:"open"`
+}
+
+type TestConnectionRequest struct {
+	Type     DriverType      `json:"type"`
+	Password string          `json:"password"`
+	Postgres *PostgresConfig `json:"postgres,omitempty"`
+	MySQL    *MySQLConfig    `json:"mysql,omitempty"`
+}
+
 type SQLiteSettingsUpdate struct {
 	ReadOnly bool `json:"readOnly"`
 	WAL      bool `json:"wal"`
+}
+
+type PostgresSettingsUpdate struct {
+	Host     string  `json:"host"`
+	Port     int     `json:"port"`
+	Database string  `json:"database"`
+	User     string  `json:"user"`
+	Password *string `json:"password,omitempty"`
+	SSLMode  string  `json:"sslMode"`
+	Schema   string  `json:"schema"`
+	ReadOnly bool    `json:"readOnly"`
+}
+
+type MySQLSettingsUpdate struct {
+	Host     string  `json:"host"`
+	Port     int     `json:"port"`
+	Database string  `json:"database"`
+	User     string  `json:"user"`
+	Password *string `json:"password,omitempty"`
+	TLS      bool    `json:"tls"`
+	ReadOnly bool    `json:"readOnly"`
 }
 
 type Connection struct {
@@ -37,13 +139,14 @@ type Connection struct {
 }
 
 type SavedConnection struct {
-	ID         string       `json:"id"`
-	Name       string       `json:"name"`
-	Type       DriverType   `json:"type"`
-	Config     DriverConfig `json:"config"`
-	CreatedAt  time.Time    `json:"createdAt"`
-	UpdatedAt  time.Time    `json:"updatedAt"`
-	LastUsedAt time.Time    `json:"lastUsedAt"`
+	ID             string         `json:"id"`
+	Name           string         `json:"name"`
+	Type           DriverType     `json:"type"`
+	Config         DriverConfig   `json:"config"`
+	SecretsBackend SecretsBackend `json:"secretsBackend,omitempty"`
+	CreatedAt      time.Time      `json:"createdAt"`
+	UpdatedAt      time.Time      `json:"updatedAt"`
+	LastUsedAt     time.Time      `json:"lastUsedAt"`
 }
 
 type ConnectionStatus string
@@ -54,13 +157,14 @@ const (
 )
 
 type ConnectionListItem struct {
-	ID          string           `json:"id"`
-	Name        string           `json:"name"`
-	Type        DriverType       `json:"type"`
-	Config      DriverConfig     `json:"config"`
-	Status      ConnectionStatus `json:"status"`
-	ConnectedAt *time.Time       `json:"connectedAt,omitempty"`
-	LastUsedAt  time.Time        `json:"lastUsedAt"`
+	ID             string           `json:"id"`
+	Name           string           `json:"name"`
+	Type           DriverType       `json:"type"`
+	Config         DriverConfig     `json:"config"`
+	SecretsBackend SecretsBackend   `json:"secretsBackend,omitempty"`
+	Status         ConnectionStatus `json:"status"`
+	ConnectedAt    *time.Time       `json:"connectedAt,omitempty"`
+	LastUsedAt     time.Time        `json:"lastUsedAt"`
 }
 
 type ConnectionListView struct {
@@ -77,4 +181,16 @@ type ConnectionsFile struct {
 type AttachedDatabase struct {
 	Alias    string `json:"alias"`
 	FilePath string `json:"filePath"`
+}
+
+func RemoteFingerprint(t DriverType, host string, port int, database, user string) string {
+	if port <= 0 {
+		switch t {
+		case DriverTypePostgres:
+			port = 5432
+		case DriverTypeMySQL:
+			port = 3306
+		}
+	}
+	return string(t) + "|" + host + "|" + strconv.Itoa(port) + "|" + database + "|" + user
 }

@@ -18,8 +18,9 @@
 |------|------|------|------|
 | v0.2 | [phase-v0.2-enhancements.md](./phase-v0.2-enhancements.md) | 体验增强（CSV、批量编辑、自动补全等） | ✅ 已完成 |
 | | [phase-v0.2-manual-checklist.md](./phase-v0.2-manual-checklist.md) | v0.2 手动验收清单 | |
-| v0.3 | [phase-v0.3-exploration.md](./phase-v0.3-exploration.md) | 探索型差异化（列画像、Filter→SQL 等） | 🔄 待发布 |
-| v1.0 | [phase-v1.0-multi-connection.md](./phase-v1.0-multi-connection.md) | PostgreSQL / MySQL | |
+| v0.3 | [phase-v0.3-exploration.md](./phase-v0.3-exploration.md) | 探索型差异化（列画像、Filter→SQL 等） | ✅ 已完成 |
+| v1.0 | [phase-v1.0-multi-connection.md](./phase-v1.0-multi-connection.md) | PostgreSQL / MySQL | 🔄 待验收 / tag |
+| | [phase-v1.0-manual-checklist.md](./phase-v1.0-manual-checklist.md) | v1.0 手动验收清单 | |
 | v1.x | [phase-v1.x-multi-database.md](./phase-v1.x-multi-database.md) | Headless REST、ER 等 | |
 
 ## 设计文档速查
@@ -29,6 +30,7 @@
 | [ARCHITECTURE.md](../design/ARCHITECTURE.md) | 目录结构、Wails、zap 日志 |
 | [API.md](../design/API.md) | Service 方法签名与错误码 |
 | [DATA_MODEL.md](../design/DATA_MODEL.md) | Go/TS 数据结构 |
+| [SECRETS.md](../design/SECRETS.md) | 远程连接密码（Keychain / Vault） |
 | [UI_UX.md](../design/UI_UX.md) | 组件与交互 |
 | [PRD.md](../product/PRD.md) | 功能优先级与验收标准 |
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -78,16 +79,10 @@ func (s *ConnectionStore) FindByID(id string) (*model.SavedConnection, bool) {
 func (s *ConnectionStore) FindByFilePath(filePath string) (*model.SavedConnection, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for i := range s.data.Items {
-		item := &s.data.Items[i]
-		if item.Config.SQLite != nil && item.Config.SQLite.FilePath == filePath {
-			return item, true
-		}
-	}
-	return nil, false
+	return s.findByFilePathLocked(filePath)
 }
 
-func (s *ConnectionStore) Upsert(req model.ConnectRequest) (*model.SavedConnection, error) {
+func (s *ConnectionStore) UpsertSQLite(req model.ConnectRequest) (*model.SavedConnection, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := time.Now().UTC()
@@ -127,11 +122,94 @@ func (s *ConnectionStore) Upsert(req model.ConnectRequest) (*model.SavedConnecti
 	return &item, nil
 }
 
+func (s *ConnectionStore) UpsertRemote(req model.RemoteConnectRequest) (*model.SavedConnection, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now().UTC()
+	fp := remoteFingerprint(req)
+	if existing, ok := s.findByFingerprintLocked(fp); ok {
+		s.applyRemoteConfig(existing, req)
+		existing.UpdatedAt = now
+		existing.LastUsedAt = now
+		return existing, nil
+	}
+	item := model.SavedConnection{
+		ID:         uuid.NewString(),
+		Name:       remoteDisplayName(req),
+		Type:       req.Type,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+		LastUsedAt: now,
+	}
+	s.applyRemoteConfig(&item, req)
+	s.data.Items = append(s.data.Items, item)
+	return &item, nil
+}
+
+func (s *ConnectionStore) applyRemoteConfig(item *model.SavedConnection, req model.RemoteConnectRequest) {
+	switch req.Type {
+	case model.DriverTypePostgres:
+		if req.Postgres != nil {
+			pg := *req.Postgres
+			pg.Password = ""
+			item.Config = model.DriverConfig{Type: model.DriverTypePostgres, Postgres: &pg}
+			item.Type = model.DriverTypePostgres
+		}
+	case model.DriverTypeMySQL:
+		if req.MySQL != nil {
+			my := *req.MySQL
+			my.Password = ""
+			item.Config = model.DriverConfig{Type: model.DriverTypeMySQL, MySQL: &my}
+			item.Type = model.DriverTypeMySQL
+		}
+	}
+	if name := remoteDisplayName(req); name != "" {
+		item.Name = name
+	}
+}
+
+func remoteFingerprint(req model.RemoteConnectRequest) string {
+	switch req.Type {
+	case model.DriverTypePostgres:
+		if req.Postgres != nil {
+			return model.RemoteFingerprint(req.Type, req.Postgres.Host, req.Postgres.Port, req.Postgres.Database, req.Postgres.User)
+		}
+	case model.DriverTypeMySQL:
+		if req.MySQL != nil {
+			return model.RemoteFingerprint(req.Type, req.MySQL.Host, req.MySQL.Port, req.MySQL.Database, req.MySQL.User)
+		}
+	}
+	return ""
+}
+
 func (s *ConnectionStore) findByFilePathLocked(filePath string) (*model.SavedConnection, bool) {
 	for i := range s.data.Items {
 		item := &s.data.Items[i]
 		if item.Config.SQLite != nil && item.Config.SQLite.FilePath == filePath {
 			return item, true
+		}
+	}
+	return nil, false
+}
+
+func (s *ConnectionStore) findByFingerprintLocked(fp string) (*model.SavedConnection, bool) {
+	for i := range s.data.Items {
+		item := &s.data.Items[i]
+		switch item.Type {
+		case model.DriverTypePostgres:
+			if item.Config.Postgres != nil {
+				got := model.RemoteFingerprint(item.Type, item.Config.Postgres.Host, item.Config.Postgres.Port, item.Config.Postgres.Database, item.Config.Postgres.User)
+				if got == fp {
+					return item, true
+				}
+			}
+		case model.DriverTypeMySQL:
+			if item.Config.MySQL != nil {
+				got := model.RemoteFingerprint(item.Type, item.Config.MySQL.Host, item.Config.MySQL.Port, item.Config.MySQL.Database, item.Config.MySQL.User)
+				if got == fp {
+					return item, true
+				}
+			}
 		}
 	}
 	return nil, false
@@ -158,6 +236,75 @@ func (s *ConnectionStore) UpdateSQLiteSettings(id string, update model.SQLiteSet
 				s.data.Items[i].Config.SQLite.ReadOnly = update.ReadOnly
 				s.data.Items[i].Config.SQLite.WAL = update.WAL && !update.ReadOnly
 			}
+			s.data.Items[i].UpdatedAt = time.Now().UTC()
+			item := s.data.Items[i]
+			return &item, nil
+		}
+	}
+	return nil, model.ErrSavedNotFound(id)
+}
+
+func (s *ConnectionStore) UpdatePostgresSettings(id string, update model.PostgresSettingsUpdate) (*model.SavedConnection, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.data.Items {
+		if s.data.Items[i].ID == id {
+			pg := s.data.Items[i].Config.Postgres
+			if pg == nil {
+				pg = &model.PostgresConfig{}
+			}
+			if update.Host != "" {
+				pg.Host = update.Host
+			}
+			if update.Port > 0 {
+				pg.Port = update.Port
+			}
+			if update.Database != "" {
+				pg.Database = update.Database
+			}
+			if update.User != "" {
+				pg.User = update.User
+			}
+			if update.SSLMode != "" {
+				pg.SSLMode = update.SSLMode
+			}
+			if update.Schema != "" {
+				pg.Schema = update.Schema
+			}
+			pg.ReadOnly = update.ReadOnly
+			s.data.Items[i].Config.Postgres = pg
+			s.data.Items[i].UpdatedAt = time.Now().UTC()
+			item := s.data.Items[i]
+			return &item, nil
+		}
+	}
+	return nil, model.ErrSavedNotFound(id)
+}
+
+func (s *ConnectionStore) UpdateMySQLSettings(id string, update model.MySQLSettingsUpdate) (*model.SavedConnection, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.data.Items {
+		if s.data.Items[i].ID == id {
+			my := s.data.Items[i].Config.MySQL
+			if my == nil {
+				my = &model.MySQLConfig{}
+			}
+			if update.Host != "" {
+				my.Host = update.Host
+			}
+			if update.Port > 0 {
+				my.Port = update.Port
+			}
+			if update.Database != "" {
+				my.Database = update.Database
+			}
+			if update.User != "" {
+				my.User = update.User
+			}
+			my.TLS = update.TLS
+			my.ReadOnly = update.ReadOnly
+			s.data.Items[i].Config.MySQL = my
 			s.data.Items[i].UpdatedAt = time.Now().UTC()
 			item := s.data.Items[i]
 			return &item, nil
@@ -202,4 +349,21 @@ func (s *ConnectionStore) OpenConnectionIDs() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return append([]string(nil), s.data.OpenConnectionIDs...)
+}
+
+func remoteDisplayName(req model.RemoteConnectRequest) string {
+	if name := strings.TrimSpace(req.Name); name != "" {
+		return name
+	}
+	switch req.Type {
+	case model.DriverTypePostgres:
+		if req.Postgres != nil {
+			return req.Postgres.User + "@" + req.Postgres.Host + "/" + req.Postgres.Database
+		}
+	case model.DriverTypeMySQL:
+		if req.MySQL != nil {
+			return req.MySQL.User + "@" + req.MySQL.Host + "/" + req.MySQL.Database
+		}
+	}
+	return "remote"
 }

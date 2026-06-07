@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/wzhejunqiu/data-nexus/internal/driver/export"
+	"github.com/wzhejunqiu/data-nexus/internal/driver/mysql"
+	"github.com/wzhejunqiu/data-nexus/internal/driver/postgres"
 	"github.com/wzhejunqiu/data-nexus/internal/driver/sqlite"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 )
@@ -33,6 +35,10 @@ func NewDriver(t model.DriverType) (Driver, error) {
 	switch t {
 	case model.DriverTypeSQLite:
 		return sqlite.New(), nil
+	case model.DriverTypeMySQL:
+		return mysql.New(), nil
+	case model.DriverTypePostgres:
+		return postgres.New(), nil
 	default:
 		return nil, model.ErrInvalidRequest("unsupported driver type")
 	}

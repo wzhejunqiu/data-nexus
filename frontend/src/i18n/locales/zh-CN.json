@@ -22,7 +22,44 @@
     "confirmRemoveOpen": "连接已打开，是否关闭并删除「{{name}}」？",
     "tables": "表",
     "views": "视图",
-    "search": "搜索表..."
+    "search": "搜索表...",
+    "type": {
+      "sqlite": "SQLite",
+      "postgres": "PostgreSQL",
+      "mysql": "MySQL"
+    },
+    "host": "主机",
+    "port": "端口",
+    "database": "数据库",
+    "user": "用户名",
+    "password": "密码",
+    "passwordOptional": "新密码（可选）",
+    "schema": "Schema",
+    "displayName": "显示名称",
+    "test": "测试连接",
+    "testSuccess": "连接成功",
+    "saveAndOpen": "保存并打开",
+    "saveSuccess": "连接已保存",
+    "applyNamespace": "应用",
+    "sqliteOptionsHint": "只读 / WAL 仅用于新建 SQLite 连接",
+    "error": {
+      "auth": "认证失败",
+      "network": "网络连接失败",
+      "database": "数据库不存在"
+    }
+  },
+  "vault": {
+    "initTitle": "设置 Vault 主密码",
+    "unlockTitle": "解锁 Vault",
+    "masterPassword": "主密码",
+    "confirmPassword": "确认密码",
+    "initHint": "当系统钥匙串不可用时，需要主密码来保存远程连接密码。",
+    "unlockHint": "打开远程连接前请输入主密码。",
+    "initAction": "创建 Vault",
+    "unlockAction": "解锁",
+    "initSuccess": "Vault 已创建",
+    "unlockSuccess": "Vault 已解锁",
+    "wrongPassword": "主密码错误"
   },
   "tabs": {
     "schema": "表结构",
@@ -265,6 +302,9 @@
     "EXPORT_CANCELLED": "导出已取消",
     "EXPORT_NO_STABLE_KEY": "该表缺少稳定排序键，无法整表导出",
     "SAVED_NOT_FOUND": "已保存连接不存在",
+    "SECRETS_VAULT_LOCKED": "Vault 已锁定",
+    "SECRETS_VAULT_NOT_INITIALIZED": "Vault 未初始化",
+    "SECRETS_VAULT_WRONG_PASSWORD": "Vault 主密码错误",
     "INTERNAL_ERROR": "内部错误"
   },
   "common": {

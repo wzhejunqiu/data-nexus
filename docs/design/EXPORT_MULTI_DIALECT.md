@@ -1,6 +1,6 @@
 # 整表 CSV 导出 — 多方言差异设计
 
-> **状态:** Phase 1（SQLite）已实现；PostgreSQL / MySQL 为 Phase 2/3 设计预留。  
+> **状态:** Phase 1–3（SQLite / PostgreSQL / MySQL PK keyset 导出）已实现。  
 > **相关:** [DATA_MODEL.md §7](./DATA_MODEL.md#7-多数据库差异矩阵设计参考) · [API.md §11](./API.md#11-exportservicev02)
 
 ---
@@ -132,8 +132,8 @@ sequenceDiagram
 | Phase | 范围 | 状态 |
 |-------|------|------|
 | Phase 1 | SQLite `TableExportCursor` + keyset | 已实现 |
-| Phase 2 | PostgreSQL `OpenTableExport` | 设计预留 |
-| Phase 3 | MySQL `OpenTableExport` | 设计预留 |
+| Phase 2 | PostgreSQL `OpenTableExport` | 已实现 |
+| Phase 3 | MySQL `OpenTableExport` | 已实现 |
 
 **Driver 接口：**
 

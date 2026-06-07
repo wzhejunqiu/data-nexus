@@ -29,6 +29,18 @@ func (s *ConnectionService) CreateConnection(req model.ConnectRequest) (*model.S
 	})
 }
 
+func (s *ConnectionService) CreateRemoteConnection(req model.RemoteConnectRequest) (*model.SavedConnection, error) {
+	return call(s.log, "ConnectionService.CreateRemoteConnection", func() (*model.SavedConnection, error) {
+		return s.mgr.CreateRemoteConnection(context.Background(), req)
+	})
+}
+
+func (s *ConnectionService) TestConnection(req model.TestConnectionRequest) error {
+	return callVoid(s.log, "ConnectionService.TestConnection", func() error {
+		return s.mgr.TestConnection(context.Background(), req)
+	})
+}
+
 func (s *ConnectionService) OpenConnection(connectionID string) (*model.Connection, error) {
 	return call(s.log, "ConnectionService.OpenConnection", func() (*model.Connection, error) {
 		return s.mgr.OpenConnection(context.Background(), connectionID)
@@ -62,6 +74,18 @@ func (s *ConnectionService) RenameConnection(connectionID string, name string) (
 func (s *ConnectionService) UpdateConnectionSQLiteSettings(connectionID string, update model.SQLiteSettingsUpdate) (*model.SavedConnection, error) {
 	return call(s.log, "ConnectionService.UpdateConnectionSQLiteSettings", func() (*model.SavedConnection, error) {
 		return s.mgr.UpdateConnectionSQLiteSettings(context.Background(), connectionID, update)
+	})
+}
+
+func (s *ConnectionService) UpdateConnectionPostgresSettings(connectionID string, update model.PostgresSettingsUpdate) (*model.SavedConnection, error) {
+	return call(s.log, "ConnectionService.UpdateConnectionPostgresSettings", func() (*model.SavedConnection, error) {
+		return s.mgr.UpdateConnectionPostgresSettings(context.Background(), connectionID, update)
+	})
+}
+
+func (s *ConnectionService) UpdateConnectionMySQLSettings(connectionID string, update model.MySQLSettingsUpdate) (*model.SavedConnection, error) {
+	return call(s.log, "ConnectionService.UpdateConnectionMySQLSettings", func() (*model.SavedConnection, error) {
+		return s.mgr.UpdateConnectionMySQLSettings(context.Background(), connectionID, update)
 	})
 }
 

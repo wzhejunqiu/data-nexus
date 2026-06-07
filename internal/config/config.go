@@ -120,6 +120,10 @@ func ConnectionsPath() string {
 	return filepath.Join(ConfigDir(), "connections.json")
 }
 
+func VaultDir() string {
+	return filepath.Join(ConfigDir(), "vault")
+}
+
 func Load() Config {
 	cfg := DefaultConfig()
 	data, err := os.ReadFile(ConfigPath())

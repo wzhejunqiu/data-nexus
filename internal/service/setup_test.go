@@ -8,7 +8,6 @@ import (
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
 	"github.com/wzhejunqiu/data-nexus/internal/testutil"
-	"go.uber.org/zap"
 )
 
 func newTestEnv(t *testing.T) (*service.ConnectionManager, *service.QueryService, *model.Connection) {
@@ -20,7 +19,7 @@ func newTestEnv(t *testing.T) (*service.ConnectionManager, *service.QueryService
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr := service.NewConnectionManager(store, zap.NewNop())
+	mgr := service.NewTestConnectionManager(store)
 	conn, err := mgr.OpenConnectionFromFile(context.Background(), model.ConnectRequest{FilePath: path})
 	if err != nil {
 		t.Fatal(err)

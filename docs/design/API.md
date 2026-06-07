@@ -1,6 +1,6 @@
 # Data Nexus — Service 绑定 API
 
-> 版本: v0.3 · 通信方式: Wails in-memory Bridge · 最后更新: 2026-06-07
+> 版本: v1.0 · 通信方式: Wails in-memory Bridge · 最后更新: 2026-06-07
 
 前端通过 `wailsjs/go/wails/*` 自动生成的绑定调用 Go Service。所有方法均为 **async**（返回 Promise）。时间戳使用 ISO 8601 UTC。
 
@@ -47,6 +47,9 @@ interface AppError {
 | `EXPORT_CANCELLED` | 用户取消 CSV 全表导出 |
 | `EXPORT_NO_STABLE_KEY` | 表无法确定稳定排序键，无法整表导出 |
 | `SAVED_NOT_FOUND` | 已保存连接 ID 不存在 |
+| `SECRETS_VAULT_LOCKED` | Vault 已锁定，需解锁后才能访问远程连接密码 |
+| `SECRETS_VAULT_NOT_INITIALIZED` | Vault 未初始化，需设置主密码 |
+| `SECRETS_VAULT_WRONG_PASSWORD` | Vault 主密码错误 |
 | `BATCH_TOO_LARGE` | 批量编辑超过 200 条变更上限 |
 | `INVALID_CSV` | CSV 解析或格式校验失败 |
 | `IMPORT_FAILED` | CSV 导入执行失败 |
@@ -156,6 +159,35 @@ func (s *ConnectionService) CreateConnection(req ConnectRequest) (*SavedConnecti
 
 新建连接配置并 **upsert** 到 `connections.json`；**不自动打开**。用户需再调 `OpenConnection`。
 
+### 3.2a CreateRemoteConnection（v1.0）
+
+```go
+func (s *ConnectionService) CreateRemoteConnection(req RemoteConnectRequest) (*SavedConnection, error)
+```
+
+创建 PostgreSQL / MySQL 连接：校验 → `SecretsStore.SetPassword` → upsert store → 可选 `OpenConnection`（`req.Open`）。
+
+密码**不**写入 JSON。Vault backend 未初始化/未解锁时返回 `SECRETS_VAULT_*`。
+
+### 3.2b TestConnection（v1.0）
+
+```go
+func (s *ConnectionService) TestConnection(req TestConnectionRequest) error
+```
+
+使用请求内 `password` 临时 Connect + Ping；**不**读写 vault/keychain。
+
+连接失败时 `CONNECTION_FAILED`，`details.reason`: `network` | `auth` | `database`。
+
+### 3.2c UpdateConnectionPostgresSettings / UpdateConnectionMySQLSettings（v1.0）
+
+```go
+func (s *ConnectionService) UpdateConnectionPostgresSettings(connectionID string, update PostgresSettingsUpdate) (*SavedConnection, error)
+func (s *ConnectionService) UpdateConnectionMySQLSettings(connectionID string, update MySQLSettingsUpdate) (*SavedConnection, error)
+```
+
+更新远程连接配置；`password` 可选（空表示不修改）。若连接已打开则自动重连。
+
 ### 3.3 OpenConnection
 
 ```go
@@ -215,6 +247,24 @@ func (s *ConnectionService) ListAttached(connectionId string) ([]AttachedDatabas
 - 会话级 `ATTACH DATABASE`；关闭连接时自动 `DETACH`
 - 只读连接以 `mode=ro` attach
 - `ListTables` 返回 `schema` 字段区分 `main` 与 attached alias
+- **SQLite only**；PG/MySQL 调用返回 `INVALID_REQUEST`
+
+---
+
+## 3.10 SecretsService（v1.0）
+
+远程连接密码存储。详见 [SECRETS.md](./SECRETS.md)。
+
+```go
+func (s *SecretsService) GetSecretsBackend() (string, error)
+func (s *SecretsService) VaultInitialized() (bool, error)
+func (s *SecretsService) VaultUnlocked() (bool, error)
+func (s *SecretsService) InitVault(masterPassword string) error
+func (s *SecretsService) UnlockVault(masterPassword string) error
+func (s *SecretsService) LockVault() error
+func (s *SecretsService) ChangeVaultPassword(oldPassword, newPassword string) error
+func (s *SecretsService) IsVaultRequiredForRemote() (bool, error)
+```
 
 ---
 

@@ -1,3 +1,6 @@
+export type DriverType = 'sqlite' | 'postgres' | 'mysql'
+export type SecretsBackend = 'keychain' | 'vault'
+
 export interface AppError {
   code: string
   message: string
@@ -10,9 +13,30 @@ export interface SQLiteConfig {
   wal?: boolean
 }
 
+export interface PostgresConfig {
+  host: string
+  port: number
+  database: string
+  user: string
+  sslMode?: string
+  schema?: string
+  readOnly: boolean
+}
+
+export interface MySQLConfig {
+  host: string
+  port: number
+  database: string
+  user: string
+  tls: boolean
+  readOnly: boolean
+}
+
 export interface DriverConfig {
-  type: 'sqlite'
+  type: DriverType
   sqlite?: SQLiteConfig
+  postgres?: PostgresConfig
+  mysql?: MySQLConfig
 }
 
 export interface ConnectRequest {
@@ -21,16 +45,54 @@ export interface ConnectRequest {
   wal?: boolean
 }
 
+export interface RemoteConnectRequest {
+  type: DriverType
+  name?: string
+  password: string
+  postgres?: PostgresConfig
+  mysql?: MySQLConfig
+  open?: boolean
+}
+
+export interface TestConnectionRequest {
+  type: DriverType
+  password: string
+  postgres?: PostgresConfig
+  mysql?: MySQLConfig
+}
+
 export interface SQLiteSettingsUpdate {
   readOnly: boolean
   wal: boolean
 }
 
+export interface PostgresSettingsUpdate {
+  host: string
+  port: number
+  database: string
+  user: string
+  password?: string | null
+  sslMode: string
+  schema: string
+  readOnly: boolean
+}
+
+export interface MySQLSettingsUpdate {
+  host: string
+  port: number
+  database: string
+  user: string
+  password?: string | null
+  tls: boolean
+  readOnly: boolean
+}
+
 export interface SavedConnection {
   id: string
   name: string
-  type: 'sqlite'
+  type: DriverType
   config: DriverConfig
+  secretsBackend?: SecretsBackend
   createdAt: string
   updatedAt: string
   lastUsedAt: string
@@ -38,7 +100,7 @@ export interface SavedConnection {
 
 export interface Connection {
   id: string
-  type: 'sqlite'
+  type: DriverType
   displayName: string
   config: DriverConfig
   connectedAt: string
@@ -49,8 +111,9 @@ export type ConnectionStatus = 'open' | 'closed'
 export interface ConnectionListItem {
   id: string
   name: string
-  type: 'sqlite'
+  type: DriverType
   config: DriverConfig
+  secretsBackend?: SecretsBackend
   status: ConnectionStatus
   connectedAt?: string
   lastUsedAt: string

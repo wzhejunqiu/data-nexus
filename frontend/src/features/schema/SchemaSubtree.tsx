@@ -7,15 +7,21 @@ import { dialogApi } from '@/lib/api/dialog'
 import { schemaApi } from '@/lib/api/schema'
 import { formatError } from '@/lib/api/errors'
 import { tableKey } from '@/lib/tableKey'
-import type { TableInfo } from '@/lib/types'
+import type { DriverConfig, TableInfo } from '@/lib/types'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useToastStore } from '@/components/ui/Toast'
 
 export function SchemaSubtree({
   connectionId,
+  connectionType = 'sqlite',
+  connectionConfig,
+  onConnectionUpdated,
   onSelectTable,
 }: {
   connectionId: string
+  connectionType?: 'sqlite' | 'postgres' | 'mysql'
+  connectionConfig?: DriverConfig
+  onConnectionUpdated?: () => void
   onSelectTable: (table: string) => void
 }) {
   const { t } = useTranslation()
@@ -34,7 +40,7 @@ export function SchemaSubtree({
   const { data: attached } = useQuery({
     queryKey: ['attached', connectionId],
     queryFn: () => connectionApi.listAttached(connectionId),
-    enabled: !!connectionId,
+    enabled: !!connectionId && connectionType === 'sqlite',
   })
 
   const attachDb = useMutation({
@@ -68,6 +74,51 @@ export function SchemaSubtree({
     onError: (err) => pushToast(formatError(t, err), 'error'),
   })
 
+  const switchPostgresSchema = useMutation({
+    mutationFn: async (schema: string) => {
+      const pg = connectionConfig?.postgres
+      if (!pg) throw new Error('missing postgres config')
+      const update = {
+        host: pg.host,
+        port: pg.port,
+        database: pg.database,
+        user: pg.user,
+        sslMode: pg.sslMode ?? 'disable',
+        schema,
+        readOnly: pg.readOnly,
+      }
+      await connectionApi.updatePostgresSettings(connectionId, update)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tables', connectionId] })
+      qc.invalidateQueries({ queryKey: ['connections'] })
+      onConnectionUpdated?.()
+    },
+    onError: (err) => pushToast(formatError(t, err), 'error'),
+  })
+
+  const switchMySQLDatabase = useMutation({
+    mutationFn: async (database: string) => {
+      const my = connectionConfig?.mysql
+      if (!my) throw new Error('missing mysql config')
+      const update = {
+        host: my.host,
+        port: my.port,
+        database,
+        user: my.user,
+        tls: my.tls,
+        readOnly: my.readOnly,
+      }
+      await connectionApi.updateMySQLSettings(connectionId, update)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tables', connectionId] })
+      qc.invalidateQueries({ queryKey: ['connections'] })
+      onConnectionUpdated?.()
+    },
+    onError: (err) => pushToast(formatError(t, err), 'error'),
+  })
+
   const items = useMemo(() => {
     const list = data?.items ?? []
     if (!filter) return list
@@ -90,16 +141,36 @@ export function SchemaSubtree({
 
   return (
     <div className="mt-2 space-y-2">
-      <div className="flex gap-1">
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex-1 text-xs"
-          onClick={() => attachDb.mutate()}
-        >
-          {t('attach.attach')}
-        </Button>
-      </div>
+      {connectionType === 'postgres' && connectionConfig?.postgres && (
+        <RemoteNamespaceSwitch
+          key={connectionConfig.postgres.schema ?? 'public'}
+          label={t('connection.schema')}
+          value={connectionConfig.postgres.schema ?? 'public'}
+          onApply={(v) => switchPostgresSchema.mutate(v)}
+          pending={switchPostgresSchema.isPending}
+        />
+      )}
+      {connectionType === 'mysql' && connectionConfig?.mysql && (
+        <RemoteNamespaceSwitch
+          key={connectionConfig.mysql.database}
+          label={t('connection.database')}
+          value={connectionConfig.mysql.database}
+          onApply={(v) => switchMySQLDatabase.mutate(v)}
+          pending={switchMySQLDatabase.isPending}
+        />
+      )}
+      {connectionType === 'sqlite' && (
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1 text-xs"
+            onClick={() => attachDb.mutate()}
+          >
+            {t('attach.attach')}
+          </Button>
+        </div>
+      )}
       {(attached ?? []).length > 0 && (
         <ul className="space-y-0.5 text-xs">
           {(attached ?? []).map((a) => (
@@ -152,6 +223,43 @@ export function SchemaSubtree({
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function RemoteNamespaceSwitch({
+  label,
+  value,
+  onApply,
+  pending,
+}: {
+  label: string
+  value: string
+  onApply: (value: string) => void
+  pending: boolean
+}) {
+  const { t } = useTranslation()
+  const [draft, setDraft] = useState(value)
+
+  return (
+    <div className="flex items-end gap-1">
+      <label className="flex-1 text-xs">
+        <span className="text-muted">{label}</span>
+        <input
+          className="mt-0.5 w-full rounded border border-border bg-transparent px-2 py-1 font-mono text-xs"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+        />
+      </label>
+      <Button
+        size="sm"
+        variant="outline"
+        className="text-xs"
+        disabled={pending || !draft.trim() || draft.trim() === value}
+        onClick={() => onApply(draft.trim())}
+      >
+        {t('connection.applyNamespace')}
+      </Button>
     </div>
   )
 }
