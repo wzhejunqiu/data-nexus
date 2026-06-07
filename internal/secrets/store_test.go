@@ -21,6 +21,11 @@ func TestNewStore(t *testing.T) {
 	if backend != BackendKeychain && backend != BackendVault {
 		t.Fatalf("unexpected backend %q", backend)
 	}
+	if backend == BackendVault {
+		if err := store.InitVault("testpass12"); err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	connID := keyringTestConnID(t)
 	if err := store.SetPassword(connID, "pw"); err != nil {
