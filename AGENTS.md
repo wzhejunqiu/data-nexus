@@ -45,4 +45,5 @@ MySQL and PostgreSQL drivers follow a two-layer test strategy:
 - **Integration tests** simulate real database behavior in-process:
   - MySQL: `go-mysql-server` (`package mysql_test`, black-box)
   - PostgreSQL: `embedded-postgres` (`package postgres_test`, black-box)
+  - Service: three-driver concurrent open (`package service_test`, black-box)
 - Run integration tests with `make test-integration` (no Docker required). They are excluded from default coverage (`-short` skips them).

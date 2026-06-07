@@ -18,7 +18,7 @@
 
 - [x] `PostgresDriver` — `database/sql` + `pgx/stdlib`
 - [x] `MySQLDriver` — `go-sql-driver/mysql`
-- [x] `OpenTableExport` — PG/MySQL `TableExportCursor`（PK keyset）
+- [x] `OpenTableExport` — PG/MySQL `TableExportCursor`（streaming `SELECT *`，行序不保证）
 - [x] Driver 工厂按 `DriverType` 分发
 
 ### 连接配置
@@ -51,9 +51,9 @@
 
 ## 完成标准
 
-- [ ] 同时打开 SQLite + PostgreSQL（或 MySQL）各至少 1 个（见 [phase-v0.4-manual-checklist.md](./phase-v0.4-manual-checklist.md)）
-- [ ] Schema 浏览与 SQL 执行在两种远程库上可用
-- [ ] tag `v0.4.0`
+- [x] 同时打开 SQLite + PostgreSQL（或 MySQL）各至少 1 个（见 [phase-v0.4-manual-checklist.md](./phase-v0.4-manual-checklist.md)）
+- [x] Schema 浏览与 SQL 执行在两种远程库上可用
+- [ ] tag `v0.4.0`（待手动发布）
 
 ---
 

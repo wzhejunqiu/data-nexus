@@ -143,6 +143,7 @@ gen-test-db:
 # Integration tests use in-process databases (go-mysql-server + embedded-postgres).
 test-integration:
 	go test ./internal/driver/mysql/... ./internal/driver/postgres/... -run Integration -count=1
+	go test ./internal/service/... -run Integration -count=1
 
 test-mysql-integration:
 	go test ./internal/driver/mysql/... -run Integration -count=1

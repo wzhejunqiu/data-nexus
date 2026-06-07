@@ -258,8 +258,10 @@ data-nexus/
 │   │   └── csv/                 # 共用 CSV 读写、CSVFormatOptions
 │   ├── driver/
 │   │   ├── driver.go            # Driver 接口（含 OpenTableExport）
-│   │   ├── export/              # TableExportCursor 契约、稳定键解析
-│   │   └── sqlite/              # export_cursor.go — keyset 整表导出
+│   │   ├── export/              # TableExportCursor 契约、streaming_cursor、稳定键解析
+│   │   ├── sqlite/              # export_cursor.go — streaming 整表导出
+│   │   ├── postgres/            # PostgreSQL 驱动（v0.4）
+│   │   └── mysql/               # MySQL 驱动（v0.4）
 │   ├── model/
 │   │   ├── connection.go
 │   │   ├── schema.go

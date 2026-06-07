@@ -1,6 +1,6 @@
 # Data Nexus — 实施路线图
 
-> 版本: v0.3 · 最后更新: 2026-06-07
+> 版本: v0.4 · 最后更新: 2026-06-07
 
 > **实施时请打开 [docs/implementation/](./implementation/README.md)**，各阶段有独立任务清单文件，本文件仅作概览与决策记录。
 
@@ -9,8 +9,8 @@
 ## 阶段概览
 
 ```
-Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ ──► Phase 4（进行中）
- 文档评审     Wails+Driver   前端骨架      功能集成      桌面端发布
+Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ ──► Phase 4 ✓
+ 文档评审     Wails+Driver   前端骨架      功能集成      桌面端发布（v0.1.0）
            → phase-1        → phase-2     → phase-3     → phase-4
 ```
 
@@ -20,7 +20,7 @@ Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ �
 | [Phase 1](./implementation/phase-1-wails-backend.md) | Wails + Driver + Services | ✅ 已完成 | 3-5 天 |
 | [Phase 2](./implementation/phase-2-frontend-shell.md) | 连接树 + Schema 子树 + 主区骨架 | ✅ 已完成 | 3-4 天 |
 | [Phase 3](./implementation/phase-3-feature-integration.md) | MVP 功能闭环 | ✅ 已完成 | 4-6 天 |
-| [Phase 4](./implementation/phase-4-release.md) | 测试 + v0.1.0 | 🔄 进行中 | 2-3 天 |
+| [Phase 4](./implementation/phase-4-release.md) | 测试 + v0.1.0 | ✅ 已完成 | 2-3 天 |
 
 **MVP 合计:** 13-20 天（1 人全职）
 
@@ -28,12 +28,12 @@ Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ �
 
 ## 后续版本
 
-| 版本 | 实施文档 | 主题 |
-|------|----------|------|
-| v0.2 | [phase-v0.2-enhancements.md](./implementation/phase-v0.2-enhancements.md) | 体验增强 |
-| v0.3 | [phase-v0.3-exploration.md](./implementation/phase-v0.3-exploration.md) | Filter→SQL、列画像 |
-| v0.4 | [phase-v0.4-multi-connection.md](./implementation/phase-v0.4-multi-connection.md) | PostgreSQL / MySQL（发布 **v0.4.0**） |
-| v1.x | [phase-v1.x-multi-database.md](./implementation/phase-v1.x-multi-database.md) | Headless REST、ER 等 |
+| 版本 | 实施文档 | 主题 | 状态 |
+|------|----------|------|------|
+| v0.2 | [phase-v0.2-enhancements.md](./implementation/phase-v0.2-enhancements.md) | 体验增强 | ✅ 已完成 |
+| v0.3 | [phase-v0.3-exploration.md](./implementation/phase-v0.3-exploration.md) | Filter→SQL、列画像 | ✅ 已完成 |
+| v0.4 | [phase-v0.4-multi-connection.md](./implementation/phase-v0.4-multi-connection.md) | PostgreSQL / MySQL（发布 **v0.4.0**） | ✅ 已验收，待 tag |
+| v1.x | [phase-v1.x-multi-database.md](./implementation/phase-v1.x-multi-database.md) | Headless REST、ER 等 | |
 
 ---
 
@@ -61,3 +61,5 @@ Phase 0 ✓ ──► Phase 1 ✓ ──► Phase 2 ✓ ──► Phase 3 ✓ �
 | 2026-06-07 | v0.3 确认做 | Filter→SQL、列画像、Canned Queries 等探索型差异化 |
 
 > 开放问题决策后追加到此表。
+
+**推荐实施顺序：** Phase 0–4 ✓ → v0.2 ✓ → v0.3 ✓ → v0.4 ✓ → **tag v0.4.0** → v1.x

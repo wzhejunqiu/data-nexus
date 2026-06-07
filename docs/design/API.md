@@ -645,9 +645,9 @@ func (s *ExportService) ExportTable(req ExportTableRequest) (*ExportResult, erro
 **全表导出（`ExportTableCSV`）补充:**
 
 - 请求增加 `exportId`（前端生成 UUID）、`defaultPath`（SaveFile 后传入）。
-- 无行数硬上限；后端通过 Driver `OpenTableExport` 打开 `TableExportCursor`，按稳定键 **keyset 分页**（`WHERE key > lastKey ORDER BY … LIMIT 1000`）流式写盘，保证顺序稳定、不丢不重。
-- SQLite：稳定键为 PK，无主键时 fallback 到 `rowid`；`WITHOUT ROWID` 且无 PK → `EXPORT_NO_STABLE_KEY`。
-- PostgreSQL / MySQL（Phase 2/3）：必须 PK，无主键 → `EXPORT_NO_STABLE_KEY`。详见 [EXPORT_MULTI_DIALECT.md](./EXPORT_MULTI_DIALECT.md)。
+- 无行数硬上限；后端通过 Driver `OpenTableExport` 打开 `TableExportCursor`，单次 `SELECT *` + `NextBatch` 分批读盘，**行序不保证**（快照内行集合完整）。
+- SQLite / PostgreSQL / MySQL（v0.4+）：均允许无主键表整表导出；[`resolve_key.go`](../../internal/driver/export/resolve_key.go) 保留供未来 keyset 场景，整表导出不调用。
+- 详见 [EXPORT_MULTI_DIALECT.md](./EXPORT_MULTI_DIALECT.md)。
 - 进度事件 `export:progress`：`{ exportId, exported }`（Wails `EventsEmit`）；不预先 `COUNT(*)`，进度仅展示已导出行数。
 - 取消：`ExportService.CancelExportTableCSV(exportId)`，删除未完成文件，返回 `EXPORT_CANCELLED`。
 - SQL 查询结果导出仍受 `MaxQueryRows`（10,000）约束，可能返回 `RESULT_TOO_LARGE`。
