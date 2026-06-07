@@ -1,6 +1,6 @@
 # Data Nexus — 技术设计文档
 
-> 版本: v0.2 · 状态: 草案 · 最后更新: 2026-06-07
+> 版本: v0.3 · 状态: 草案 · 最后更新: 2026-06-07
 
 ## 1. 设计目标
 
@@ -101,10 +101,10 @@ wails build
 | 语言 | Go 1.22+ | 与 Wails 同栈，单二进制 |
 | UI 边界 | Wails Service 绑定 | 替代 chi HTTP；类型安全、低延迟 |
 | SQLite 驱动 | [modernc.org/sqlite](https://pkg.go.dev/modernc.org/sqlite) | 纯 Go，无 CGO，Wails 交叉编译友好 |
-| 配置 | CLI flags + 用户目录配置 | `~/.data-nexus/`（v0.2 起） |
-| 日志 | `log/slog` | 标准库结构化日志 |
+| 配置 | CLI flags + `~/.data-nexus/config.yaml` | 日志等用户可配置项 |
+| 日志 | [uber-go/zap](https://github.com/uber-go/zap) | 高性能结构化日志；默认 INFO |
 
-> **移除 MVP 依赖：** chi、embed 静态 HTTP、CORS 中间件。
+> **移除 MVP 依赖：** chi、embed 静态 HTTP、CORS 中间件、`log/slog`（统一改用 zap）。
 
 ### 3.3 前端
 
@@ -127,6 +127,80 @@ wails build
 | `Taskfile.yml` 或 `Makefile` | 补充 test、lint |
 | ESLint + Prettier | 前端规范 |
 | golangci-lint | Go 静态检查 |
+
+### 3.5 日志（zap）
+
+#### 设计原则
+
+| 原则 | 说明 |
+|------|------|
+| 默认级别 | **INFO**（`debug` 仅开发/排障时开启） |
+| 开发输出 | **控制台**（`wails dev` / debug build） |
+| 发布输出 | **文件**（`wails build` release） |
+| 用户可配置 | 配置文件 + CLI 覆盖 |
+| 注入方式 | `*zap.Logger` 构造注入，禁止包级全局 logger |
+
+#### 输出模式
+
+| `log.output` | 行为 |
+|--------------|------|
+| `auto`（默认） | 开发 → 控制台；发布 → 文件 |
+| `console` | 仅 stdout |
+| `file` | 仅文件 |
+| `both` | 控制台 + 文件（排障发布版时使用） |
+
+**`auto` 判定：** 配置文件/CLI 未显式指定时，`wails dev`（`WAILS_DEV=1`）或 debug build → 控制台；否则 → 文件。
+
+#### 默认日志路径
+
+| 平台 | 默认文件 |
+|------|----------|
+| macOS | `~/Library/Logs/data-nexus/data-nexus.log` |
+| Windows | `%LOCALAPPDATA%\data-nexus\logs\data-nexus.log` |
+| Linux | `~/.local/share/data-nexus/logs/data-nexus.log` |
+
+用户配置文件：`~/.data-nexus/config.yaml`（模型见 [DATA_MODEL.md](./DATA_MODEL.md#24-appconfig应用配置含日志)）。
+
+#### CLI 覆盖（优先级高于配置文件）
+
+```bash
+data-nexus --log-level debug
+data-nexus --log-output console
+data-nexus --log-output file --log-file /tmp/data-nexus.log
+```
+
+#### 编码格式
+
+| 场景 | Encoder |
+|------|---------|
+| 控制台 | `console` — 带颜色、人类可读 |
+| 文件 | `json` — 便于检索；配合 lumberjack 轮转 |
+
+#### 初始化与使用
+
+```go
+// internal/logger/logger.go
+func New(cfg config.LogConfig, devMode bool) (*zap.Logger, error)
+
+// main.go
+logCfg := config.Load().Log
+logger, err := logger.New(logCfg, isDevMode())
+defer logger.Sync()
+
+mgr := service.NewConnectionManager(logger)
+```
+
+**规范：**
+- Driver / Service / Wails 绑定层通过构造函数接收 `*zap.Logger`
+- 敏感信息（SQL 参数值、密码）不得出现在 INFO 及以上级别
+- Service 入口记录 `method`、`duration_ms`、错误码（不含用户数据）
+
+#### 依赖
+
+```
+go.uber.org/zap
+gopkg.in/natefinch/lumberjack.v2
+```
 
 ---
 
@@ -160,8 +234,11 @@ data-nexus/
 │   │   ├── schema.go
 │   │   ├── query.go
 │   │   └── errors.go            # AppError 结构化错误
-│   └── config/
-│       └── config.go
+│   ├── config/
+│   │   ├── config.go            # 应用配置加载（含日志）
+│   │   └── config.yaml.example
+│   └── logger/
+│       └── logger.go            # zap 初始化、输出目标、级别
 ├── frontend/                    # Wails 前端（原 web/）
 │   ├── src/
 │   │   ├── app/
@@ -439,3 +516,4 @@ wails build -platform linux/amd64
 | HTTP REST | MVP 移除 | Bridge 足够；业务层保留便于未来 headless |
 | 前端目录 | `frontend/` | Wails 惯例，非 `web/` |
 | Electron | 不采用 | 体积与内存劣势；Go 栈统一 |
+| 日志框架 | zap | 默认 INFO；dev 控制台、release 文件；YAML/CLI 可配置 |

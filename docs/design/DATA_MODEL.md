@@ -1,6 +1,6 @@
 # Data Nexus — 数据模型
 
-> 版本: v0.2 · 描述后端领域模型与多数据库扩展策略
+> 版本: v0.3 · 描述后端领域模型与多数据库扩展策略
 
 ---
 
@@ -73,6 +73,39 @@ type SavedConnection struct {
 ```
 
 存储：本地 JSON 文件 `~/.data-nexus/connections.json` 或 SQLite 配置库。
+
+### 2.4 AppConfig（应用配置，含日志）
+
+```yaml
+# ~/.data-nexus/config.yaml
+log:
+  level: info          # debug | info | warn | error，默认 info
+  output: auto         # auto | console | file | both
+  file:
+    path: ""           # 空则平台默认，见 ARCHITECTURE.md §3.5
+    max_size_mb: 10
+    max_backups: 5
+    max_age_days: 30
+    compress: true
+```
+
+```go
+type LogConfig struct {
+    Level  string         `yaml:"level"`  // default: "info"
+    Output string         `yaml:"output"` // default: "auto"
+    File   LogFileConfig  `yaml:"file"`
+}
+
+type LogFileConfig struct {
+    Path       string `yaml:"path"`
+    MaxSizeMB  int    `yaml:"max_size_mb"`  // default: 10
+    MaxBackups int    `yaml:"max_backups"`  // default: 5
+    MaxAgeDays int    `yaml:"max_age_days"` // default: 30
+    Compress   bool   `yaml:"compress"`     // default: true
+}
+```
+
+**优先级：** CLI flags > 配置文件 > 内置默认值。`output=auto` 时，`wails dev` / debug build 写控制台，release build 写文件。
 
 ---
 
