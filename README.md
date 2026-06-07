@@ -12,7 +12,7 @@
 
 ## 环境要求
 
-- Go 1.23+
+- Go 1.25+
 - Node.js 20+
 - [Wails v2 CLI](https://wails.io/docs/gettingstarted/installation)
 
