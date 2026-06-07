@@ -15,6 +15,7 @@ build/bin/
 frontend/node_modules/
 frontend/dist/
 frontend/wailsjs/
+frontend/package.json.md5
 *.tsbuildinfo
 
 # OS / IDE
