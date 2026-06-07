@@ -1,0 +1,125 @@
+package config
+
+import (
+	"flag"
+	"os"
+	"path/filepath"
+
+	"gopkg.in/yaml.v3"
+)
+
+type Config struct {
+	Log LogConfig `yaml:"log"`
+}
+
+type LogConfig struct {
+	Level  string        `yaml:"level"`
+	Output string        `yaml:"output"`
+	File   LogFileConfig `yaml:"file"`
+}
+
+type LogFileConfig struct {
+	Path       string `yaml:"path"`
+	MaxSizeMB  int    `yaml:"max_size_mb"`
+	MaxBackups int    `yaml:"max_backups"`
+	MaxAgeDays int    `yaml:"max_age_days"`
+	Compress   bool   `yaml:"compress"`
+}
+
+type CLIOverrides struct {
+	LogLevel  string
+	LogOutput string
+	LogFile   string
+	DBPath    string
+}
+
+var (
+	flagLogLevel  = flag.String("log-level", "", "log level: debug|info|warn|error")
+	flagLogOutput = flag.String("log-output", "", "log output: auto|console|file|both")
+	flagLogFile   = flag.String("log-file", "", "log file path")
+	flagDB        = flag.String("db", "", "open sqlite database on startup")
+)
+
+func ParseFlags() CLIOverrides {
+	flag.Parse()
+	return CLIOverrides{
+		LogLevel:  *flagLogLevel,
+		LogOutput: *flagLogOutput,
+		LogFile:   *flagLogFile,
+		DBPath:    *flagDB,
+	}
+}
+
+func DefaultConfig() Config {
+	return Config{
+		Log: LogConfig{
+			Level:  "info",
+			Output: "auto",
+			File: LogFileConfig{
+				Path:       "",
+				MaxSizeMB:  10,
+				MaxBackups: 5,
+				MaxAgeDays: 30,
+				Compress:   true,
+			},
+		},
+	}
+}
+
+func ConfigDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ".data-nexus"
+	}
+	return filepath.Join(home, ".data-nexus")
+}
+
+func ConfigPath() string {
+	return filepath.Join(ConfigDir(), "config.yaml")
+}
+
+func ConnectionsPath() string {
+	return filepath.Join(ConfigDir(), "connections.json")
+}
+
+func Load() Config {
+	cfg := DefaultConfig()
+	data, err := os.ReadFile(ConfigPath())
+	if err != nil {
+		return cfg
+	}
+	_ = yaml.Unmarshal(data, &cfg)
+	if cfg.Log.Level == "" {
+		cfg.Log.Level = "info"
+	}
+	if cfg.Log.Output == "" {
+		cfg.Log.Output = "auto"
+	}
+	if cfg.Log.File.MaxSizeMB == 0 {
+		cfg.Log.File.MaxSizeMB = 10
+	}
+	if cfg.Log.File.MaxBackups == 0 {
+		cfg.Log.File.MaxBackups = 5
+	}
+	if cfg.Log.File.MaxAgeDays == 0 {
+		cfg.Log.File.MaxAgeDays = 30
+	}
+	return cfg
+}
+
+func ApplyCLI(cfg Config, cli CLIOverrides) Config {
+	if cli.LogLevel != "" {
+		cfg.Log.Level = cli.LogLevel
+	}
+	if cli.LogOutput != "" {
+		cfg.Log.Output = cli.LogOutput
+	}
+	if cli.LogFile != "" {
+		cfg.Log.File.Path = cli.LogFile
+	}
+	return cfg
+}
+
+func DefaultLogFilePath() string {
+	return filepath.Join(ConfigDir(), "data-nexus.log")
+}

@@ -21,7 +21,7 @@
 - [x] [CONNECTION_UX.md](../design/CONNECTION_UX.md)
 - [x] [ROADMAP.md](../ROADMAP.md)
 - [x] [implementation/](./README.md) 分阶段实施清单
-- [ ] **评审签字 / 确认**（团队或本人确认可开工）
+- [x] **评审签字 / 确认**（团队或本人确认可开工）
 
 ---
 
@@ -35,16 +35,16 @@
 
 ### 已决策项（无需再讨论）
 
-| 问题        | 决策                                       |
-| ----------- | ------------------------------------------ |
-| 只读模式    | 连接时可勾选，默认读写                     |
-| 文件选择    | MVP 原生对话框 + 可选路径输入              |
-| 桌面 vs Web | Wails v2 桌面                              |
-| 日志        | zap，默认 INFO                             |
-| i18n        | 需要；react-i18next，默认 zh-CN，MVP 含 en |
-| MVP 范围    | P0 + P1 全做                               |
-| 首发平台    | macOS / Windows / Linux 三平台             |
-| v0.3 方向   | 做；Filter→SQL + 列画像等探索型差异化      |
+| 问题        | 决策                                                    |
+| ----------- | ------------------------------------------------------- |
+| 只读模式    | 连接时可勾选，默认读写                                  |
+| 文件选择    | MVP 原生对话框 + 可选路径输入                           |
+| 桌面 vs Web | Wails v2 桌面                                           |
+| 日志        | zap，默认 INFO                                          |
+| i18n        | 需要；react-i18next，默认 zh-CN，MVP 含 en              |
+| MVP 范围    | P0 + P1 全做                                            |
+| 首发平台    | macOS / Windows / Linux 三平台                          |
+| v0.3 方向   | 做；Filter→SQL + 列画像等探索型差异化                   |
 | 连接持久化  | MVP：`connections.json` + 连接树；可同时打开多个 SQLite |
 | 启动 UX     | 无 Welcome；直接进入主界面（Navicat 模式）              |
 

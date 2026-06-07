@@ -1,0 +1,71 @@
+{
+  "app": {
+    "title": "Data Nexus",
+    "openCount": "已打开 {{count}} 个连接",
+    "noConnection": "新建或打开一个连接开始"
+  },
+  "connection": {
+    "new": "新建连接",
+    "open": "打开",
+    "close": "关闭",
+    "remove": "删除",
+    "readOnly": "只读",
+    "rename": "重命名",
+    "restoreOnStartup": "启动时恢复已打开连接",
+    "confirmRemove": "删除连接「{{name}}」？",
+    "confirmRemoveOpen": "连接已打开，是否关闭并删除「{{name}}」？",
+    "tables": "表",
+    "views": "视图",
+    "search": "搜索表..."
+  },
+  "tabs": {
+    "schema": "表结构",
+    "data": "数据",
+    "sql": "SQL"
+  },
+  "schema": {
+    "column": "列名",
+    "type": "类型",
+    "nullable": "可空",
+    "pk": "主键",
+    "default": "默认值",
+    "indexes": "索引",
+    "copyTable": "复制表名",
+    "copyColumn": "复制",
+    "empty": "数据库中没有用户表或视图"
+  },
+  "data": {
+    "selectTable": "从左侧选择一个表",
+    "pageSize": "每页行数",
+    "total": "共 {{count}} 行",
+    "null": "NULL"
+  },
+  "sql": {
+    "run": "执行",
+    "history": "历史",
+    "connection": "连接",
+    "confirmWrite": "确认执行此写操作？",
+    "readOnlyBlocked": "当前连接为只读模式",
+    "pragma": "PRAGMA 快捷",
+    "copyCsv": "复制为 CSV",
+    "rowsAffected": "影响行数：{{count}}",
+    "duration": "{{ms}} ms"
+  },
+  "common": {
+    "cancel": "取消",
+    "confirm": "确认",
+    "loading": "加载中...",
+    "error": "错误",
+    "yes": "是",
+    "no": "否"
+  },
+  "theme": {
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统"
+  },
+  "language": {
+    "zh": "中文",
+    "en": "English"
+  }
+}

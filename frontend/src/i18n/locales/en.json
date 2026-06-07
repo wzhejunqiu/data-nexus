@@ -1,0 +1,71 @@
+{
+  "app": {
+    "title": "Data Nexus",
+    "openCount": "Opened {{count}} connections",
+    "noConnection": "Create or open a connection to get started"
+  },
+  "connection": {
+    "new": "New connection",
+    "open": "Open",
+    "close": "Close",
+    "remove": "Remove",
+    "readOnly": "Read-only",
+    "rename": "Rename",
+    "restoreOnStartup": "Restore open connections on startup",
+    "confirmRemove": "Remove connection \"{{name}}\"?",
+    "confirmRemoveOpen": "Connection is open. Close and remove \"{{name}}\"?",
+    "tables": "TABLES",
+    "views": "VIEWS",
+    "search": "Search tables..."
+  },
+  "tabs": {
+    "schema": "Schema",
+    "data": "Data",
+    "sql": "SQL"
+  },
+  "schema": {
+    "column": "Column",
+    "type": "Type",
+    "nullable": "Nullable",
+    "pk": "PK",
+    "default": "Default",
+    "indexes": "Indexes",
+    "copyTable": "Copy table name",
+    "copyColumn": "Copy",
+    "empty": "No user tables or views in this database"
+  },
+  "data": {
+    "selectTable": "Select a table from the sidebar",
+    "pageSize": "Rows per page",
+    "total": "Total {{count}} rows",
+    "null": "NULL"
+  },
+  "sql": {
+    "run": "Run",
+    "history": "History",
+    "connection": "Connection",
+    "confirmWrite": "Execute this write statement?",
+    "readOnlyBlocked": "Connection is read-only",
+    "pragma": "PRAGMA shortcuts",
+    "copyCsv": "Copy as CSV",
+    "rowsAffected": "Rows affected: {{count}}",
+    "duration": "{{ms}} ms"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "error": "Error",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "zh": "中文",
+    "en": "English"
+  }
+}
