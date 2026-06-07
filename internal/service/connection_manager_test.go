@@ -493,3 +493,74 @@ func TestConnectionManagerAttachValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestConnectionManagerTestConnectionInvalidRequest(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewTestConnectionManager(store)
+	ctx := context.Background()
+
+	if err := mgr.TestConnection(ctx, model.TestConnectionRequest{Type: model.DriverTypePostgres}); err == nil {
+		t.Fatal("expected validation error")
+	}
+	if err := mgr.TestConnection(ctx, model.TestConnectionRequest{
+		Type:     model.DriverTypePostgres,
+		Postgres: &model.PostgresConfig{Host: "", Database: "db", User: "u"},
+	}); err == nil {
+		t.Fatal("expected host required")
+	}
+}
+
+func TestConnectionManagerUpdateRemoteSettings(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mockSecrets := secrets.NewMockStore()
+	mgr := service.NewTestConnectionManagerWithSecrets(store, mockSecrets)
+	ctx := context.Background()
+
+	saved, err := mgr.CreateRemoteConnection(ctx, model.RemoteConnectRequest{
+		Type: model.DriverTypePostgres,
+		Name: "pg",
+		Postgres: &model.PostgresConfig{
+			Host: "127.0.0.1", Port: 5432, Database: "db", User: "u",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := mgr.UpdateConnectionPostgresSettings(ctx, saved.ID, model.PostgresSettingsUpdate{
+		Host: "10.0.0.1", Port: 5433,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Config.Postgres.Host != "10.0.0.1" {
+		t.Fatalf("unexpected host %s", updated.Config.Postgres.Host)
+	}
+
+	mysqlSaved, err := mgr.CreateRemoteConnection(ctx, model.RemoteConnectRequest{
+		Type: model.DriverTypeMySQL,
+		Name: "mysql",
+		MySQL: &model.MySQLConfig{
+			Host: "127.0.0.1", Port: 3306, Database: "db", User: "u",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mysqlUpdated, err := mgr.UpdateConnectionMySQLSettings(ctx, mysqlSaved.ID, model.MySQLSettingsUpdate{
+		Host: "10.0.0.2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mysqlUpdated.Config.MySQL.Host != "10.0.0.2" {
+		t.Fatalf("unexpected mysql host %s", mysqlUpdated.Config.MySQL.Host)
+	}
+}

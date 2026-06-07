@@ -11,6 +11,7 @@ import (
 	"github.com/wzhejunqiu/data-nexus/internal/executionlog/sqlite"
 	"github.com/wzhejunqiu/data-nexus/internal/logger"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
+	"github.com/wzhejunqiu/data-nexus/internal/secrets"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
 	wailssvc "github.com/wzhejunqiu/data-nexus/internal/wails"
 	"go.uber.org/zap"
@@ -460,5 +461,117 @@ func TestTableServiceUpdateCellsBatch(t *testing.T) {
 	}
 	if res.UpdatedCount != 1 {
 		t.Fatalf("expected 1 update, got %d", res.UpdatedCount)
+	}
+}
+
+func TestConnectionServiceCreateRemoteConnection(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewTestConnectionManagerWithSecrets(store, secrets.NewMockStore())
+	svc := wailssvc.NewConnectionService(mgr, zap.NewNop())
+
+	saved, err := svc.CreateRemoteConnection(model.RemoteConnectRequest{
+		Type:     model.DriverTypePostgres,
+		Name:     "pg",
+		Password: "secret",
+		Postgres: &model.PostgresConfig{
+			Host: "127.0.0.1", Port: 5432, Database: "db", User: "u",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.Name != "pg" {
+		t.Fatalf("unexpected name %s", saved.Name)
+	}
+}
+
+func TestConnectionServiceOpenFromFile(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "app.db")
+	f, err := os.Create(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewTestConnectionManager(store)
+	svc := wailssvc.NewConnectionService(mgr, zap.NewNop())
+
+	conn, err := svc.OpenConnectionFromFile(model.ConnectRequest{FilePath: dbPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if conn.ID == "" {
+		t.Fatal("expected connection id")
+	}
+}
+
+func TestConnectionServiceUpdateSQLiteSettings(t *testing.T) {
+	mgr, _, conn := newWailsTestEnv(t)
+	svc := wailssvc.NewConnectionService(mgr, zap.NewNop())
+
+	updated, err := svc.UpdateConnectionSQLiteSettings(conn.ID, model.SQLiteSettingsUpdate{ReadOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Config.SQLite == nil || !updated.Config.SQLite.ReadOnly {
+		t.Fatalf("expected read-only, got %+v", updated.Config.SQLite)
+	}
+}
+
+func TestDialogServiceOpenCSVFile(t *testing.T) {
+	rt := &mockRuntime{filePath: "/tmp/data.csv"}
+	svc := wailssvc.NewDialogServiceWithRuntime(zap.NewNop(), rt)
+	svc.SetContext(context.Background())
+
+	path, err := svc.OpenCSVFile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if path != "/tmp/data.csv" {
+		t.Fatalf("unexpected path %s", path)
+	}
+}
+
+func TestDialogServiceSaveFile(t *testing.T) {
+	rt := &mockRuntime{savePath: "/tmp/save.csv"}
+	svc := wailssvc.NewDialogServiceWithRuntime(zap.NewNop(), rt)
+	svc.SetContext(context.Background())
+
+	path, err := svc.SaveFile("out.csv", []model.FileFilter{{DisplayName: "CSV", Pattern: "*.csv"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if path != "/tmp/save.csv" {
+		t.Fatalf("unexpected path %s", path)
+	}
+}
+
+func TestSchemaServiceDetectFTSTable(t *testing.T) {
+	_, qs, conn := newWailsTestEnv(t)
+	querySvc := wailssvc.NewQueryService(qs, zap.NewNop())
+	schemaSvc := wailssvc.NewSchemaService(qs, zap.NewNop())
+
+	_, err := querySvc.Execute(model.ExecuteQueryRequest{
+		ConnectionID: conn.ID,
+		SQL:          "CREATE VIRTUAL TABLE docs USING fts5(title)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := schemaSvc.DetectFTSTable(conn.ID, "docs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info == nil || !info.Enabled {
+		t.Fatalf("expected FTS enabled, got %+v", info)
 	}
 }

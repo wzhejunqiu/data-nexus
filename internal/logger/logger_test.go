@@ -8,6 +8,7 @@ import (
 
 	"github.com/wzhejunqiu/data-nexus/internal/config"
 	"github.com/wzhejunqiu/data-nexus/internal/logger"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestNewDevModeAutoConsole(t *testing.T) {
@@ -83,5 +84,19 @@ func TestNewFileCreatesParentDir(t *testing.T) {
 	log.Info("nested dir test")
 	if !strings.HasSuffix(logPath, "app.log") {
 		t.Fatal("unexpected log path")
+	}
+}
+
+func TestManagerSetLevel(t *testing.T) {
+	mgr, err := logger.NewManager(config.LogConfig{Level: "info", Output: "console"}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr.SetLevel("error")
+	if !mgr.Logger().Core().Enabled(zapcore.ErrorLevel) {
+		t.Fatal("expected error level enabled")
+	}
+	if mgr.Logger().Core().Enabled(zapcore.InfoLevel) {
+		t.Fatal("expected info level disabled")
 	}
 }

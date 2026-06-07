@@ -248,3 +248,59 @@ func TestConnectionStoreUpsertRemote(t *testing.T) {
 		t.Fatalf("unexpected mysql display name %q", mysqlItem.Name)
 	}
 }
+
+func TestConnectionStoreUpdatePostgresSettings(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := store.UpsertRemote(model.RemoteConnectRequest{
+		Type: model.DriverTypePostgres,
+		Name: "pg",
+		Postgres: &model.PostgresConfig{
+			Host: "h1", Port: 5432, Database: "db", User: "u",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := store.UpdatePostgresSettings(item.ID, model.PostgresSettingsUpdate{
+		Host: "h2", Port: 5433, Database: "db2", User: "u2", Schema: "app",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pg := updated.Config.Postgres
+	if pg.Host != "h2" || pg.Port != 5433 || pg.Schema != "app" {
+		t.Fatalf("unexpected postgres settings: %+v", pg)
+	}
+}
+
+func TestConnectionStoreUpdateMySQLSettings(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := store.UpsertRemote(model.RemoteConnectRequest{
+		Type: model.DriverTypeMySQL,
+		Name: "mysql",
+		MySQL: &model.MySQLConfig{
+			Host: "h1", Port: 3306, Database: "db", User: "u",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := store.UpdateMySQLSettings(item.ID, model.MySQLSettingsUpdate{
+		Host: "h2", Port: 3307, Database: "db2", User: "u2", TLS: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	my := updated.Config.MySQL
+	if my.Host != "h2" || my.Port != 3307 || !my.TLS {
+		t.Fatalf("unexpected mysql settings: %+v", my)
+	}
+}

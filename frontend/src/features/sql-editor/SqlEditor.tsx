@@ -78,7 +78,11 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const monacoTheme = resolveTheme(themeMode) === 'dark' ? 'vs-dark' : 'vs'
   const setStatus = useStatusStore((s) => s.setStatus)
   const setEditorSql = useWorkspaceStore((s) => s.setEditorSql)
-  const [sql, setSql] = useState(() => useWorkspaceStore.getState().editorSql || 'SELECT 1;')
+  const [sql, setSql] = useState(() => {
+    const initial = useWorkspaceStore.getState().editorSql || 'SELECT 1;'
+    useWorkspaceStore.getState().setEditorSql(initial)
+    return initial
+  })
 
   const updateSql = useCallback(
     (next: string) => {
@@ -97,9 +101,6 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
     })
   }, [updateSql])
 
-  useEffect(() => {
-    setEditorSql(sql)
-  }, []) // sync initial editor content for SavedQueries
   const [result, setResult] = useState<QueryResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)

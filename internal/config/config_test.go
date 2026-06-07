@@ -198,3 +198,18 @@ func TestDefaultLogFilePathNoHome(t *testing.T) {
 		t.Fatalf("unexpected fallback log path: %s", path)
 	}
 }
+
+func TestLoadCorruptYAMLUsesDefaults(t *testing.T) {
+	home := withHome(t)
+	dir := filepath.Join(home, ".data-nexus")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(config.ConfigPath(), []byte(":\n\tbad"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Load()
+	if cfg.Log.Level != "info" {
+		t.Fatalf("expected default level after corrupt yaml, got %s", cfg.Log.Level)
+	}
+}

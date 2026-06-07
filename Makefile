@@ -182,6 +182,7 @@ test-db-down:
 	$(assert-compose-runtime)
 	$(COMPOSE) -f $(COMPOSE_FILE) down -v
 
+# Optional manual acceptance against real databases (not counted in make test-coverage-go).
 test-db-integration: test-db-up
 	TEST_POSTGRES_DSN='postgres://test:test@127.0.0.1:5432/testdb?sslmode=disable' \
 	TEST_MYSQL_DSN='test:test@tcp(127.0.0.1:3306)/testdb?parseTime=true' \
