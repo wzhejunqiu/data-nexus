@@ -143,6 +143,7 @@ type RowFilter struct {
 
 type FTSInfo struct {
 	Enabled      bool   `json:"enabled"`
+	Schema       string `json:"schema,omitempty"`
 	FTSTableName string `json:"ftsTableName,omitempty"`
 	ContentTable string `json:"contentTable,omitempty"`
 }

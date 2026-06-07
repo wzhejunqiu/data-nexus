@@ -77,16 +77,29 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const themeMode = useThemeStore((s) => s.mode)
   const monacoTheme = resolveTheme(themeMode) === 'dark' ? 'vs-dark' : 'vs'
   const setStatus = useStatusStore((s) => s.setStatus)
-  const [sql, setSql] = useState('SELECT 1;')
+  const setEditorSql = useWorkspaceStore((s) => s.setEditorSql)
+  const [sql, setSql] = useState(() => useWorkspaceStore.getState().editorSql || 'SELECT 1;')
+
+  const updateSql = useCallback(
+    (next: string) => {
+      setSql(next)
+      setEditorSql(next)
+    },
+    [setEditorSql],
+  )
 
   useEffect(() => {
     return useWorkspaceStore.subscribe((state, prev) => {
       const pending = state.pendingSql
       if (!pending || pending === prev.pendingSql) return
-      setSql(pending)
+      updateSql(pending)
       useWorkspaceStore.getState().setPendingSql(null)
     })
-  }, [])
+  }, [updateSql])
+
+  useEffect(() => {
+    setEditorSql(sql)
+  }, []) // sync initial editor content for SavedQueries
   const [result, setResult] = useState<QueryResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -251,7 +264,7 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
     try {
       const dialect = connectionTypeToSqlDialect(activeConnItem?.type)
       const formatted = formatSql(sql, dialect)
-      setSql(formatted)
+      updateSql(formatted)
       editorRef.current?.setValue(formatted)
     } catch {
       pushToast(t('sql.formatError'), 'error')
@@ -300,10 +313,10 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
         <Button variant="outline" size="sm" onClick={formatEditorSQL}>
           {t('sql.format')}
         </Button>
-        <QueryHistory history={history} onSelect={setSql} />
+        <QueryHistory history={history} onSelect={updateSql} />
         <select
           className="rounded border border-border bg-transparent px-2 py-1 text-sm"
-          onChange={(e) => e.target.value && setSql(e.target.value)}
+          onChange={(e) => e.target.value && updateSql(e.target.value)}
           defaultValue=""
         >
           <option value="">{t('sql.pragma')}</option>
@@ -320,7 +333,7 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
           defaultLanguage="sql"
           theme={monacoTheme}
           value={sql}
-          onChange={(v) => setSql(v ?? '')}
+          onChange={(v) => updateSql(v ?? '')}
           onMount={handleEditorMount}
           options={{ minimap: { enabled: false }, fontSize: 13, lineNumbers: 'on' }}
         />

@@ -20,12 +20,12 @@ func (d *Driver) buildBrowseWhere(ctx context.Context, ref tableRef, opts model.
 
 	search := strings.TrimSpace(opts.Search)
 	if search != "" {
-		fts, err := d.DetectFTSTable(ctx, ref.BareName)
+		fts, err := d.DetectFTSTable(ctx, ref.Qualified)
 		if err != nil {
 			return "", nil, err
 		}
 		if fts.Enabled && fts.FTSTableName != "" {
-			ftsClause, ftsArgs, err := ftsSearchSubquery(fts.FTSTableName, search)
+			ftsClause, ftsArgs, err := ftsSearchSubquery(fts.Schema, fts.FTSTableName, search)
 			if err != nil {
 				return "", nil, err
 			}

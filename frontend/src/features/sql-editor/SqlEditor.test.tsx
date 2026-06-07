@@ -3,6 +3,7 @@ import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '@/test/render'
 import { SqlEditor } from './SqlEditor'
 import { useStatusStore } from '@/stores/statusStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 
 vi.mock('@monaco-editor/react', () => ({
   default: ({ value, onChange }: { value: string; onChange?: (v: string | undefined) => void }) => (
@@ -48,6 +49,7 @@ const openConn = {
 describe('SqlEditor', () => {
   beforeEach(() => {
     useStatusStore.setState({ rowCount: null, durationMs: null, operation: null })
+    useWorkspaceStore.setState({ editorSql: 'SELECT 1;', pendingSql: null })
     vi.mocked(navigator.clipboard.writeText).mockClear()
     formatSqlMock.mockClear()
   })

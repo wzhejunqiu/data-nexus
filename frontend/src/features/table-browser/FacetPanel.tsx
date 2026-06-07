@@ -8,12 +8,12 @@ export function FacetPanel({
   connectionId,
   tableName,
   filters,
-  onAddFilter,
+  onToggleFilter,
 }: {
   connectionId: string
   tableName: string
   filters: RowFilter[]
-  onAddFilter: (filter: RowFilter) => void
+  onToggleFilter: (filter: RowFilter) => void
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -55,7 +55,7 @@ export function FacetPanel({
                         active ? 'bg-accent/30 text-accent' : 'bg-muted/30 hover:bg-muted/50'
                       }`}
                       onClick={() =>
-                        onAddFilter({ column: col.name, operator: 'eq', value: tv.value })
+                        onToggleFilter({ column: col.name, operator: 'eq', value: tv.value })
                       }
                     >
                       {tv.value} ({tv.count})

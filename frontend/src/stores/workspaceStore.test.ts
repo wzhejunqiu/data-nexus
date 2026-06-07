@@ -8,6 +8,7 @@ describe('workspaceStore', () => {
       selectedTable: null,
       activeTab: 'data',
       pendingSql: null,
+      editorSql: 'SELECT 1;',
       tableStates: {},
     })
   })
@@ -40,5 +41,10 @@ describe('workspaceStore', () => {
     expect(state.activeConnectionId).toBe('c1')
     expect(state.selectedTable).toBe('orders')
     expect(state.activeTab).toBe('sql')
+  })
+
+  it('setEditorSql updates editor content', () => {
+    useWorkspaceStore.getState().setEditorSql('SELECT 99;')
+    expect(useWorkspaceStore.getState().editorSql).toBe('SELECT 99;')
   })
 })

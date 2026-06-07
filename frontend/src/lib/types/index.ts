@@ -171,6 +171,7 @@ export interface TableProfile {
 
 export interface FTSInfo {
   enabled: boolean
+  schema?: string
   ftsTableName?: string
   contentTable?: string
 }

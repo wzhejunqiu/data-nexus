@@ -69,7 +69,7 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
 
   const { data: ftsInfo } = useQuery({
     queryKey: ['fts', connectionId, tableName],
-    queryFn: () => schemaApi.detectFTS(connectionId, tableName.split('.').pop() ?? tableName),
+    queryFn: () => schemaApi.detectFTS(connectionId, tableName),
   })
 
   useEffect(() => {
@@ -204,11 +204,15 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
     })
   }
 
-  const addFacetFilter = (filter: RowFilter) => {
-    const next = [
-      ...filters.filter((f) => !(f.column === filter.column && f.operator === 'eq')),
-      filter,
-    ]
+  const toggleFacetFilter = (filter: RowFilter) => {
+    const isActive = appliedFilters.some(
+      (f) => f.column === filter.column && f.operator === 'eq' && f.value === filter.value,
+    )
+    const next = isActive
+      ? filters.filter(
+          (f) => !(f.column === filter.column && f.operator === 'eq' && f.value === filter.value),
+        )
+      : [...filters.filter((f) => !(f.column === filter.column && f.operator === 'eq')), filter]
     setFilters(next)
     setAppliedFilters(next)
     setPage(1)
@@ -222,7 +226,7 @@ export function DataGrid({ connectionId, tableName }: { connectionId: string; ta
             connectionId={connectionId}
             tableName={tableName}
             filters={appliedFilters}
-            onAddFilter={addFacetFilter}
+            onToggleFilter={toggleFacetFilter}
           />
           <FilterBuilder
             tableName={tableName}
