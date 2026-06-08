@@ -226,6 +226,8 @@ frontend/src/features/connection/tree/
   useConnectionTree.ts
 frontend/src/features/connection/ConnectionForm/
   ConnectionForm.tsx
+  FormField.tsx
+  connectionFormValidation.ts
   DialectSidebar.tsx
   sections/GeneralSection.tsx
   sections/SecuritySection.tsx
