@@ -11,6 +11,7 @@ import (
 	"github.com/wzhejunqiu/data-nexus/internal/driver/sqlite"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"github.com/wzhejunqiu/data-nexus/internal/sqlutil"
+	"go.uber.org/zap"
 )
 
 type ImportService struct {
@@ -130,7 +131,24 @@ func (s *ImportService) ImportCSV(ctx context.Context, req model.ImportCSVReques
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = tx.Rollback() }()
+	importSuccess := false
+	defer func() {
+		if !importSuccess {
+			s.query.log.Debug("csv import rolled back",
+				zap.String("connection_id", req.ConnectionID),
+				zap.String("table", tableName),
+				zap.String("mode", req.Mode),
+			)
+		}
+		_ = tx.Rollback()
+	}()
+
+	s.query.log.Debug("csv import started",
+		zap.String("connection_id", req.ConnectionID),
+		zap.String("table", tableName),
+		zap.String("mode", req.Mode),
+		zap.Int("column_count", len(dbCols)),
+	)
 
 	if req.Mode == "append" {
 		inserted, err := s.importAppendBatched(ctx, tx, tableName, headers, colMap, dbCols, firstBatch, iter, nullValue)
@@ -150,6 +168,14 @@ func (s *ImportService) ImportCSV(ctx context.Context, req model.ImportCSVReques
 	if err := tx.Commit(); err != nil {
 		return nil, model.ErrSQL(err.Error())
 	}
+	importSuccess = true
+	s.query.log.Debug("csv import completed",
+		zap.String("connection_id", req.ConnectionID),
+		zap.String("table", tableName),
+		zap.String("mode", req.Mode),
+		zap.Int("rows_inserted", result.RowsInserted),
+		zap.Int("rows_updated", result.RowsUpdated),
+	)
 	return result, nil
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/wzhejunqiu/data-nexus/internal/logger"
 	"github.com/wzhejunqiu/data-nexus/internal/secrets"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
+	"github.com/wzhejunqiu/data-nexus/internal/version"
 	wailssvc "github.com/wzhejunqiu/data-nexus/internal/wails"
 	"go.uber.org/zap"
 )
@@ -31,6 +32,13 @@ func main() {
 	}
 	log := logMgr.Logger()
 	defer func() { _ = log.Sync() }()
+
+	log.Info("data nexus starting",
+		zap.String("version", version.Version()),
+		zap.String("log_level", cfg.Log.Level),
+		zap.String("log_output", cfg.Log.Output),
+		zap.Bool("dev_mode", config.IsDevMode()),
+	)
 
 	store, err := service.NewConnectionStore("")
 	if err != nil {
@@ -56,6 +64,12 @@ func main() {
 	cannedQuerySvc := service.NewCannedQueryService(queryStore)
 	exportSvc := service.NewExportService(querySvc)
 	importSvc := service.NewImportService(querySvc)
+
+	log.Debug("services initialized",
+		zap.String("secrets_backend", string(secretStore.ActiveBackend())),
+		zap.Bool("vault_initialized", secretStore.VaultInitialized()),
+		zap.Bool("vault_unlocked", secretStore.VaultUnlocked()),
+	)
 
 	connWails := wailssvc.NewConnectionService(mgr, log)
 	groupWails := wailssvc.NewConnectionGroupService(groupSvc, log)

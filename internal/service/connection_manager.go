@@ -29,6 +29,9 @@ type ConnectionManager struct {
 }
 
 func NewConnectionManager(store *ConnectionStore, secretStore secrets.Store, log *zap.Logger) *ConnectionManager {
+	if log == nil {
+		log = zap.NewNop()
+	}
 	return &ConnectionManager{
 		store:   store,
 		secrets: secretStore,
@@ -83,6 +86,11 @@ func (m *ConnectionManager) CreateConnection(ctx context.Context, req model.Conn
 	if err := m.store.Save(); err != nil {
 		return nil, model.ErrInternal(err.Error())
 	}
+	m.log.Debug("sqlite connection created",
+		zap.String("connection_id", item.ID),
+		zap.String("name", item.Name),
+		zap.String("file_path", req.FilePath),
+	)
 	return item, nil
 }
 
@@ -106,6 +114,12 @@ func (m *ConnectionManager) CreateRemoteConnection(ctx context.Context, req mode
 			return saved, err
 		}
 	}
+	m.log.Debug("remote connection created",
+		zap.String("connection_id", saved.ID),
+		zap.String("name", saved.Name),
+		zap.String("driver", string(saved.Type)),
+		zap.Bool("opened", req.Open),
+	)
 	return saved, nil
 }
 
@@ -125,6 +139,7 @@ func (m *ConnectionManager) TestConnection(ctx context.Context, req model.TestCo
 	if err := drv.Ping(ctx); err != nil {
 		return mapConnectionError(err)
 	}
+	m.log.Debug("connection test succeeded", zap.String("driver", string(req.Type)))
 	return nil
 }
 
@@ -141,8 +156,22 @@ func (m *ConnectionManager) OpenConnection(ctx context.Context, connectionID str
 		return nil, model.ErrSavedNotFound(connectionID)
 	}
 
+	m.log.Debug("opening connection",
+		zap.String("connection_id", connectionID),
+		zap.String("driver", string(saved.Type)),
+		zap.String("name", saved.Name),
+	)
+
 	cfg, err := m.configForOpen(saved)
 	if err != nil {
+		fields := []zap.Field{
+			zap.String("connection_id", connectionID),
+			zap.Error(err),
+		}
+		if appErr, ok := err.(*model.AppError); ok && strings.HasPrefix(appErr.Code, "SECRETS_") {
+			fields = append(fields, zap.String("reason", "secrets_unavailable"))
+		}
+		m.log.Debug("connection open aborted", fields...)
 		return nil, err
 	}
 
@@ -152,7 +181,13 @@ func (m *ConnectionManager) OpenConnection(ctx context.Context, connectionID str
 	}
 	if err := drv.Connect(ctx, cfg); err != nil {
 		_ = drv.Close()
-		return nil, mapConnectionError(err)
+		mapped := mapConnectionError(err)
+		m.log.Debug("connection connect failed",
+			zap.String("connection_id", connectionID),
+			zap.String("driver", string(saved.Type)),
+			zap.Error(mapped),
+		)
+		return nil, mapped
 	}
 
 	conn := &model.Connection{
@@ -165,9 +200,15 @@ func (m *ConnectionManager) OpenConnection(ctx context.Context, connectionID str
 
 	m.mu.Lock()
 	m.active[connectionID] = &Session{Connection: conn, Driver: drv}
+	activeCount := len(m.active)
 	m.mu.Unlock()
 
 	m.touchLastUsed(saved.ID)
+	m.log.Debug("connection opened",
+		zap.String("connection_id", connectionID),
+		zap.String("driver", string(saved.Type)),
+		zap.Int("active_count", activeCount),
+	)
 	return conn, nil
 }
 
@@ -221,9 +262,17 @@ func (m *ConnectionManager) CloseConnection(_ context.Context, connectionID stri
 		return model.ErrConnectionNotFound(connectionID)
 	}
 	if err := sess.Driver.Close(); err != nil {
+		m.log.Warn("connection close failed",
+			zap.String("connection_id", connectionID),
+			zap.Error(err),
+		)
 		return model.ErrInternal(err.Error())
 	}
 	delete(m.active, connectionID)
+	m.log.Debug("connection closed",
+		zap.String("connection_id", connectionID),
+		zap.Int("active_count", len(m.active)),
+	)
 	return nil
 }
 
@@ -241,7 +290,14 @@ func (m *ConnectionManager) RemoveConnection(ctx context.Context, connectionID s
 	if err := m.store.Remove(connectionID); err != nil {
 		return err
 	}
-	return m.store.Save()
+	if err := m.store.Save(); err != nil {
+		return err
+	}
+	m.log.Debug("connection removed",
+		zap.String("connection_id", connectionID),
+		zap.String("driver", string(saved.Type)),
+	)
+	return nil
 }
 
 func (m *ConnectionManager) UpdateConnectionSQLiteSettings(ctx context.Context, connectionID string, update model.SQLiteSettingsUpdate) (*model.SavedConnection, error) {
@@ -258,6 +314,11 @@ func (m *ConnectionManager) UpdateConnectionSQLiteSettings(ctx context.Context, 
 	if err := m.store.Save(); err != nil {
 		return nil, model.ErrInternal(err.Error())
 	}
+	m.log.Debug("sqlite settings updated",
+		zap.String("connection_id", connectionID),
+		zap.Bool("read_only", update.ReadOnly),
+		zap.Bool("wal", update.WAL),
+	)
 	return item, nil
 }
 
@@ -277,6 +338,10 @@ func (m *ConnectionManager) UpdateConnectionPostgresSettings(ctx context.Context
 	if err := m.store.Save(); err != nil {
 		return nil, model.ErrInternal(err.Error())
 	}
+	m.log.Debug("postgres settings updated",
+		zap.String("connection_id", connectionID),
+		zap.String("driver", string(model.DriverTypePostgres)),
+	)
 	return item, nil
 }
 
@@ -296,6 +361,10 @@ func (m *ConnectionManager) UpdateConnectionMySQLSettings(ctx context.Context, c
 	if err := m.store.Save(); err != nil {
 		return nil, model.ErrInternal(err.Error())
 	}
+	m.log.Debug("mysql settings updated",
+		zap.String("connection_id", connectionID),
+		zap.String("driver", string(model.DriverTypeMySQL)),
+	)
 	return item, nil
 }
 
@@ -317,6 +386,10 @@ func (m *ConnectionManager) RenameConnection(connectionID, name string) (*model.
 	if err := m.store.Save(); err != nil {
 		return nil, model.ErrInternal(err.Error())
 	}
+	m.log.Debug("connection renamed",
+		zap.String("connection_id", connectionID),
+		zap.String("new_name", name),
+	)
 	return item, nil
 }
 
@@ -337,26 +410,35 @@ func (m *ConnectionManager) PersistOpenConnections() error {
 	}
 	m.mu.RUnlock()
 	m.store.SetOpenConnectionIDs(ids)
+	m.log.Debug("persisting open connections", zap.Strings("connection_ids", ids))
 	return m.store.Save()
 }
 
 func (m *ConnectionManager) RestoreConnectionsOnStartup(ctx context.Context) error {
 	if !m.store.RestoreOpenOnStartup() {
+		m.log.Debug("skip restore connections, feature disabled")
 		return nil
 	}
-	for _, id := range m.store.OpenConnectionIDs() {
+	ids := m.store.OpenConnectionIDs()
+	m.log.Debug("restoring connections on startup", zap.Int("count", len(ids)), zap.Strings("connection_ids", ids))
+	restored := 0
+	for _, id := range ids {
 		saved, ok := m.store.FindByID(id)
 		if !ok {
+			m.log.Debug("skip restore, connection not found", zap.String("connection_id", id))
 			continue
 		}
 		if saved.Type != model.DriverTypeSQLite && !m.secrets.VaultUnlocked() && m.secrets.ActiveBackend() == secrets.BackendVault {
-			m.log.Debug("skip restore remote connection, vault locked", zap.String("id", id))
+			m.log.Debug("skip restore remote connection, vault locked", zap.String("connection_id", id))
 			continue
 		}
 		if _, err := m.OpenConnection(ctx, id); err != nil {
-			m.log.Warn("failed to restore connection", zap.String("id", id), zap.Error(err))
+			m.log.Warn("failed to restore connection", zap.String("connection_id", id), zap.Error(err))
+			continue
 		}
+		restored++
 	}
+	m.log.Debug("connection restore finished", zap.Int("restored", restored), zap.Int("attempted", len(ids)))
 	return nil
 }
 
@@ -382,7 +464,15 @@ func (m *ConnectionManager) AttachDatabase(ctx context.Context, connectionID, fi
 	if err != nil {
 		return err
 	}
-	return drv.Attach(ctx, req.FilePath, alias)
+	if err := drv.Attach(ctx, req.FilePath, alias); err != nil {
+		return err
+	}
+	m.log.Debug("database attached",
+		zap.String("connection_id", connectionID),
+		zap.String("alias", alias),
+		zap.String("file_path", req.FilePath),
+	)
+	return nil
 }
 
 func (m *ConnectionManager) DetachDatabase(ctx context.Context, connectionID, alias string) error {
@@ -396,7 +486,14 @@ func (m *ConnectionManager) DetachDatabase(ctx context.Context, connectionID, al
 	if err != nil {
 		return err
 	}
-	return drv.Detach(ctx, alias)
+	if err := drv.Detach(ctx, alias); err != nil {
+		return err
+	}
+	m.log.Debug("database detached",
+		zap.String("connection_id", connectionID),
+		zap.String("alias", alias),
+	)
+	return nil
 }
 
 func (m *ConnectionManager) ListAttachedDatabases(ctx context.Context, connectionID string) ([]model.AttachedDatabase, error) {
@@ -423,9 +520,13 @@ func (m *ConnectionManager) Driver(connectionID string) (driver.Driver, error) {
 func (m *ConnectionManager) CloseAll() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	count := len(m.active)
 	for id, sess := range m.active {
 		_ = sess.Driver.Close()
 		delete(m.active, id)
+	}
+	if count > 0 {
+		m.log.Debug("all connections closed", zap.Int("count", count))
 	}
 }
 

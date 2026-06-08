@@ -21,7 +21,7 @@ func call[T any](log *zap.Logger, method string, fn func() (T, error)) (T, error
 		log.Warn("service call failed", append(fields, zap.Error(err))...)
 		return result, err
 	}
-	log.Info("service call", fields...)
+	log.Debug("service call", fields...)
 	return result, nil
 }
 

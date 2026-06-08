@@ -10,7 +10,10 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useToastStore } from '@/components/ui/Toast'
 import { connectionGroupApi } from '@/lib/api/connectionGroup'
+import { formatError } from '@/lib/api/errors'
 import type { GroupMemberRef, SidebarRootItemRef } from '@/lib/types'
 import { reorderMemberItems, reorderRootItems } from './sidebarOrder'
 
@@ -30,6 +33,8 @@ export function SidebarDndContext({
   rootItems: SidebarRootItemRef[]
   groupMembers: Record<string, GroupMemberRef[]>
 }) {
+  const { t } = useTranslation()
+  const pushToast = useToastStore((s) => s.push)
   const [active, setActive] = useState<SidebarDragItem | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -76,8 +81,8 @@ export function SidebarDndContext({
         return
       }
       onRefresh()
-    } catch {
-      // API errors surface via global toast handler
+    } catch (err) {
+      pushToast(formatError(t, err), 'error')
     }
   }
 

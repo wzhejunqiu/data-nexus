@@ -9,6 +9,7 @@ import (
 
 	"github.com/wzhejunqiu/data-nexus/internal/csvutil"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
+	"go.uber.org/zap"
 )
 
 type ExportService struct {
@@ -67,6 +68,13 @@ func (s *ExportService) ExportTableToFile(
 		return model.ErrInternal(err.Error())
 	}
 
+	s.query.log.Debug("table export started",
+		zap.String("connection_id", req.ConnectionID),
+		zap.String("table", req.TableName),
+		zap.String("path", path),
+		zap.Int("column_count", len(columnNames)),
+	)
+
 	exported := 0
 	emitProgress := func() {
 		if onProgress != nil {
@@ -77,6 +85,11 @@ func (s *ExportService) ExportTableToFile(
 	for {
 		if err := ctx.Err(); err != nil {
 			if errors.Is(err, context.Canceled) {
+				s.query.log.Debug("export canceled",
+					zap.String("connection_id", req.ConnectionID),
+					zap.String("table", req.TableName),
+					zap.Int("rows_exported", exported),
+				)
 				return model.ErrExportCancelled()
 			}
 			return err
@@ -85,6 +98,11 @@ func (s *ExportService) ExportTableToFile(
 		batch, err := cursor.NextBatch(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
+				s.query.log.Debug("export canceled",
+					zap.String("connection_id", req.ConnectionID),
+					zap.String("table", req.TableName),
+					zap.Int("rows_exported", exported),
+				)
 				return model.ErrExportCancelled()
 			}
 			return err
@@ -105,6 +123,13 @@ func (s *ExportService) ExportTableToFile(
 		return model.ErrInternal(err.Error())
 	}
 	success = true
+	s.query.log.Debug("table export completed",
+		zap.String("connection_id", req.ConnectionID),
+		zap.String("table", req.TableName),
+		zap.String("path", path),
+		zap.String("format", format.Delimiter),
+		zap.Int("rows_exported", exported),
+	)
 	return nil
 }
 

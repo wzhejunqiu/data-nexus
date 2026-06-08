@@ -39,27 +39,43 @@ func (s *SecretsService) VaultUnlocked() (bool, error) {
 }
 
 func (s *SecretsService) InitVault(masterPassword string) error {
-	return callVoid(s.log, "SecretsService.InitVault", func() error {
+	err := callVoid(s.log, "SecretsService.InitVault", func() error {
 		return s.store().InitVault(masterPassword)
 	})
+	if err == nil {
+		s.log.Debug("vault initialized")
+	}
+	return err
 }
 
 func (s *SecretsService) UnlockVault(masterPassword string) error {
-	return callVoid(s.log, "SecretsService.UnlockVault", func() error {
+	err := callVoid(s.log, "SecretsService.UnlockVault", func() error {
 		return s.store().UnlockVault(masterPassword)
 	})
+	if err == nil {
+		s.log.Debug("vault unlocked")
+	}
+	return err
 }
 
 func (s *SecretsService) LockVault() error {
-	return callVoid(s.log, "SecretsService.LockVault", func() error {
+	err := callVoid(s.log, "SecretsService.LockVault", func() error {
 		return s.store().LockVault()
 	})
+	if err == nil {
+		s.log.Debug("vault locked")
+	}
+	return err
 }
 
 func (s *SecretsService) ChangeVaultPassword(oldPassword, newPassword string) error {
-	return callVoid(s.log, "SecretsService.ChangeVaultPassword", func() error {
+	err := callVoid(s.log, "SecretsService.ChangeVaultPassword", func() error {
 		return s.store().ChangeVaultPassword(oldPassword, newPassword)
 	})
+	if err == nil {
+		s.log.Debug("vault password changed")
+	}
+	return err
 }
 
 func (s *SecretsService) IsVaultRequiredForRemote() (bool, error) {

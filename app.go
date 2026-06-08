@@ -58,23 +58,33 @@ func (a *App) startup(ctx context.Context) {
 	a.appSvc.SetContext(ctx)
 	runtime.OnFileDrop(ctx, a.handleFileDrop)
 
+	a.log.Debug("app startup begin")
+
 	if a.startupDB != "" {
+		a.log.Debug("opening startup database", zap.String("path", a.startupDB))
 		if conn, err := a.conn.OpenConnectionFromFile(model.ConnectRequest{FilePath: a.startupDB}); err != nil {
 			a.log.Warn("failed to open startup database", zap.String("path", a.startupDB), zap.Error(err))
 			a.emitError(err)
 		} else {
+			a.log.Debug("startup database opened", zap.String("connection_id", conn.ID))
 			a.emitConnectionOpened(conn.ID)
 		}
 	} else if err := a.mgr.RestoreConnectionsOnStartup(ctx); err != nil {
 		a.log.Warn("failed to restore connections", zap.Error(err))
+	} else {
+		a.log.Debug("startup connection restore finished")
 	}
 }
 
 func (a *App) shutdown(_ context.Context) {
+	a.log.Debug("app shutdown begin")
 	if err := a.mgr.PersistOpenConnections(); err != nil {
 		a.log.Warn("failed to persist open connections", zap.Error(err))
+	} else {
+		a.log.Debug("open connections persisted")
 	}
 	a.mgr.CloseAll()
+	a.log.Debug("app shutdown complete")
 }
 
 func (a *App) emitConnectionOpened(connectionID string) {

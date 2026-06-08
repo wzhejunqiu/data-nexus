@@ -8,6 +8,7 @@ import (
 
 	"github.com/wzhejunqiu/data-nexus/internal/driver/export"
 	"github.com/wzhejunqiu/data-nexus/internal/executionlog"
+	"github.com/wzhejunqiu/data-nexus/internal/logutil"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"go.uber.org/zap"
 )
@@ -63,12 +64,25 @@ func (s *QueryService) Execute(ctx context.Context, req model.ExecuteQueryReques
 	if err != nil {
 		return nil, err
 	}
+	s.log.Debug("executing sql",
+		zap.String("connection_id", req.ConnectionID),
+		zap.String("kind", string(kind)),
+		zap.Int("sql_len", len(sqlText)),
+		zap.String("sql_preview", logutil.SQLPreview(sqlText, 120)),
+		zap.Int("max_rows", maxRows),
+	)
 	if kind == model.StatementWrite {
 		if drv.ReadOnly() {
 			return nil, model.ErrReadOnly()
 		}
 		execResult, err := drv.Exec(ctx, sqlText, req.Params)
 		if err != nil {
+			s.log.Debug("sql execution failed",
+				zap.String("connection_id", req.ConnectionID),
+				zap.String("kind", string(kind)),
+				zap.String("sql_preview", logutil.SQLPreview(sqlText, 120)),
+				zap.Error(err),
+			)
 			return nil, err
 		}
 		resp := &model.QueryResponse{
@@ -77,11 +91,23 @@ func (s *QueryService) Execute(ctx context.Context, req model.ExecuteQueryReques
 			LastInsertID: execResult.LastInsertID,
 			DurationMs:   execResult.Duration.Milliseconds(),
 		}
+		s.log.Debug("sql exec completed",
+			zap.String("connection_id", req.ConnectionID),
+			zap.Int64("rows_affected", execResult.RowsAffected),
+			zap.Int64("last_insert_id", execResult.LastInsertID),
+			zap.Int64("duration_ms", resp.DurationMs),
+		)
 		s.recordExecution(ctx, req.ConnectionID, sqlText, resp)
 		return resp, nil
 	}
 	result, err := drv.QueryRows(ctx, sqlText, req.Params, maxRows)
 	if err != nil {
+		s.log.Debug("sql execution failed",
+			zap.String("connection_id", req.ConnectionID),
+			zap.String("kind", string(kind)),
+			zap.String("sql_preview", logutil.SQLPreview(sqlText, 120)),
+			zap.Error(err),
+		)
 		return nil, err
 	}
 	resp := &model.QueryResponse{
@@ -92,6 +118,12 @@ func (s *QueryService) Execute(ctx context.Context, req model.ExecuteQueryReques
 		Truncated:  result.Truncated,
 		DurationMs: result.Duration.Milliseconds(),
 	}
+	s.log.Debug("sql query completed",
+		zap.String("connection_id", req.ConnectionID),
+		zap.Int("row_count", result.RowCount),
+		zap.Bool("truncated", result.Truncated),
+		zap.Int64("duration_ms", resp.DurationMs),
+	)
 	s.recordExecution(ctx, req.ConnectionID, sqlText, resp)
 	return resp, nil
 }
@@ -266,5 +298,11 @@ func (s *QueryService) UpdateCellsBatch(ctx context.Context, req model.UpdateCel
 	if err != nil {
 		return nil, err
 	}
+	s.log.Debug("cells batch updated",
+		zap.String("connection_id", req.ConnectionID),
+		zap.String("table", req.TableName),
+		zap.Int("change_count", len(req.Changes)),
+		zap.Int("updated_count", count),
+	)
 	return &model.UpdateCellsBatchResult{UpdatedCount: count}, nil
 }
