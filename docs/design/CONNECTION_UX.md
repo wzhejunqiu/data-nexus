@@ -21,8 +21,9 @@
 
 ```
 启动应用
-  → 加载 connections.json
-  → 显示主界面（连接列表 + 空主区或上次 Tab 布局）
+  → 打开 catalog.db（不存在则创建 schema + 默认 Group）
+  → 加载 Group 树 + 连接列表
+  → 显示主界面
   → 不自动 OpenConnection（除非用户开启「启动恢复已打开连接」）
 ```
 
@@ -67,7 +68,7 @@
 | **打开**（○ 连接） | 双击连接 item，或右键 → 打开 → `OpenConnection(savedId)` |
 | **关闭**（● 连接） | 右键 → 关闭，或 MenuBar → 文件 → 关闭当前连接 |
 | **删除** | 右键 → 删除 → `RemoveConnection`（打开中需 confirm） |
-| **重命名 / 编辑** | 右键 → 重命名 / 编辑连接 |
+| **重命名 / 编辑** | 右键 → **编辑连接**（含显示名称） |
 | **双击 ○ 或 ● 连接** | 打开：未打开则 `OpenConnection`；已打开则设为当前 `activeConnectionId` |
 | **单击连接** | 仅选中/高亮，不 open |
 | **点击表名** | 主区切到「数据」Tab，上下文为当前连接 |
@@ -77,17 +78,20 @@
 
 ## 5. v0.5 连接列表与右键菜单
 
-v0.5 起，连接 item **不再** 显示行内「打开 / 关闭 / 重命名 / 编辑 / 删除」按钮；改为 **右键 ContextMenu**。
+v0.5 起，连接 item **不再** 显示行内「打开 / 关闭 / 编辑 / 删除」按钮；改为 **右键 ContextMenu**。
 
-| 菜单项 | 显示条件 | API |
-|--------|----------|-----|
-| 打开 | `status !== 'open'` | `OpenConnection` |
-| 关闭 | `status === 'open'` | `CloseConnection` |
-| 重命名 | 始终 | `RenameConnection` + Dialog |
-| 编辑连接… | 始终 | `UpdateConnection*Settings` + Dialog |
+| 菜单项 | 显示条件 | API / 行为 |
+|--------|----------|------------|
+| 打开连接 | `status !== 'open'` | `OpenConnection` |
+| 关闭连接 | `status === 'open'` | `CloseConnection` |
+| 编辑连接 | 始终显示；**仅** `status !== 'open'` 可用 | `EditConnectionDialog` + `ConnectionForm`（含 **显示名称**） |
 | 删除 | 始终（danger） | `RemoveConnection` |
 
 **双击** 为打开连接的主入口（见 §4）。
+
+**显示名称（重命名）：** 在 **编辑连接** Dialog 的「显示名称」字段修改，与连接配置 **一并保存**；**无** 单独重命名菜单或 inline 编辑。
+
+**编辑连接：** 仅 **连接关闭** 时可编辑；已 open 时右键「编辑连接」**disabled**（Tooltip：请先关闭连接）。
 
 **自左侧移除：** 「新建连接」按钮、SQLite `readOnly`/`wal` 勾选（迁入 `NewConnectionDialog`）、「启动时恢复已打开连接」（迁入 `SettingsDialog`）。
 
@@ -134,11 +138,17 @@ v0.5 起，连接 item **不再** 显示行内「打开 / 关闭 / 重命名 / �
 | PostgreSQL | PG | `user@host:port/database` |
 | MySQL | MY | `user@host:port/database` |
 
-### 7.4 Schema / Database 切换
+### 7.4 Schema / Database 浏览（v0.5 层级树）
 
-- **PostgreSQL**：侧边栏 schema 输入 + 应用 → `UpdateConnectionPostgresSettings` → 重连 → 刷新表列表
-- **MySQL**：database 切换同理
-- **Attach**：仅 SQLite 连接显示
+v0.5 起，database/schema **不再**用手输框切换，改为连接列表内 **可展开层级树**。详见 [v0.5/CONNECTION_TREE.md](../implementation/v0.5/CONNECTION_TREE.md)。
+
+| 类型 | 树层级 |
+|------|--------|
+| SQLite | 连接 → `main` / attach alias → 表 |
+| MySQL | 连接 → database → 表 |
+| PostgreSQL | 连接 → database → schema → 表 |
+
+**Attach：** 仅 SQLite；attach 库为 L1 节点，与 `main` 同级。
 
 ### 7.5 连接失败文案
 

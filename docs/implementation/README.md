@@ -21,7 +21,8 @@
 | v0.3 | [phase-v0.3-exploration.md](./phase-v0.3-exploration.md) | 探索型差异化（列画像、Filter→SQL 等） | ✅ 已完成 |
 | v0.4 | [phase-v0.4-multi-connection.md](./phase-v0.4-multi-connection.md) | PostgreSQL / MySQL（以 **v0.4.0** 发布） | ✅ 已验收（待 tag） |
 | | [phase-v0.4-manual-checklist.md](./phase-v0.4-manual-checklist.md) | v0.4 手动验收清单 | ✅ |
-| v0.5 | [phase-v0.5.md](./phase-v0.5.md) | 桌面 UI 重构（MenuBar、连接右键、SQL 历史） | |
+| v0.5 | [phase-v0.5.md](./phase-v0.5.md) | 桌面 UI 重构（MenuBar、连接右键、连接表单、SQL 历史） | |
+| | [v0.5/](./v0.5/README.md) | v0.5 实施方案 · 设计 · 验收 | |
 | v0.5.1 | [phase-v0.5.1.md](./phase-v0.5.1.md) | macOS ⌘, 设置；快捷键可配置 | |
 | v0.6 | [phase-v0.6.md](./phase-v0.6.md) | 纯 Headless REST（`--api`） | |
 | v0.7 | [phase-v0.7.md](./phase-v0.7.md) | Server 模式（`--server` 浏览器 UI） | |

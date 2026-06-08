@@ -137,7 +137,7 @@ MVP 采用单页应用；**无 Welcome 页**，启动即进入主工作台。见
 |------|------|
 | **双击** 连接 item | **打开连接**：未打开 → `OpenConnection`；已打开 → 设为 `activeConnectionId` |
 | **单击** 连接 item | 仅选中/高亮，不 open |
-| **右键** 连接 item | 上下文菜单：打开/关闭、重命名、编辑连接、删除 |
+| **右键** 连接 item | 上下文菜单：打开/关闭、编辑连接、删除 |
 | 点击表名 | 主区绑定 `connectionId + tableName` |
 | SQL Tab | 连接下拉切换 SQL 上下文；保留 per-connection 历史下拉 |
 
@@ -147,7 +147,8 @@ MVP 采用单页应用；**无 Welcome 页**，启动即进入主工作台。见
 |--------|------|
 | 打开 | `status !== 'open'` |
 | 关闭 | `status === 'open'` |
-| 重命名 / 编辑连接 | 始终 |
+| 重命名 | —（displayName 在 **编辑连接** Dialog） |
+| 编辑连接 | **仅** `status !== 'open'`（已 open 时 disabled；含显示名称） |
 | 删除 | 始终（danger；打开中需 confirm） |
 
 **自左侧移除（v0.5）：** 「新建连接」按钮、`readOnly`/`wal` 勾选（迁入新建连接 Dialog）、「启动时恢复已打开连接」（迁入设置）。

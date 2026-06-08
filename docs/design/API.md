@@ -37,6 +37,7 @@ interface AppError {
 | `NOT_CONNECTED` | 已废弃 → 使用 `CONNECTION_NOT_FOUND` |
 | `CONNECTION_NOT_FOUND` | 连接 ID 不存在或未打开 |
 | `CONNECTION_ALREADY_OPEN` | 连接已处于打开状态 |
+| `CONNECTION_OPEN` | 连接处于打开状态，拒绝修改连接配置（须先关闭） |
 | `CONNECTION_FAILED` | 无法打开数据库 |
 | `DATABASE_LOCKED` | SQLite 数据库被锁定 |
 | `TABLE_NOT_FOUND` | 表/视图不存在 |
@@ -186,7 +187,9 @@ func (s *ConnectionService) UpdateConnectionPostgresSettings(connectionID string
 func (s *ConnectionService) UpdateConnectionMySQLSettings(connectionID string, update MySQLSettingsUpdate) (*SavedConnection, error)
 ```
 
-更新远程连接配置；`password` 可选（空表示不修改）。若连接已打开则自动重连。
+更新远程连接配置；`password` 可选（空表示不修改）。
+
+**v0.5 约束：** 连接 **必须已关闭**（不在活跃 map）方可更新；若已 open → `CONNECTION_OPEN`。**不再**自动重连（用户须先 `CloseConnection`，编辑后重新 `OpenConnection`）。
 
 ### 3.3 OpenConnection
 
@@ -222,11 +225,13 @@ func (s *ConnectionService) RemoveConnection(connectionId string) error
 
 若仍打开则先 `CloseConnection`，再从 `connections.json` 删除。
 
-### 3.7 RenameConnection（P1）
+### 3.7 RenameConnection（P1，v0.5 UI 不暴露）
 
 ```go
 func (s *ConnectionService) RenameConnection(connectionId string, name string) (*SavedConnection, error)
 ```
+
+**v0.5：** 前端 **不** 提供单独重命名入口；`displayName` 随 `UpdateConnection*` 在 **编辑连接** Dialog 一并保存。本 API 可保留供兼容或内部复用。
 
 ### 3.8 SetRestoreOpenOnStartup（P1）
 
