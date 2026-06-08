@@ -3,6 +3,9 @@ package wails
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"sync"
 
@@ -103,5 +106,38 @@ func (s *AppService) GetVersion() (*model.VersionInfo, error) {
 			Platform: runtime.GOOS,
 			Arch:     runtime.GOARCH,
 		}, nil
+	})
+}
+
+func (s *AppService) GetPlatform() (string, error) {
+	return call(s.log, "AppService.GetPlatform", func() (string, error) {
+		return runtime.GOOS + "/" + runtime.GOARCH, nil
+	})
+}
+
+func (s *AppService) RevealFileInExplorer(filePath string) error {
+	return callVoid(s.log, "AppService.RevealFileInExplorer", func() error {
+		if filePath == "" {
+			return model.ErrInvalidRequest("file path is required")
+		}
+		if _, err := os.Stat(filePath); err != nil {
+			if os.IsNotExist(err) {
+				return model.ErrInvalidRequest("file not found")
+			}
+			return model.ErrInternal(err.Error())
+		}
+		var cmd *exec.Cmd
+		switch runtime.GOOS {
+		case "darwin":
+			cmd = exec.Command("open", "-R", filePath)
+		case "windows":
+			cmd = exec.Command("explorer", "/select,", filepath.Clean(filePath))
+		default:
+			cmd = exec.Command("xdg-open", filepath.Dir(filePath))
+		}
+		if err := cmd.Start(); err != nil {
+			return model.ErrInternal(err.Error())
+		}
+		return nil
 	})
 }

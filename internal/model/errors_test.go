@@ -22,6 +22,7 @@ func TestAppErrorConstructors(t *testing.T) {
 		{"invalid request", model.ErrInvalidRequest("bad"), "INVALID_REQUEST"},
 		{"connection not found", model.ErrConnectionNotFound("id"), "CONNECTION_NOT_FOUND"},
 		{"already open", model.ErrConnectionAlreadyOpen("id"), "CONNECTION_ALREADY_OPEN"},
+		{"connection open for update", model.ErrConnectionOpen("id"), "CONNECTION_OPEN"},
 		{"saved not found", model.ErrSavedNotFound("id"), "SAVED_NOT_FOUND"},
 		{"connection failed", model.ErrConnectionFailed("msg"), "CONNECTION_FAILED"},
 		{"database locked", model.ErrDatabaseLocked(), "DATABASE_LOCKED"},

@@ -131,7 +131,7 @@ func TestSchemaAndTableServices(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tables, err := schemaSvc.ListTables(conn.ID)
+	tables, err := schemaSvc.ListTables(conn.ID, model.ListTablesOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,6 +517,10 @@ func TestConnectionServiceOpenFromFile(t *testing.T) {
 func TestConnectionServiceUpdateSQLiteSettings(t *testing.T) {
 	mgr, _, conn := newWailsTestEnv(t)
 	svc := wailssvc.NewConnectionService(mgr, zap.NewNop())
+
+	if err := svc.CloseConnection(conn.ID); err != nil {
+		t.Fatal(err)
+	}
 
 	updated, err := svc.UpdateConnectionSQLiteSettings(conn.ID, model.SQLiteSettingsUpdate{ReadOnly: true})
 	if err != nil {

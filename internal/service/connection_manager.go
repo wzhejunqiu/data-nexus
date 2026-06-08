@@ -245,6 +245,9 @@ func (m *ConnectionManager) RemoveConnection(ctx context.Context, connectionID s
 }
 
 func (m *ConnectionManager) UpdateConnectionSQLiteSettings(ctx context.Context, connectionID string, update model.SQLiteSettingsUpdate) (*model.SavedConnection, error) {
+	if err := m.ensureConnectionClosed(connectionID); err != nil {
+		return nil, err
+	}
 	if update.ReadOnly {
 		update.WAL = false
 	}
@@ -255,10 +258,13 @@ func (m *ConnectionManager) UpdateConnectionSQLiteSettings(ctx context.Context, 
 	if err := m.store.Save(); err != nil {
 		return nil, model.ErrInternal(err.Error())
 	}
-	return item, m.reopenIfActive(ctx, connectionID)
+	return item, nil
 }
 
 func (m *ConnectionManager) UpdateConnectionPostgresSettings(ctx context.Context, connectionID string, update model.PostgresSettingsUpdate) (*model.SavedConnection, error) {
+	if err := m.ensureConnectionClosed(connectionID); err != nil {
+		return nil, err
+	}
 	item, err := m.store.UpdatePostgresSettings(connectionID, update)
 	if err != nil {
 		return nil, err
@@ -271,10 +277,13 @@ func (m *ConnectionManager) UpdateConnectionPostgresSettings(ctx context.Context
 	if err := m.store.Save(); err != nil {
 		return nil, model.ErrInternal(err.Error())
 	}
-	return item, m.reopenIfActive(ctx, connectionID)
+	return item, nil
 }
 
 func (m *ConnectionManager) UpdateConnectionMySQLSettings(ctx context.Context, connectionID string, update model.MySQLSettingsUpdate) (*model.SavedConnection, error) {
+	if err := m.ensureConnectionClosed(connectionID); err != nil {
+		return nil, err
+	}
 	item, err := m.store.UpdateMySQLSettings(connectionID, update)
 	if err != nil {
 		return nil, err
@@ -287,21 +296,17 @@ func (m *ConnectionManager) UpdateConnectionMySQLSettings(ctx context.Context, c
 	if err := m.store.Save(); err != nil {
 		return nil, model.ErrInternal(err.Error())
 	}
-	return item, m.reopenIfActive(ctx, connectionID)
+	return item, nil
 }
 
-func (m *ConnectionManager) reopenIfActive(ctx context.Context, connectionID string) error {
+func (m *ConnectionManager) ensureConnectionClosed(connectionID string) error {
 	m.mu.RLock()
 	_, isOpen := m.active[connectionID]
 	m.mu.RUnlock()
-	if !isOpen {
-		return nil
+	if isOpen {
+		return model.ErrConnectionOpen(connectionID)
 	}
-	if err := m.CloseConnection(ctx, connectionID); err != nil {
-		return err
-	}
-	_, err := m.OpenConnection(ctx, connectionID)
-	return err
+	return nil
 }
 
 func (m *ConnectionManager) RenameConnection(connectionID, name string) (*model.SavedConnection, error) {

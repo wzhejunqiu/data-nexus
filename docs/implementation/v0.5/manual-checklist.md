@@ -1,6 +1,6 @@
 # v0.5 手动验收清单
 
-> 桌面 UI 重构 · 最后更新: 2026-06-08  
+> 桌面 UI 重构 · 最后更新: 2026-06-08（含文件→新建分组、macOS 系统菜单、Attach/DnD）  
 > **依据:** [phase-v0.5.md](../phase-v0.5.md) · [DESIGN.md](./DESIGN.md)
 
 **自动化测试（实施完成后）:**
@@ -15,26 +15,48 @@ cd frontend && npm test
 
 ## MenuBar 与 Header
 
+### Win / Linux（应用内 MenuBar）
+
 - [ ] 顶栏显示 **文件 / 视图 / 帮助** 三个菜单
-- [ ] 右侧显示「已打开 N 个连接」（由 `AppShell` 从 `connectionApi.list()` 派生，非后端接口）
+- [ ] 右侧显示「已打开 N 个连接」
 - [ ] Header **无** 独立「设置」按钮
 - [ ] 导入/导出向导期间 MenuBar 可见；File 相关项 disabled；右侧显示向导标题
+- [ ] **退出**（文件菜单）→ 应用退出
 
-### 文件菜单
+### macOS（系统菜单栏）
 
-- [ ] **新建连接…** → 打开 `NewConnectionDialog`
-- [ ] **打开 SQLite 文件…** → 文件对话框 → 连接打开并出现在列表
-- [ ] **关闭当前连接** → 关闭当前活跃连接；无活跃连接时 disabled
-- [ ] **退出**（Win/Linux MenuBar 或 macOS App 菜单）→ 应用退出
+- [ ] 屏幕顶部系统栏：**Data Nexus / 文件 / 编辑 / 视图 / 窗口 / 帮助**
+- [ ] 窗口内顶栏 **无** 文件/视图/帮助 Menubar，仅右侧「已打开 N 个连接」
+- [ ] App 菜单 **Quit**（`Cmd+Q`）可用
+- [ ] **无重复**：窗口内不出现第二套 File/View/Help
 
-### 视图菜单
+### 菜单项（两平台等价）
 
-- [ ] **SQL 执行历史…** → 打开全局历史 Dialog
-- [ ] **设置…** → 打开设置 Dialog
+#### 文件
 
-### 帮助菜单
+- [ ] **新建连接…** → `NewConnectionDialog`
+- [ ] **打开 SQLite 文件…** → 文件对话框 → 连接打开
+- [ ] **关闭当前连接** → 关闭活跃连接；无活跃时 disabled
+- [ ] **新建分组…** → 创建顶层 Group（名称默认「新分组」）；侧边栏刷新
 
-- [ ] **关于 Data Nexus** → 打开 About Dialog（非原生 MessageDialog）；平台信息来自 Go `GetPlatform()`
+#### 打开 SQLite 文件（快速通道）
+
+- [ ] 选 `.db` → 保存到 catalog（显示名=文件名）→ **立即 open**
+- [ ] 同路径再次打开 → 复用已有连接记录
+- [ ] 与「新建连接…」区别：不经 Dialog，默认可写、非 WAL
+
+#### 退出
+
+- [ ] **退出**（Win/Linux 文件菜单）→ 应用退出
+
+#### 视图
+
+- [ ] **SQL 执行历史…** → 全局历史 Dialog
+- [ ] **设置…** → 设置 Dialog（macOS：`Cmd+,`）
+
+#### 帮助
+
+- [ ] **关于 Data Nexus** → About Dialog（非原生 MessageDialog）
 
 ### 快捷键（v0.5 固定）
 
@@ -45,11 +67,11 @@ cd frontend && npm test
 
 ---
 
-## Go 原生菜单
+## Go 原生菜单（macOS 专项）
 
-- [ ] macOS：菜单栏 **仅** App / Edit / Window（无 File / View / Help）
-- [ ] macOS App 菜单 **Quit**（`Cmd+Q`）可用
-- [ ] **无重复** 的 Open / Settings / About / Theme / Language 原生项
+- [ ] `app_menu_darwin.go`：File / View / Help 在 **系统菜单栏**
+- [ ] 菜单项触发 `EventsEmit` → 前端 Dialog 正确打开（含 `app:new-group`）
+- [ ] `handleFileDrop` emit `app:file-drop`（非 Go 侧直接 open）
 
 ---
 
@@ -59,6 +81,8 @@ cd frontend && npm test
 - [ ] **游离连接** 与 📁「我的连接」**第一层同级**（相同缩进）
 - [ ] Group 名称 **原地重命名**：Enter 生效，无 Dialog
 - [ ] Group 右键：**新建 / 重命名 / 删除**
+- [ ] **文件 → 新建分组…** 与 **根层空白处右键 → 新建分组** 等价（删除全部分组后可恢复）
+- [ ] 无分组时显示「在空白处右键可新建分组」提示
 - [ ] 拖 Group 改 **父层级**；拖连接进 Group 或根层游离
 - [ ] 拖 Group / 连接改 **同级顺序**（`sort_order`）
 - [ ] 连接右键：**打开连接 / 关闭连接 / 编辑连接 / 删除**（**无**单独重命名）

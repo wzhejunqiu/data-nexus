@@ -1,4 +1,8 @@
-import { ListQueryHistory, ListSqlExecutions } from '../../../wailsjs/go/wails/SqlExecutionService'
+import {
+  ListAllSqlExecutions,
+  ListQueryHistory,
+  ListSqlExecutions,
+} from '../../../wailsjs/go/wails/SqlExecutionService'
 import type { SqlExecutionList, SqlExecutionRecord } from '../types'
 import { mapWailsError } from './errors'
 
@@ -44,6 +48,20 @@ export const queryHistoryApi = {
   listExecutions: (connectionId: string, limit = 50) =>
     wrap(async (): Promise<SqlExecutionList> => {
       const res = await ListSqlExecutions(connectionId, limit)
+      const items = (res.items ?? []) as Array<{
+        id?: number
+        connectionId: string
+        sql: string
+        kind: unknown
+        effectRows: number
+        durationMs: number
+        executedAt: unknown
+      }>
+      return { items: items.map((item) => mapRecord(item)) }
+    }),
+  listAllExecutions: (limit = 50) =>
+    wrap(async (): Promise<SqlExecutionList> => {
+      const res = await ListAllSqlExecutions(limit)
       const items = (res.items ?? []) as Array<{
         id?: number
         connectionId: string

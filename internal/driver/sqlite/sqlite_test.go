@@ -35,7 +35,7 @@ func TestDriverListTablesAndBrowse(t *testing.T) {
 	}
 	defer func() { _ = drv.Close() }()
 
-	tables, err := drv.ListTables(context.Background())
+	tables, err := drv.ListTables(context.Background(), model.ListTablesOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestListTablesExcludesSystemTables(t *testing.T) {
 	}
 	defer func() { _ = drv.Close() }()
 
-	tables, err := drv.ListTables(context.Background())
+	tables, err := drv.ListTables(context.Background(), model.ListTablesOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,7 +248,7 @@ func TestListTablesIncludesView(t *testing.T) {
 	}
 	defer func() { _ = drv.Close() }()
 
-	tables, err := drv.ListTables(context.Background())
+	tables, err := drv.ListTables(context.Background(), model.ListTablesOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

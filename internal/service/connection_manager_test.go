@@ -189,6 +189,20 @@ func TestConnectionManagerUpdateReadOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	_, err = mgr.UpdateConnectionSQLiteSettings(context.Background(), conn.ID, model.SQLiteSettingsUpdate{
+		ReadOnly: true,
+	})
+	if err == nil {
+		t.Fatal("expected CONNECTION_OPEN when updating open connection")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "CONNECTION_OPEN" {
+		t.Fatalf("expected CONNECTION_OPEN, got %v", err)
+	}
+
+	if err := mgr.CloseConnection(context.Background(), conn.ID); err != nil {
+		t.Fatal(err)
+	}
 	updated, err := mgr.UpdateConnectionSQLiteSettings(context.Background(), conn.ID, model.SQLiteSettingsUpdate{
 		ReadOnly: true,
 	})
@@ -197,14 +211,6 @@ func TestConnectionManagerUpdateReadOnly(t *testing.T) {
 	}
 	if !updated.Config.SQLite.ReadOnly {
 		t.Fatal("expected read-only config")
-	}
-
-	list := mgr.ListConnections()
-	if list.Items[0].Status != model.ConnectionStatusOpen {
-		t.Fatal("expected connection to stay open after read-only update")
-	}
-	if !list.Items[0].Config.SQLite.ReadOnly {
-		t.Fatal("expected list item read-only")
 	}
 }
 

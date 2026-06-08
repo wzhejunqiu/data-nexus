@@ -13,6 +13,7 @@ type Store interface {
 	Insert(ctx context.Context, record model.SqlExecutionRecord) error
 	ListQueryHistory(ctx context.Context, connectionID string, limit int) ([]string, error)
 	ListExecutions(ctx context.Context, connectionID string, limit int) ([]model.SqlExecutionRecord, error)
+	ListAllExecutions(ctx context.Context, limit int) ([]model.SqlExecutionRecord, error)
 }
 
 func NewStore(cfg model.ExecutionLogConfig) (Store, error) {

@@ -11,7 +11,8 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  [文件▾] [视图▾] [帮助▾]                         已打开 N 个连接 │
+│  Win/Linux: [文件▾][视图▾][帮助▾]  已打开 N 个连接              │
+│  macOS: 系统菜单栏（App/文件/编辑/视图/窗口/帮助）+ 仅状态行     │
 ├─────────────────┬────────────────────────────────────────────────┤
 │  连接列表        │  [表结构] [数据] [SQL]          连接: app.db ▾ │
 │  ▼ 📁 我的连接   │                                                │
@@ -28,7 +29,7 @@
 
 | 区域 | 职责 | v0.5 变更 |
 |------|------|-----------|
-| 顶栏 MenuBar | 新建连接、打开 SQLite、关闭连接、SQL 历史、设置、关于 | **新增** |
+| 顶栏 MenuBar | 新建连接、打开 SQLite、关闭连接、**新建分组**、SQL 历史、设置、关于 | **新增**；macOS 走系统菜单栏，应用内仅状态行 |
 | 左侧连接列表 | 顶层 **Group** + **游离连接**（同级）+ schema 子树 | catalog.db |
 | 右侧展示区 | Tab + 主内容 | 不变 |
 | Status Bar | 行数、耗时、版本 | 不变 |
@@ -39,24 +40,36 @@
 
 ## 2. AppMenuBar
 
-### 2.1 结构
+### 2.1 结构（平台差异）
+
+**Win / Linux — 应用内 Menubar：**
 
 ```
-[Data Nexus]  [文件▾] [视图▾] [帮助▾]                    已打开 2 个连接
+[文件▾] [视图▾] [帮助▾]                    已打开 2 个连接
 ```
 
-- 左侧：应用名（可选）+ 三个顶级菜单
-- 右侧：已打开连接数（`openCount`）；向导模式显示向导标题替代计数
-- **`openCount` 数据来源：** 由 `AppShell` 从 `connectionApi.list()` 派生（`status === 'open'` 计数）；连接 open/close 后 invalidate `['connections']`。详见 [FRONTEND.md §1](./FRONTEND.md#1-appmenubar)
+**macOS — 系统菜单栏 + 应用内状态行：**
+
+```
+（屏幕顶部系统栏）Data Nexus | 文件 | 编辑 | 视图 | 窗口 | 帮助
+（窗口内顶栏）                              已打开 2 个连接
+```
+
+- **Win/Linux：** 左侧 Radix Menubar（`AppMenuBar.tsx`）+ 右侧状态
+- **macOS：** 菜单在 **系统菜单栏**（`app_menu_darwin.go`）；应用内 **不渲染** Menubar（`useIsMacOS()`）；顶栏仅右侧 `openCount` / 向导标题（`Header` 高度 36px）
+- **`openCount` 数据来源：** 由 `AppShell` 从 `connectionApi.list()` 派生；详见 [FRONTEND.md §1](./FRONTEND.md#1-appmenubar)
 
 ### 2.2 文件菜单
 
 | 项 | 行为 | 快捷键（v0.5 固定） |
 |----|------|----------------------|
 | 新建连接… | 打开 `NewConnectionDialog` | `Cmd/Ctrl+N` |
-| 打开 SQLite 文件… | 原生文件对话框 → `OpenConnectionFromFile` | `Cmd/Ctrl+O` |
+| 打开 SQLite 文件… | 原生文件对话框 → `OpenConnectionFromFile`（保存到 catalog 并**立即打开**；默认可写、非 WAL） | `Cmd/Ctrl+O` |
 | 关闭当前连接 | `CloseConnection(activeConnectionId)`；无活跃连接时 disabled | `Cmd/Ctrl+W` |
+| 新建分组… | `CreateGroup('', '新分组')` 创建顶层 Group（`parent_id NULL`） | — |
 | 退出 | Wails Quit | macOS：`Cmd+Q`（App 菜单）；Win/Linux：可选 MenuBar 项 |
+
+**「打开 SQLite 文件…」与「新建连接…」：** 前者为**快速通道**——选 `.db` 即用默认参数新建/复用连接并 open，不经 Dialog；后者可配置显示名称、只读/WAL、分组及 PG/MySQL。
 
 **远程连接:** 「新建连接」Dialog 内 Tab 切换 SQLite / PostgreSQL / MySQL（v0.4 已有）。
 
@@ -79,21 +92,32 @@
 
 导入/导出 CSV 全屏向导期间：
 
-- MenuBar **保持可见**
-- 「新建连接」「打开 SQLite」「关闭当前连接」→ **disabled**
+- 顶栏状态行 **保持可见**（macOS 系统菜单仍可用）
+- 「新建连接」「打开 SQLite」「关闭当前连接」「新建分组」→ **disabled**（macOS 由 Go 菜单项同步 disabled 策略待 v0.5.1；v0.5 前端快捷键仍 respect `disabled`）
 - 右侧文案：向导标题（如「导出 CSV」），非 openCount
 
-### 2.6 Go 原生菜单（macOS / Win / Linux）
+### 2.6 Go 原生菜单（平台差异）
 
-v0.5 精简为：
+| 平台 | 实现 | 菜单结构 |
+|------|------|----------|
+| **macOS** | `app_menu_darwin.go` | **App**（系统标准 + Quit）→ **文件** → **Edit** → **视图** → **Window** → **帮助** |
+| **Win/Linux** | `app_menu.go` | **App** / **Edit** / **Window**（无 File/View/Help；由应用内 MenuBar 提供） |
 
-| 菜单 | 内容 |
-|------|------|
-| **App** | About（可选移除，改前端）、Settings…（可选，`Cmd+,` → `app:settings`）、Quit |
-| **Edit** | 系统标准（Copy/Paste 等） |
-| **Window** | 系统标准（Minimize 等） |
+**macOS 菜单项 → 前端事件：**
 
-**移除:** File、View、Help 子菜单及其中的 Open/Close/Theme/Language/Settings/About。
+| 菜单项 | `EventsEmit` |
+|--------|----------------|
+| 新建连接… | `app:new-connection` |
+| 打开 SQLite 文件… | `app:open-sqlite` |
+| 关闭当前连接 | `app:close-connection` |
+| 新建分组… | `app:new-group` |
+| SQL 执行历史… | `app:sql-history` |
+| 设置… | `app:settings` |
+| 关于 Data Nexus | `app:about` |
+
+**macOS HIG：** 不在窗口内重复 File/View/Help；**Quit** 仅 App 菜单（`Cmd+Q`）；Win/Linux MenuBar 保留「退出」项。
+
+**Win/Linux：** 与 v0.5 初版一致 — 原生菜单精简，功能全部由 `AppMenuBar` 承担。
 
 ---
 
@@ -111,7 +135,8 @@ v0.5 精简为：
 | 能力 | Group | 连接 |
 |------|-------|------|
 | 重命名 | **原地 inline**，Enter 保存；**无 Dialog** | **无**；displayName 在 **编辑连接** Dialog |
-| 右键 | **新建 / 重命名 / 删除** | 见 §4.4（PG/MySQL 四项；SQLite 五项） |
+| 右键 | **新建 / 重命名 / 删除**；**根层空白 → 新建分组** | 见 §4.4（PG/MySQL 四项；SQLite 五项） |
+| 文件菜单 | **新建分组…**（顶层 Group，与空白右键等价） | — |
 | 编辑 | — | **仅 closed**；含显示名称 + 连接配置 |
 | 拖改父级 | 拖到 Group 上 / 根层 | 拖到 Group 上 / 根层游离 |
 | 拖改顺序 | 同级 `sort_order` | 同级 `sort_order` |
@@ -151,6 +176,7 @@ v0.5 精简为：
 | **单击** database/schema | 设为 `browseContext` |
 | **单击** 表名 | 主区「数据」Tab，`connectionId + tableKey` |
 | **拖拽 `.db`** 到已 open SQLite 连接 | 打开 `AttachDatabaseDialog` 并预填路径 |
+| **右键** attach L1 | 取消附加（Detach）；在 Finder/文件管理器中显示源文件 |
 
 ### 4.4 右键菜单（连接 L0）
 
@@ -187,10 +213,12 @@ v0.5 精简为：
 
 ### 4.6 空状态
 
-无连接时列表区文案：
+**无连接：**
 
 - zh-CN：「暂无连接。使用 文件 → 新建连接 开始。」
 - en: "No connections yet. Use File → New Connection to get started."
+
+**无顶层 Group（已删除默认「我的连接」等）：** 列表区显示 `connectionGroup.noGroupsHint`（「在空白处右键可新建分组」）；可用 **文件 → 新建分组…** 或根层空白 **ContextMenu → 新建分组**。
 
 ---
 
@@ -332,14 +360,15 @@ selectedConnectionId: string | null  // 单击高亮，不同于 activeConnectio
 
 | 前缀 | 示例 key |
 |------|----------|
-| `menu.file.*` | `newConnection`, `openSQLite`, `closeConnection`, `quit` |
+| `menu.file.*` | `newConnection`, `openSQLite`, `closeConnection`, `newGroup`, `quit` |
 | `menu.view.*` | `sqlHistory`, `settings` |
 | `menu.help.*` | `about` |
 | `sqlHistory.*` | `title`, `executedAt`, `connection`, `sql`, `kind`, `duration`, `empty` |
 | `about.*` | `title`, `version`, `platform` |
 | `settings.restoreOnStartup` | 启动恢复开关标签 |
 | `connection.emptyHint` | 空列表引导文案 |
-| `connectionGroup.*` | `defaultName`, `new`, `rename`, `delete`, `deleteSimpleConfirm`, `deleteWithConnections`, `deleteConnectionsToo`, `deleteConnectionsHint`, `freeConnection`（完整表见 [CONNECTION_GROUPS_AND_STORAGE.md §8](./CONNECTION_GROUPS_AND_STORAGE.md#8-i18n)） |
+| `connectionGroup.*` | `defaultName`, `new`, `createRoot`, `noGroupsHint`, `rename`, `delete`, …（完整表见 [CONNECTION_GROUPS_AND_STORAGE.md §8](./CONNECTION_GROUPS_AND_STORAGE.md#8-i18n)） |
+| `connection.attachedBadge` | attach 节点 L1 徽标文案 |
 | `connectionForm.*` | 见 [CONNECTION_FORM.md §7](./CONNECTION_FORM.md#7-i18n-键新增) |
 | `attach.*` | `dialogTitle`, `attach`, `detach`, `showInFinder`, `sessionHint` 等（见 [CONNECTION_TREE.md §3.6](./CONNECTION_TREE.md#36-sqlite-attach--detach)） |
 
@@ -349,7 +378,11 @@ selectedConnectionId: string | null  // 单击高亮，不同于 activeConnectio
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| `AppMenuBar` | 新增 | 顶栏菜单 |
+| `AppMenuBar` | 新增 | Win/Linux 顶栏菜单；macOS 隐藏（系统菜单栏） |
+| `lib/platform.ts` | 新增 | `useIsMacOS()` 平台检测 |
+| `ConnectionSchemaTree` | 新增 | 连接下 schema 层级树；attach L1 右键 |
+| `SidebarDndContext` | 新增 | `@dnd-kit` 改父级 + 同级排序 |
+| `useSidebarFileDrop` | 新增 | `app:file-drop` 分流 attach / 新建连接 |
 | `Menubar` | 新增 | Radix 基元 |
 | `ContextMenu` | 新增 | Radix 基元 |
 | `SqlExecutionHistoryDialog` | 新增 | 全局 SQL 历史 |
@@ -357,12 +390,13 @@ selectedConnectionId: string | null  // 单击高亮，不同于 activeConnectio
 | `AttachDatabaseDialog` | 新增 | SQLite 附加库 |
 | `Header` | 变更 | 组合 MenuBar，移除设置按钮 |
 | `AppShell` | 变更 | Dialog 状态 + 快捷键 |
-| `ConnectionTree` | 变更 | 纯列表 + 右键 |
-| `ConnectionGroupNode` | 新增 | 嵌套分组 |
-| `ConnectionTreeItem` | 变更 | Group 下连接行 + ContextMenu |
+| `ConnectionTree` | 变更 | `rootItems` 混排 + 根层空白右键新建分组 |
+| `ConnectionGroupNode` | 新增 | 嵌套分组 + DnD |
+| `ConnectionTreeItem` | 变更 | Group 下连接行 + ContextMenu + sortable |
 | `ConnectionForm` | 新增 | 新建/编辑连接统一表单 |
 | `NewConnectionDialog` | 变更 | 壳 + mode=create |
 | `EditConnectionDialog` | 变更 | 壳 + mode=edit，共用 ConnectionForm |
 | `RemoteConnectionForm` | 废弃 | 逻辑迁入 ConnectionForm |
+| `SchemaSubtree` | **已删除** | 逻辑迁入 `ConnectionSchemaTree` |
 | `SettingsDialog` | 变更 | 设置 Dialog 展示壳 |
 | `SettingsDialogContainer` | 变更 | 设置 wrapper（config query）；**AppShell 挂载** |

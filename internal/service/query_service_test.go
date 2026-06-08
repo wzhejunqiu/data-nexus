@@ -236,7 +236,7 @@ func TestQueryServiceListTables(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	list, err := qs.ListTables(ctx, conn.ID)
+	list, err := qs.ListTables(ctx, conn.ID, model.ListTablesOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -438,7 +438,7 @@ func TestQueryServiceClassifySQL_EmptySQL(t *testing.T) {
 
 func TestQueryServiceListTables_NotConnected(t *testing.T) {
 	_, qs, _ := newTestEnv(t)
-	_, err := qs.ListTables(context.Background(), "nonexistent")
+	_, err := qs.ListTables(context.Background(), "nonexistent", model.ListTablesOptions{})
 	if err == nil {
 		t.Fatal("expected error")
 	}

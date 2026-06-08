@@ -28,8 +28,8 @@ func buildMySQLDSN(my *model.MySQLConfig, password string) string {
 	params := []string{
 		"parseTime=true",
 		"allowNativePasswords=true",
-		"charset=utf8mb4",
-		"collation=utf8mb4_unicode_ci",
+		"charset=" + my.NormalizedCharset(),
+		"collation=" + my.NormalizedCollation(),
 	}
 	if my.TLS {
 		if my.TLSSkipVerify {
@@ -62,6 +62,12 @@ func (d *Driver) Connect(ctx context.Context, cfg model.DriverConfig) error {
 	if err := db.PingContext(ctx); err != nil {
 		_ = db.Close()
 		return model.ErrConnectionFailed(err.Error())
+	}
+	if engine := strings.TrimSpace(my.DefaultStorageEngine); engine != "" {
+		if _, err := db.ExecContext(ctx, "SET SESSION default_storage_engine = ?", engine); err != nil {
+			_ = db.Close()
+			return model.ErrConnectionFailed(err.Error())
+		}
 	}
 	d.db = db
 	return nil

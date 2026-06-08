@@ -31,6 +31,10 @@ func ErrConnectionAlreadyOpen(id string) *AppError {
 	return NewAppError("CONNECTION_ALREADY_OPEN", "connection is already open", map[string]any{"connectionId": id})
 }
 
+func ErrConnectionOpen(id string) *AppError {
+	return NewAppError("CONNECTION_OPEN", "connection must be closed before updating settings", map[string]any{"connectionId": id})
+}
+
 func ErrSavedNotFound(id string) *AppError {
 	return NewAppError("SAVED_NOT_FOUND", "saved connection not found", map[string]any{"connectionId": id})
 }

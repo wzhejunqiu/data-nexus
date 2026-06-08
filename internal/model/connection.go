@@ -34,25 +34,29 @@ type SQLiteConfig struct {
 }
 
 type PostgresConfig struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Database string `json:"database"`
-	User     string `json:"user"`
-	Password string `json:"-"`
-	SSLMode  string `json:"sslMode"`
-	Schema   string `json:"schema"`
-	ReadOnly bool   `json:"readOnly"`
+	Host           string `json:"host"`
+	Port           int    `json:"port"`
+	Database       string `json:"database"`
+	User           string `json:"user"`
+	Password       string `json:"-"`
+	SSLMode        string `json:"sslMode"`
+	Schema         string `json:"schema"`
+	ClientEncoding string `json:"clientEncoding,omitempty"`
+	ReadOnly       bool   `json:"readOnly"`
 }
 
 type MySQLConfig struct {
-	Host          string `json:"host"`
-	Port          int    `json:"port"`
-	Database      string `json:"database"`
-	User          string `json:"user"`
-	Password      string `json:"-"`
-	TLS           bool   `json:"tls"`
-	TLSSkipVerify bool   `json:"tlsSkipVerify,omitempty"`
-	ReadOnly      bool   `json:"readOnly"`
+	Host                 string `json:"host"`
+	Port                 int    `json:"port"`
+	Database             string `json:"database"`
+	User                 string `json:"user"`
+	Password             string `json:"-"`
+	TLS                  bool   `json:"tls"`
+	TLSSkipVerify        bool   `json:"tlsSkipVerify,omitempty"`
+	Charset              string `json:"charset,omitempty"`
+	Collation            string `json:"collation,omitempty"`
+	DefaultStorageEngine string `json:"defaultStorageEngine,omitempty"`
+	ReadOnly             bool   `json:"readOnly"`
 }
 
 func (c *PostgresConfig) NormalizedPort() int {
@@ -76,11 +80,32 @@ func (c *PostgresConfig) NormalizedSSLMode() string {
 	return c.SSLMode
 }
 
+func (c *PostgresConfig) NormalizedClientEncoding() string {
+	if c.ClientEncoding == "" {
+		return "UTF8"
+	}
+	return c.ClientEncoding
+}
+
 func (c *MySQLConfig) NormalizedPort() int {
 	if c.Port <= 0 {
 		return 3306
 	}
 	return c.Port
+}
+
+func (c *MySQLConfig) NormalizedCharset() string {
+	if c.Charset == "" {
+		return "utf8mb4"
+	}
+	return c.Charset
+}
+
+func (c *MySQLConfig) NormalizedCollation() string {
+	if c.Collation == "" {
+		return "utf8mb4_unicode_ci"
+	}
+	return c.Collation
 }
 
 type ConnectRequest struct {
@@ -111,25 +136,29 @@ type SQLiteSettingsUpdate struct {
 }
 
 type PostgresSettingsUpdate struct {
-	Host     string  `json:"host"`
-	Port     int     `json:"port"`
-	Database string  `json:"database"`
-	User     string  `json:"user"`
-	Password *string `json:"password,omitempty"`
-	SSLMode  string  `json:"sslMode"`
-	Schema   string  `json:"schema"`
-	ReadOnly bool    `json:"readOnly"`
+	Host           string  `json:"host"`
+	Port           int     `json:"port"`
+	Database       string  `json:"database"`
+	User           string  `json:"user"`
+	Password       *string `json:"password,omitempty"`
+	SSLMode        string  `json:"sslMode"`
+	Schema         string  `json:"schema"`
+	ClientEncoding string  `json:"clientEncoding,omitempty"`
+	ReadOnly       bool    `json:"readOnly"`
 }
 
 type MySQLSettingsUpdate struct {
-	Host          string  `json:"host"`
-	Port          int     `json:"port"`
-	Database      string  `json:"database"`
-	User          string  `json:"user"`
-	Password      *string `json:"password,omitempty"`
-	TLS           bool    `json:"tls"`
-	TLSSkipVerify bool    `json:"tlsSkipVerify"`
-	ReadOnly      bool    `json:"readOnly"`
+	Host                 string  `json:"host"`
+	Port                 int     `json:"port"`
+	Database             string  `json:"database"`
+	User                 string  `json:"user"`
+	Password             *string `json:"password,omitempty"`
+	TLS                  bool    `json:"tls"`
+	TLSSkipVerify        bool    `json:"tlsSkipVerify"`
+	Charset              string  `json:"charset,omitempty"`
+	Collation            string  `json:"collation,omitempty"`
+	DefaultStorageEngine string  `json:"defaultStorageEngine,omitempty"`
+	ReadOnly             bool    `json:"readOnly"`
 }
 
 type Connection struct {

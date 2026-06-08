@@ -10,13 +10,13 @@ v0.4 已完成 PostgreSQL / MySQL 远程连接。当前桌面 UI 仍沿用 MVP �
 
 | 现状 | v0.5 目标 |
 |------|-----------|
-| `Header.tsx` 仅标题 + 设置按钮 | 顶栏 `AppMenuBar`（文件 / 视图 / 帮助） |
+| `Header.tsx` 仅标题 + 设置按钮 | 顶栏：**Win/Linux** `AppMenuBar`；**macOS** 系统菜单 + 应用内状态行 |
 | `ConnectionTree` 顶部：新建连接、readOnly/wal、启动恢复 | 左侧纯连接列表；全局操作迁入 MenuBar / Dialog |
 | `NewConnectionDialog` 顶部 Tab + 扁平远程表单 | 宽 Dialog + 侧栏方言 + 常规/安全/高级分区；方言专属配置 |
 | `RemoteConnectionForm` 与编辑 Dialog 分离 | 统一 `ConnectionForm`；MySQL charset/引擎、PG SSL/编码 |
 | `connections.json` 扁平列表 | **`catalog.db`** + 嵌套 **Group**（**不迁移** json） |
 | 连接 item 行内 Open/Close/Rename/Edit/Delete 按钮 | 右键 ContextMenu + 双击打开；重命名并入 **编辑连接** |
-| Go `ApplicationMenu()` 含 File/View/Help 子菜单 | 仅 App / Edit / Window；Quit 保留 App 菜单 |
+| Go `ApplicationMenu()` 含 File/View/Help 子菜单 | **macOS：** 系统菜单 File/View/Help；**Win/Linux：** 仅 App/Edit/Window + 应用内 MenuBar |
 | 无跨连接 SQL 历史 UI | `SqlExecutionHistoryDialog` + `ListAllSqlExecutions` |
 | 原生 `ShowAbout` | 前端 `AboutDialog`（i18n） |
 
@@ -65,9 +65,9 @@ v0.4 已完成 PostgreSQL / MySQL 远程连接。当前桌面 UI 仍沿用 MVP �
 | A6 | Wails 绑定 | `internal/wails/sql_execution.go` | `ListAllSqlExecutions(limit int)` |
 | A7 | Wails 测试 | `internal/wails/services_test.go` | 绑定 smoke test |
 | A8 | 重新生成 TS 绑定 | `wails generate` / `make generate` | 更新 `wailsjs/go/wails/SqlExecutionService` |
-| A9 | 精简原生菜单 | `app.go` → `ApplicationMenu()` | 移除 File/View/Help 子菜单；保留 App（含 Quit）、Edit、Window |
-| A10 | 清理 Go 菜单处理器 | `app.go` | `handleOpenDatabase`、`handleCloseConnection` 等若仅菜单调用则删除或改为 EventsEmit 供过渡期使用；**最终由前端 MenuBar 接管** |
-| A11 | macOS App 菜单 | `app.go` | 可选保留 App → Settings…（`Cmd+,`）→ `EventsEmit("app:settings")`，与 v0.5.1 衔接 |
+| A9 | 原生菜单（平台分治） | `app_menu.go` / `app_menu_darwin.go` | macOS：File（含新建分组）/View/Help + EventsEmit；Win/Linux：App/Edit/Window |
+| A10 | 文件拖放事件化 | `app.go` `handleFileDrop` | emit `app:file-drop`；前端 attach / 新建连接分流 |
+| A11 | macOS 应用内 Menubar 隐藏 | `AppMenuBar.tsx` + `lib/platform.ts` | `useIsMacOS()`；HIG 合规 |
 
 **完成标准:** `make test` 通过；Wails 绑定可调用 `ListAllSqlExecutions`。
 
@@ -84,9 +84,10 @@ v0.4 已完成 PostgreSQL / MySQL 远程连接。当前桌面 UI 仍沿用 MVP �
 | B1 | 安装依赖 | `frontend/package.json` | `@radix-ui/react-menubar`、`@radix-ui/react-context-menu` |
 | B2 | Menubar 基元 | `frontend/src/components/ui/Menubar.tsx` | shadcn 风格 wrapper |
 | B3 | ContextMenu 基元 | `frontend/src/components/ui/ContextMenu.tsx` | shadcn 风格 wrapper |
-| B4 | AppMenuBar | `frontend/src/components/AppMenuBar.tsx` | 文件 / 视图 / 帮助；右侧「已打开 N 个连接」 |
-| B5 | 重构 Header | `frontend/src/components/Header.tsx` | 移除设置按钮；组合 `AppMenuBar` + wizardTitle |
-| B6 | AppShell Dialog 状态 | `frontend/src/app/AppShell.tsx` | 集中管理：`newConnectionOpen`、`settingsOpen`、`sqlHistoryOpen`、`aboutOpen` |
+| B4 | AppMenuBar | `frontend/src/components/AppMenuBar.tsx` | Win/Linux：文件/视图/帮助（文件含**新建分组**）；macOS：仅状态行 |
+| B5 | 重构 Header | `frontend/src/components/Header.tsx` | macOS `h-9`；Win/Linux `h-12` |
+| B6 | AppShell 原生菜单事件 | `AppShell.tsx` | 监听 `app:new-connection`、`app:new-group`、`app:open-sqlite` 等 |
+| B6b | AppShell Dialog 状态 | `frontend/src/app/AppShell.tsx` | 集中管理：`newConnectionOpen`、`settingsOpen`、`sqlHistoryOpen`、`aboutOpen` |
 | B7 | 快捷键（v0.5 固定值） | `AppShell.tsx` | `Cmd/Ctrl+N/O/W/,` 监听；Quit 仍走 macOS App 菜单 |
 | B8 | i18n 菜单键 | `frontend/src/locales/*.json` | `menu.file.*`、`menu.view.*`、`menu.help.*` |
 
@@ -95,8 +96,9 @@ v0.4 已完成 PostgreSQL / MySQL 远程连接。当前桌面 UI 仍沿用 MVP �
 | 菜单项 | 动作 | 快捷键 |
 |--------|------|--------|
 | 新建连接… | 打开 `NewConnectionDialog` | N |
-| 打开 SQLite 文件… | 文件对话框 + `openFromFile` | O |
+| 打开 SQLite 文件… | 文件对话框 + `openFromFile`（快速保存并 open） | O |
 | 关闭当前连接 | `CloseConnection(activeConnectionId)` | W |
+| 新建分组… | `CreateGroup('', name)` 顶层 Group | — |
 | 退出 | `runtime.Quit`（或通过 Wails API） | Q（macOS App 菜单） |
 | SQL 执行历史… | 打开 `SqlExecutionHistoryDialog` | — |
 | 设置… | 打开 `SettingsDialog` | `,` |
@@ -116,9 +118,9 @@ v0.4 已完成 PostgreSQL / MySQL 远程连接。当前桌面 UI 仍沿用 MVP �
 |---|------|------|
 | C1 | `ConnectionGroupNode.tsx` | 📁；**inline 重命名**（Enter）；右键 **新建/重命名/删除**；**DeleteGroupDialog** |
 | C1b | `ConnectionTreeItem.tsx` | 右键 **打开/关闭/编辑/删除**（SQLite open 时第五项「附加数据库…」见 Phase D）；draggable；**无** inline 重命名 |
-| C2 | `ConnectionTree.tsx` | `GetSidebarTree` 驱动；根级 `groups` + `freeConnections` 混排渲染（**顶部控件清理见 Phase D S1**） |
+| C2 | `ConnectionTree.tsx` | `GetSidebarTree` 驱动；按 **`rootItems`** 混排；**根层空白右键新建分组** |
 | C3 | 新建连接入 Group | 当前选中 Group 或 root |
-| C4 | `SidebarDndContext` + hooks | Group 改父级；连接移 Group/游离；`sort_order` 排序 |
+| C4 | `SidebarDndContext` + hooks | Group 改父级；连接移 Group/游离；**`@dnd-kit/sortable` 同级排序** |
 | C5 | 后端 API | `MoveGroup`, `ReorderGroupMembers`, `ReorderSidebarRoot` |
 | C6 | 测试 | 嵌套、DnD、首次启动初始化后树正确 |
 
@@ -138,13 +140,15 @@ v0.4 已完成 PostgreSQL / MySQL 远程连接。当前桌面 UI 仍沿用 MVP �
 | S6 | **ListTables 扩展** | `ListTablesOptions{database, schema}` | 按 namespace 过滤；向后兼容 |
 | S7 | ConnectionSchemaTree | `features/connection/tree/` | NamespaceNode、SchemaNode、懒加载 |
 | S8 | browseContext | `workspaceStore.ts` | namespace + schema；驱动右侧 Tab |
-| S9 | 移除 RemoteNamespaceSwitch | `SchemaSubtree.tsx` | 合并后删除 |
+| S9 | 移除 RemoteNamespaceSwitch / **SchemaSubtree** | — | **已删除** |
 | S10 | SettingsDialog 迁入恢复 | `SettingsDialog.tsx` | |
 | S11 | 测试 | 各 dialect 树、懒加载、tableKey |
-| S12 | `AttachDatabaseDialog` + **SQLite 连接 L0 ContextMenu**「附加数据库…」 | `AttachDatabaseDialog.tsx` + `ConnectionTreeItem` | 见 CONNECTION_TREE §3.6 |
-| S12b | 移除 v0.4 Attach 按钮与 `window.prompt` | `ConnectionSchemaTree` | 合并至 NamespaceNode |
-| S12c | **拖拽 `.db` 到已 open SQLite 连接** → 预填 Attach Dialog | `ConnectionTreeItem` / `SidebarDndContext` | 与窗口级 `handleFileDrop` 区分 |
-| S12d | **`RevealFileInExplorer` Wails 绑定** + attach L1 右键 | `AppService` | attach 节点「在 Finder 中显示」 |
+| S12 | `AttachDatabaseDialog` + SQLite L0「附加数据库…」 | `AttachDatabaseDialog.tsx` + `ConnectionTreeItem` | 见 CONNECTION_TREE §3.6 |
+| S12b | 移除 v0.4 Attach 按钮与 `window.prompt` | `ConnectionSchemaTree` | 已合并 |
+| S12c | **拖拽 `.db` 到已 open SQLite** | `useSidebarFileDrop.ts` | `app:file-drop` + `data-sqlite-drop-target` |
+| S12d | attach L1 右键 Detach + Finder | `ConnectionSchemaTree` + `RevealFileInExplorer` | 已实现 |
+| S12e | **DnD 同级排序** | `SidebarDndContext` + `sidebarOrder.ts` | `ReorderSidebarRoot` / `ReorderGroupMembers` |
+| S12f | **`rootItems` / `memberItems`** | `groups.go` + TS types | 根级/组内交错顺序 |
 
 ---
 
@@ -208,6 +212,11 @@ v0.4 已完成 PostgreSQL / MySQL 远程连接。当前桌面 UI 仍沿用 MVP �
 ### 新增
 
 ```
+app_menu.go
+app_menu_darwin.go
+frontend/src/lib/platform.ts
+frontend/src/features/connection/dnd/sidebarOrder.ts
+frontend/src/features/connection/dnd/useSidebarFileDrop.ts
 frontend/src/components/ui/Menubar.tsx
 frontend/src/components/ui/ContextMenu.tsx
 frontend/src/components/AppMenuBar.tsx
@@ -257,40 +266,27 @@ frontend/src/app/AppShell.tsx
 frontend/src/components/Header.tsx
 frontend/src/features/connection/ConnectionTree.tsx
 frontend/src/stores/workspaceStore.ts
-frontend/src/features/schema/SchemaSubtree.tsx
 frontend/src/features/connection/NewConnectionDialog.tsx
 frontend/src/features/connection/NewConnectionDialog.test.tsx
 frontend/src/features/connection/EditConnectionDialog.tsx
 frontend/src/features/connection/EditConnectionDialog.test.tsx
-internal/model/connection.go
-internal/model/connection_test.go
-internal/driver/driver.go
-internal/driver/mysql/mysql.go
-internal/driver/mysql/dsn_test.go
-internal/driver/postgres/postgres.go
-internal/service/connection_store.go
-internal/config/config.go
-frontend/src/features/settings/SettingsDialog.tsx
-frontend/src/lib/api/queryHistory.ts
-frontend/src/locales/zh-CN.json
-frontend/src/locales/en.json
-internal/executionlog/store.go
-internal/executionlog/sqlite/store.go
-internal/executionlog/sqlite/store_test.go
-internal/service/sql_execution_service.go
-internal/service/sql_execution_service_test.go
-internal/wails/sql_execution.go
-internal/wails/services_test.go
+internal/model/connection_group.go   # RootItems, MemberItems
+internal/catalog/sqlite/groups.go
 app.go
 ```
 
-### 可选删除 / 精简
+### 删除
 
 ```
-app.go — handleOpenDatabase、handleCloseConnection（若前端完全接管）
-ConnectionTree.tsx — RestoreOnStartupToggle 组件（迁至 SettingsDialog）
-RemoteConnectionForm.tsx — 合并至 ConnectionForm 后删除
-SchemaSubtree.tsx — Attach 按钮与 window.prompt（迁至 AttachDatabaseDialog）
+frontend/src/features/schema/SchemaSubtree.tsx
+frontend/src/features/schema/SchemaSubtree.test.tsx
+```
+
+### 可选删除 / 精简（已完成）
+
+```
+app.go — handleOpenDatabase、handleCloseConnection（已移除）
+RemoteConnectionForm.tsx — 已合并至 ConnectionForm 并删除
 ```
 
 ---
@@ -323,11 +319,12 @@ flowchart TD
 
 | 风险 | 缓解 |
 |------|------|
-| macOS 双菜单（原生 + 应用内）重复 | v0.5 移除 Go File/View/Help；仅 App/Edit/Window |
+| macOS 双菜单（原生 + 应用内）重复 | macOS **隐藏应用内 Menubar**；菜单仅系统栏 |
 | WebView 快捷键与 Monaco 冲突 | v0.5 固定快捷键；v0.5.1 统一 ShortcutRegistry |
-| 连接树移除按钮后新用户不知何操作 | 空列表 Empty state 提示「文件 → 新建连接」；双击/右键在 DESIGN 中明确 |
+| 连接树移除按钮后新用户不知何操作 | 空列表提示「文件 → 新建连接」；无分组时「文件 → 新建分组」或空白右键 |
 | `ListAllExecutions` 大表性能 | limit 默认 50、上限 200；与 per-connection API 一致 |
-| 窗口级 drop 与连接节点 drop 冲突 | 拖到 L0 SQLite 连接由前端拦截；窗口空白区仍走 `handleFileDrop` 新建连接 |
+| 窗口级 drop 与连接节点 drop 冲突 | Go emit `app:file-drop`；前端 `useSidebarFileDrop` 分流 |
+| 删除全部分组后无法新建 Group | **文件 → 新建分组…** 或根层空白右键 |
 
 ---
 
@@ -344,8 +341,8 @@ flowchart TD
 
 [v0.5.1](../phase-v0.5.1.md) 将在 v0.5 基础上：
 
-- macOS `⌘,` 与 App 菜单 Settings 联调验收
+- 原生菜单文案随 `app:language` 动态更新
 - 快捷键可配置 + `config.yaml` 持久化
-- MenuBar 显示动态快捷键文案
+- MenuBar / 系统菜单显示动态快捷键文案
 
 v0.5 实施时请 **预留** `AppShell` 快捷键 hook 与 `SettingsDialog` 扩展位，但 **不提前实现** v0.5.1 功能。

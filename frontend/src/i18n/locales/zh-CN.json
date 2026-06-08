@@ -4,11 +4,68 @@
     "openCount": "已打开 {{count}} 个连接",
     "noConnection": "新建或打开一个连接开始"
   },
+  "menu": {
+    "file": {
+      "label": "文件",
+      "newConnection": "新建连接…",
+      "openSqlite": "打开 SQLite 文件…",
+      "closeConnection": "关闭当前连接",
+      "newGroup": "新建分组…",
+      "quit": "退出"
+    },
+    "view": {
+      "label": "视图",
+      "sqlHistory": "SQL 执行历史…",
+      "settings": "设置…"
+    },
+    "help": {
+      "label": "帮助",
+      "about": "关于 Data Nexus"
+    }
+  },
+  "connectionGroup": {
+    "defaultName": "我的连接",
+    "new": "新建",
+    "rename": "重命名",
+    "delete": "删除分组",
+    "newGroupName": "新分组",
+    "deleteSimpleConfirm": "删除分组「{{name}}」及其子分组？",
+    "deleteWithConnections": "将删除分组「{{name}}」。内含 {{connCount}} 个连接。",
+    "deleteConnectionsToo": "同时删除这 {{connCount}} 个连接",
+    "deleteConnectionsHint": "未勾选时，连接将变为游离连接，与分组同级显示。",
+    "emptyHint": "使用 文件 → 新建连接 添加连接",
+    "noGroupsHint": "在空白处右键可新建分组",
+    "createRoot": "新建分组"
+  },
+  "sqlHistory": {
+    "title": "SQL 执行历史",
+    "empty": "暂无执行记录",
+    "time": "时间",
+    "connection": "连接",
+    "sql": "SQL",
+    "kind": "类型",
+    "duration": "耗时"
+  },
+  "about": {
+    "title": "关于 Data Nexus",
+    "version": "版本 {{version}}",
+    "platform": "平台 {{platform}}",
+    "description": "跨平台数据库客户端"
+  },
   "connection": {
     "new": "新建连接",
     "open": "打开",
     "close": "关闭",
     "remove": "删除",
+    "delete": "删除",
+    "openConnection": "打开连接",
+    "closeConnection": "关闭连接",
+    "attachDatabase": "附加数据库…",
+    "attach": "附加",
+    "attachAlias": "别名",
+    "attachAliasOptional": "可选，留空自动生成",
+    "attachedBadge": "已附加",
+    "emptyTables": "无表",
     "readOnly": "只读",
     "rename": "重命名",
     "edit": "编辑",
@@ -49,6 +106,46 @@
       "auth": "认证失败",
       "network": "网络连接失败",
       "database": "数据库不存在"
+    }
+  },
+  "connectionForm": {
+    "titleNew": "新建连接",
+    "titleEdit": "编辑连接",
+    "section": {
+      "general": "常规",
+      "security": "安全与 TLS",
+      "advanced": "高级选项"
+    },
+    "charset": "字符集",
+    "collation": "排序规则",
+    "storageEngine": "默认存储引擎",
+    "storageEngineDefault": "服务端默认",
+    "clientEncoding": "客户端编码",
+    "sslMode": {
+      "label": "SSL 模式",
+      "disable": "禁用",
+      "allow": "允许",
+      "prefer": "优先",
+      "require": "必需",
+      "verify-ca": "验证 CA",
+      "verify-full": "完全验证"
+    },
+    "testConnection": "测试连接",
+    "saveAndOpen": "保存并打开",
+    "optional": "可选",
+    "passwordKeep": "留空表示不修改",
+    "validation": {
+      "required": "请输入{{field}}",
+      "invalidPort": "端口须为 1–65535 的整数"
+    },
+    "fields": {
+      "displayName": "显示名称",
+      "filePath": "文件路径",
+      "host": "主机",
+      "port": "端口",
+      "database": "数据库",
+      "user": "用户",
+      "password": "密码"
     }
   },
   "vault": {
@@ -129,9 +226,13 @@
   },
   "attach": {
     "attach": "Attach 数据库…",
-    "detach": "Detach",
+    "detach": "取消附加",
     "aliasPrompt": "附加数据库别名",
-    "mainDb": "主数据库"
+    "mainDb": "主数据库",
+    "showInFinder": "在 Finder 中显示",
+    "showInFileManager": "在文件管理器中显示",
+    "dropRequiresOpenSqlite": "请先将 .db 拖到已打开的 SQLite 连接，或先打开 SQLite 连接",
+    "multiDropOpenedFirst": "已将第一个文件作为新连接打开"
   },
   "data": {
     "selectTable": "从左侧选择一个表",
@@ -284,7 +385,8 @@
     "maxSizeMB": "日志文件最大 MB",
     "maxBackups": "日志备份数量",
     "maxAgeDays": "日志保留天数",
-    "compress": "压缩轮转日志"
+    "compress": "压缩轮转日志",
+    "restoreOnStartup": "启动时恢复已打开连接"
   },
   "status": {
     "rows": "{{count}} 行",

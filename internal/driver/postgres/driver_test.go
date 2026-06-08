@@ -20,7 +20,7 @@ func newMockDriver(t *testing.T) (*Driver, sqlmock.Sqlmock) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	return &Driver{db: db, schema: "public"}, mock
+	return &Driver{db: db, schema: "public", database: "testdb"}, mock
 }
 
 func expectPGTableType(mock sqlmock.Sqlmock) {
@@ -74,6 +74,44 @@ func TestClassifySQLNotConnected(t *testing.T) {
 	}
 }
 
+func TestListNamespaces(t *testing.T) {
+	drv, mock := newMockDriver(t)
+	mock.ExpectQuery(`SELECT datname`).
+		WillReturnRows(sqlmock.NewRows([]string{"datname"}).
+			AddRow("postgres").
+			AddRow("testdb"))
+
+	namespaces, err := drv.ListNamespaces(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(namespaces) != 2 || namespaces[1].Name != "testdb" {
+		t.Fatalf("unexpected namespaces: %+v", namespaces)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestListSchemas(t *testing.T) {
+	drv, mock := newMockDriver(t)
+	mock.ExpectQuery(`SELECT schema_name`).
+		WillReturnRows(sqlmock.NewRows([]string{"schema_name"}).
+			AddRow("public").
+			AddRow("app"))
+
+	schemas, err := drv.ListSchemas(context.Background(), "testdb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(schemas) != 2 || schemas[0].Name != "public" {
+		t.Fatalf("unexpected schemas: %+v", schemas)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestListTables(t *testing.T) {
 	drv, mock := newMockDriver(t)
 	mock.ExpectQuery(`SELECT table_name, table_type`).
@@ -83,7 +121,7 @@ func TestListTables(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT COUNT(*) FROM "public"."users"`)).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(2))
 
-	tables, err := drv.ListTables(context.Background())
+	tables, err := drv.ListTables(context.Background(), model.ListTablesOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

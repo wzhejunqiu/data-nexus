@@ -5,25 +5,35 @@ import { ConnectionTree } from './ConnectionTree'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useToastStore } from '@/components/ui/Toast'
 
-vi.mock('@/features/schema/SchemaSubtree', () => ({
-  SchemaSubtree: () => <div data-testid="schema-subtree" />,
+vi.mock('@/features/connection/tree/ConnectionSchemaTree', () => ({
+  ConnectionSchemaTree: () => <div data-testid="schema-tree" />,
 }))
 
 vi.mock('@/features/saved-queries/SavedQueries', () => ({
   SavedQueries: () => null,
 }))
 
+vi.mock('@/lib/api/connectionGroup', () => ({
+  connectionGroupApi: {
+    getSidebarTree: vi.fn(),
+    createGroup: vi.fn(),
+  },
+}))
+
 vi.mock('@/lib/api/connection', () => ({
   connectionApi: {
-    list: vi.fn(),
     open: vi.fn(),
     close: vi.fn(),
     remove: vi.fn(),
-    rename: vi.fn(),
-    getRestoreOpenOnStartup: vi.fn(),
-    setRestoreOpenOnStartup: vi.fn(),
   },
 }))
+
+const defaultGroup = {
+  id: 'g-default',
+  name: 'My Connections',
+  childGroups: [],
+  connections: [] as (typeof closedItem)[],
+}
 
 const closedItem = {
   id: 'c1',
@@ -47,107 +57,30 @@ describe('ConnectionTree', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
-  it('shows loading then empty state', async () => {
-    const { connectionApi } = await import('@/lib/api/connection')
-    vi.mocked(connectionApi.list).mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ items: [] }), 50)),
+  it('shows loading then empty hint', async () => {
+    const { connectionGroupApi } = await import('@/lib/api/connectionGroup')
+    vi.mocked(connectionGroupApi.getSidebarTree).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ groups: [defaultGroup], freeConnections: [] }), 50),
+        ),
     )
-    vi.mocked(connectionApi.getRestoreOpenOnStartup).mockResolvedValue(false)
 
     renderWithProviders(<ConnectionTree />)
     expect(screen.getByText(/加载/)).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText(/新建或打开一个连接开始/)).toBeInTheDocument()
-    })
-  })
-
-  it('opens a closed connection', async () => {
-    const { connectionApi } = await import('@/lib/api/connection')
-    vi.mocked(connectionApi.list).mockResolvedValue({ items: [closedItem] })
-    vi.mocked(connectionApi.getRestoreOpenOnStartup).mockResolvedValue(false)
-    vi.mocked(connectionApi.open).mockResolvedValue({
-      id: 'c1',
-      type: 'sqlite',
-      displayName: 'app.db',
-      config: closedItem.config,
-      connectedAt: '2026-01-01T00:00:00Z',
-    })
-
-    renderWithProviders(<ConnectionTree />)
-    await waitFor(() => {
-      expect(screen.getByText('app.db')).toBeInTheDocument()
-    })
-    fireEvent.click(screen.getByRole('button', { name: '打开' }))
-    await waitFor(() => {
-      expect(connectionApi.open).toHaveBeenCalledWith('c1')
-    })
-  })
-
-  it('closes an open connection', async () => {
-    const { connectionApi } = await import('@/lib/api/connection')
-    vi.mocked(connectionApi.list).mockResolvedValue({ items: [openItem] })
-    vi.mocked(connectionApi.getRestoreOpenOnStartup).mockResolvedValue(false)
-    vi.mocked(connectionApi.close).mockResolvedValue(undefined)
-
-    renderWithProviders(<ConnectionTree />)
-    await waitFor(() => {
-      expect(screen.getByTestId('schema-subtree')).toBeInTheDocument()
-    })
-    fireEvent.click(screen.getByRole('button', { name: '关闭' }))
-    await waitFor(() => {
-      expect(connectionApi.close).toHaveBeenCalledWith('c2')
-    })
-  })
-
-  it('does not remove when confirm is cancelled', async () => {
-    const { connectionApi } = await import('@/lib/api/connection')
-    vi.mocked(connectionApi.list).mockResolvedValue({ items: [closedItem] })
-    vi.mocked(connectionApi.getRestoreOpenOnStartup).mockResolvedValue(false)
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
-
-    renderWithProviders(<ConnectionTree />)
-    await waitFor(() => {
-      expect(screen.getByText('app.db')).toBeInTheDocument()
-    })
-    fireEvent.click(screen.getByRole('button', { name: '删除' }))
-    expect(connectionApi.remove).not.toHaveBeenCalled()
-  })
-
-  it('removes when confirm is accepted', async () => {
-    const { connectionApi } = await import('@/lib/api/connection')
-    vi.mocked(connectionApi.list).mockResolvedValue({ items: [closedItem] })
-    vi.mocked(connectionApi.getRestoreOpenOnStartup).mockResolvedValue(false)
-    vi.mocked(connectionApi.remove).mockResolvedValue(undefined)
-
-    renderWithProviders(<ConnectionTree />)
-    await waitFor(() => {
-      expect(screen.getByText('app.db')).toBeInTheDocument()
-    })
-    fireEvent.click(screen.getByRole('button', { name: '删除' }))
-    await waitFor(() => {
-      expect(connectionApi.remove).toHaveBeenCalledWith('c1')
-    })
-  })
-
-  it('toggles restore on startup', async () => {
-    const { connectionApi } = await import('@/lib/api/connection')
-    vi.mocked(connectionApi.list).mockResolvedValue({ items: [] })
-    vi.mocked(connectionApi.getRestoreOpenOnStartup).mockResolvedValue(false)
-    vi.mocked(connectionApi.setRestoreOpenOnStartup).mockResolvedValue(undefined)
-
-    renderWithProviders(<ConnectionTree />)
-    const checkbox = await screen.findByLabelText(/启动时恢复已打开连接/)
-    fireEvent.click(checkbox)
-    await waitFor(() => {
-      expect(connectionApi.setRestoreOpenOnStartup).toHaveBeenCalledWith(true)
+      expect(screen.getByText(/文件 → 新建连接/)).toBeInTheDocument()
     })
   })
 
   it('opens a closed connection on double click', async () => {
+    const { connectionGroupApi } = await import('@/lib/api/connectionGroup')
     const { connectionApi } = await import('@/lib/api/connection')
-    vi.mocked(connectionApi.list).mockResolvedValue({ items: [closedItem] })
-    vi.mocked(connectionApi.getRestoreOpenOnStartup).mockResolvedValue(false)
+    vi.mocked(connectionGroupApi.getSidebarTree).mockResolvedValue({
+      groups: [defaultGroup],
+      freeConnections: [closedItem],
+    })
     vi.mocked(connectionApi.open).mockResolvedValue({
       id: 'c1',
       type: 'sqlite',
@@ -160,19 +93,49 @@ describe('ConnectionTree', () => {
     await waitFor(() => {
       expect(screen.getByText('app.db')).toBeInTheDocument()
     })
-    fireEvent.doubleClick(screen.getByText('app.db').closest('div.mb-2')!)
+    fireEvent.doubleClick(screen.getByText('app.db'))
     await waitFor(() => {
       expect(connectionApi.open).toHaveBeenCalledWith('c1')
     })
   })
 
-  it('opens new connection dialog', async () => {
-    const { connectionApi } = await import('@/lib/api/connection')
-    vi.mocked(connectionApi.list).mockResolvedValue({ items: [] })
-    vi.mocked(connectionApi.getRestoreOpenOnStartup).mockResolvedValue(false)
+  it('shows schema tree when connection is open', async () => {
+    const { connectionGroupApi } = await import('@/lib/api/connectionGroup')
+    vi.mocked(connectionGroupApi.getSidebarTree).mockResolvedValue({
+      groups: [defaultGroup],
+      freeConnections: [openItem],
+    })
 
     renderWithProviders(<ConnectionTree />)
-    fireEvent.click(screen.getByRole('button', { name: '新建连接' }))
-    expect(screen.getByPlaceholderText('/path/to/database.db')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('schema-tree')).toBeInTheDocument()
+    })
+  })
+
+  it('creates a root group from blank area context menu', async () => {
+    const { connectionGroupApi } = await import('@/lib/api/connectionGroup')
+    vi.mocked(connectionGroupApi.getSidebarTree).mockResolvedValue({
+      groups: [],
+      freeConnections: [],
+    })
+    vi.mocked(connectionGroupApi.createGroup).mockResolvedValue({
+      id: 'g-new',
+      name: '新分组',
+      sortOrder: 0,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    } as Awaited<ReturnType<typeof connectionGroupApi.createGroup>>)
+
+    renderWithProviders(<ConnectionTree />)
+    await waitFor(() => {
+      expect(screen.getByText(/空白处右键/)).toBeInTheDocument()
+    })
+
+    fireEvent.contextMenu(screen.getByText(/空白处右键/))
+    fireEvent.click(await screen.findByText('新建分组'))
+
+    await waitFor(() => {
+      expect(connectionGroupApi.createGroup).toHaveBeenCalledWith('', '新分组')
+    })
   })
 })

@@ -1,5 +1,35 @@
 package model
 
+type NamespaceKind string
+
+const (
+	NamespaceKindDatabase NamespaceKind = "database"
+	NamespaceKindAttach   NamespaceKind = "attach"
+)
+
+type NamespaceInfo struct {
+	Name     string        `json:"name"`
+	Kind     NamespaceKind `json:"kind"`
+	FilePath *string       `json:"filePath,omitempty"`
+}
+
+type NamespaceList struct {
+	Items []NamespaceInfo `json:"items"`
+}
+
+type SchemaInfo struct {
+	Name string `json:"name"`
+}
+
+type SchemaList struct {
+	Items []SchemaInfo `json:"items"`
+}
+
+type ListTablesOptions struct {
+	Database string `json:"database,omitempty"`
+	Schema   string `json:"schema,omitempty"`
+}
+
 type TableType string
 
 const (

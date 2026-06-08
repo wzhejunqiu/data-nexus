@@ -7,6 +7,23 @@ import (
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 )
 
+func TestBuildMySQLDSNWithCustomCharset(t *testing.T) {
+	dsn := buildMySQLDSN(&model.MySQLConfig{
+		Host:      "localhost",
+		Port:      3306,
+		Database:  "app",
+		User:      "root",
+		Charset:   "gbk",
+		Collation: "gbk_chinese_ci",
+	}, "secret")
+	if !strings.Contains(dsn, "charset=gbk") {
+		t.Fatalf("expected charset=gbk, got %q", dsn)
+	}
+	if !strings.Contains(dsn, "collation=gbk_chinese_ci") {
+		t.Fatalf("expected collation=gbk_chinese_ci, got %q", dsn)
+	}
+}
+
 func TestBuildMySQLDSNWithoutTLS(t *testing.T) {
 	dsn := buildMySQLDSN(&model.MySQLConfig{
 		Host:     "localhost",

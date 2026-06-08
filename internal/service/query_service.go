@@ -157,12 +157,36 @@ func (s *QueryService) OpenTableExport(ctx context.Context, connectionID, tableN
 	return drv.OpenTableExport(ctx, tableName, opts)
 }
 
-func (s *QueryService) ListTables(ctx context.Context, connectionID string) (*model.TableList, error) {
+func (s *QueryService) ListNamespaces(ctx context.Context, connectionID string) (*model.NamespaceList, error) {
 	drv, err := s.mgr.Driver(connectionID)
 	if err != nil {
 		return nil, err
 	}
-	items, err := drv.ListTables(ctx)
+	items, err := drv.ListNamespaces(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &model.NamespaceList{Items: items}, nil
+}
+
+func (s *QueryService) ListSchemas(ctx context.Context, connectionID, database string) (*model.SchemaList, error) {
+	drv, err := s.mgr.Driver(connectionID)
+	if err != nil {
+		return nil, err
+	}
+	items, err := drv.ListSchemas(ctx, database)
+	if err != nil {
+		return nil, err
+	}
+	return &model.SchemaList{Items: items}, nil
+}
+
+func (s *QueryService) ListTables(ctx context.Context, connectionID string, opts model.ListTablesOptions) (*model.TableList, error) {
+	drv, err := s.mgr.Driver(connectionID)
+	if err != nil {
+		return nil, err
+	}
+	items, err := drv.ListTables(ctx, opts)
 	if err != nil {
 		return nil, err
 	}

@@ -80,3 +80,36 @@ func TestSqlExecutionServiceNilStore(t *testing.T) {
 		t.Fatalf("expected empty executions, got %+v", executions.Items)
 	}
 }
+
+func TestSqlExecutionServiceListAll(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sql-global.db")
+	store, err := sqlite.NewStore(&model.ExecutionLogSQLiteConfig{FilePath: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+
+	svc := service.NewSqlExecutionService(store)
+	ctx := context.Background()
+
+	_ = store.Insert(ctx, model.SqlExecutionRecord{
+		ConnectionID: "a", SQL: "Q1", Kind: model.SqlExecutionResult,
+		EffectRows: 1, DurationMs: 1, ExecutedAt: time.Now().UTC(),
+	})
+
+	all, err := svc.ListAllSqlExecutions(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all.Items) != 1 {
+		t.Fatalf("expected 1, got %d", len(all.Items))
+	}
+
+	large, err := svc.ListAllSqlExecutions(ctx, 999)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(large.Items) != 1 {
+		t.Fatalf("expected cap at 200 but only 1 record")
+	}
+}

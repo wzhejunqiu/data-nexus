@@ -15,6 +15,7 @@ vi.mock('@/lib/api/connection', () => ({
     updateSQLiteSettings: vi.fn(),
     updatePostgresSettings: vi.fn(),
     updateMySQLSettings: vi.fn(),
+    rename: vi.fn(),
   },
 }))
 
@@ -83,6 +84,7 @@ describe('EditConnectionDialog', () => {
 
   it('renders readOnly and wal checkboxes with initial values', () => {
     renderDialog()
+    fireEvent.click(screen.getByRole('button', { name: /connectionForm.section.advanced/ }))
     const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[]
     expect(checkboxes[0].checked).toBe(false)
     expect(checkboxes[1].checked).toBe(false)
@@ -96,6 +98,7 @@ describe('EditConnectionDialog', () => {
         sqlite: { filePath: '/tmp/test.db', readOnly: true, wal: false },
       },
     })
+    fireEvent.click(screen.getByRole('button', { name: /connectionForm.section.advanced/ }))
     const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[]
     expect(checkboxes[0].checked).toBe(true)
     expect(checkboxes[1].disabled).toBe(true)
@@ -106,6 +109,7 @@ describe('EditConnectionDialog', () => {
     vi.mocked(connectionApi.updateSQLiteSettings).mockResolvedValue({} as never)
 
     renderDialog()
+    fireEvent.click(screen.getByRole('button', { name: /connectionForm.section.advanced/ }))
     const checkboxes = screen.getAllByRole('checkbox')
     fireEvent.click(checkboxes[0])
     fireEvent.click(screen.getByRole('button', { name: /confirm|确认/i }))
@@ -123,6 +127,7 @@ describe('EditConnectionDialog', () => {
     vi.mocked(connectionApi.updateSQLiteSettings).mockResolvedValue({} as never)
 
     renderDialog()
+    fireEvent.click(screen.getByRole('button', { name: /connectionForm.section.advanced/ }))
     const checkboxes = screen.getAllByRole('checkbox')
     fireEvent.click(checkboxes[1])
     fireEvent.click(screen.getByRole('button', { name: /confirm|确认/i }))

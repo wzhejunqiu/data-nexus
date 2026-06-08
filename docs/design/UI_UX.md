@@ -22,10 +22,10 @@
 |------|------|
 | 窗口 | 默认 1280×800，最小 960×600 |
 | 标题栏 | `Data Nexus — app.db`（连接后显示文件名） |
-| 应用内 MenuBar（v0.5） | **文件**（新建连接 / 打开 SQLite / 关闭 / 退出）、**视图**（SQL 执行历史 / 设置）、**帮助**（关于） |
-| 原生菜单（v0.5 精简） | 仅保留 macOS 标准 **App / Edit / Window**（含 Quit）；不再重复 File/View/Help |
+| 应用内 MenuBar（v0.5） | **Win/Linux：** 顶栏 **文件**（新建连接 / 打开 SQLite / 关闭 / **新建分组** / 退出）、**视图**、**帮助**；**macOS：** 应用内 **不渲染** Menubar，等价项在系统菜单栏 |
+| 原生菜单（v0.5） | **macOS：** `app_menu_darwin.go` — App / 文件 / 编辑 / 视图 / 窗口 / 帮助（`EventsEmit` → 前端 Dialog）；**Win/Linux：** 仅 App / Edit / Window，File/View/Help 由应用内 MenuBar 提供 |
 | 文件打开 | 系统原生对话框（MenuBar「打开 SQLite」或新建连接 Dialog） |
-| 拖拽 | 拖 `.db` 到窗口打开（P1；**Server 模式不适用**） |
+| 拖拽 | 拖 `.db` 到窗口：**空白区** → 新建连接；**已 open 的 SQLite 连接** → `AttachDatabaseDialog` 预填路径（`app:file-drop` + 前端命中检测） |
 
 ### 1.2 HTTP 模式 UI（v0.7，仅 `--server`）
 
@@ -84,17 +84,25 @@
 
 ### 3.1 整体布局（v0.5）
 
-主工作台为 **左连接列表 + 右展示区** 两栏；全局操作经顶栏 MenuBar。
+主工作台为 **左连接列表 + 右展示区** 两栏；全局操作经 MenuBar（Win/Linux 应用内顶栏，macOS 系统菜单栏）。
+
+**Win / Linux：**
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  MenuBar: [文件▾] [视图▾] [帮助▾]              已打开 N 个连接   │
 ├─────────────────┬────────────────────────────────────────────────┤
+```
+
+**macOS：** 窗口内顶栏仅「已打开 N 个连接」；菜单在屏幕顶部系统栏。
+
+```
+├─────────────────┬────────────────────────────────────────────────┤
 │  连接列表        │  Tab: [表结构] [数据] [SQL]    连接: app.db ▾  │
-│  ● app.db       ├────────────────────────────────────────────────┤
-│    └ users      │                                                │
-│  ○ staging.db   │              Main Content Area                 │
-│  [SavedQueries] │                                                │
+│  ▼ 📁 我的连接   │                                                │
+│    ● mysql       │              Main Content Area                 │
+│  ○ staging.db    │  ← 游离连接                                    │
+│  [SavedQueries]  │                                                │
 ├─────────────────┴────────────────────────────────────────────────┤
 │  Status Bar: 行数 | 耗时 | 版本                                  │
 └──────────────────────────────────────────────────────────────────┘
@@ -102,8 +110,8 @@
 
 | 区域 | 职责 |
 |------|------|
-| 顶栏 MenuBar | 新建连接、打开 SQLite、关闭连接、SQL 历史、设置、关于 |
-| 左侧连接列表 | 连接导航；已打开连接展开 Schema 子树；不含「新建连接」等全局控件 |
+| 顶栏 MenuBar | 新建连接、打开 SQLite、关闭连接、**新建分组**、SQL 历史、设置、关于（macOS：系统菜单栏） |
+| 左侧连接列表 | 顶层 Group + 游离连接（同级）；已 open 连接展开 schema 子树；**文件 → 新建分组** 或 **根层空白右键** |
 | 右侧展示区 | Tab + 主内容（结构 / 数据 / SQL） |
 
 ### 3.2 路由
@@ -155,19 +163,27 @@ MVP 采用单页应用；**无 Welcome 页**，启动即进入主工作台。见
 
 详见 [CONNECTION_UX.md §5](./CONNECTION_UX.md#5-v05-连接列表与右键菜单)。
 
-### 4.2 顶栏 — AppMenuBar（v0.5）
+### 4.2 顶栏 — AppMenuBar（v0.5，平台差异）
+
+**Win / Linux — 应用内：**
 
 ```
-[Data Nexus]  [文件▾] [视图▾] [帮助▾]                    已打开 2 个连接
+[文件▾] [视图▾] [帮助▾]                    已打开 2 个连接
 ```
+
+**macOS — 系统菜单栏 + 应用内状态行：**
+
+- 菜单在屏幕顶部系统栏（`app_menu_darwin.go`）
+- 窗口内顶栏 **无** Menubar，仅「已打开 N 个连接」
 
 **文件**
 
 | 项 | 行为 | 快捷键 |
 |----|------|--------|
 | 新建连接… | `NewConnectionDialog` | `Cmd/Ctrl+N` |
-| 打开 SQLite 文件… | 文件对话框 + `OpenConnectionFromFile` | `Cmd/Ctrl+O` |
+| 打开 SQLite 文件… | 文件对话框 → `OpenConnectionFromFile`（快速保存并 open，默认非只读） | `Cmd/Ctrl+O` |
 | 关闭当前连接 | `CloseConnection(activeConnectionId)` | `Cmd/Ctrl+W` |
+| 新建分组… | `CreateGroup('', name)` 创建顶层 Group | — |
 | 退出 | Quit（macOS 亦可经 App 菜单） | `Cmd/Ctrl+Q`（macOS App 菜单） |
 
 **视图**
@@ -393,7 +409,9 @@ SQL Tab 内 per-connection `QueryHistory` 下拉 **保留**（快捷入口，不
 | 组件 | 用途 | 优先级 |
 |------|------|--------|
 | `AppShell` | 整体布局框架 | P0 |
-| `AppMenuBar` | 应用内顶栏菜单（文件/视图/帮助） | v0.5 |
+| `AppMenuBar` | Win/Linux 应用内顶栏菜单；macOS 隐藏 Menubar（系统菜单栏承担） | v0.5 |
+| `ConnectionSchemaTree` | 连接下 database/schema 层级树 + attach L1 右键 | v0.5 |
+| `SidebarDndContext` | 连接/Group 拖拽改父级与同级排序 | v0.5 |
 | `ConnectionTree` | 左连接列表 + Schema 子树 | P0 |
 | `ConnectionTreeItem` | 连接行 + 右键 ContextMenu | v0.5 |
 | `NewConnectionDialog` | 新建连接（含 SQLite 只读/WAL） | P0 |
@@ -503,8 +521,9 @@ MVP 核心态 — 多连接 + 数据浏览（v0.5 布局）：
 
 | PRD 功能 | UI 入口 |
 |----------|---------|
-| 连接 SQLite | MenuBar 文件 → 新建连接 / 打开 SQLite |
+| 连接 SQLite | MenuBar 文件 → **打开 SQLite**（快速）或 **新建连接**（完整 Dialog） |
 | 远程连接 | MenuBar 文件 → 新建连接 → PG/MySQL Tab |
+| 连接分组 | MenuBar 文件 → **新建分组**；或侧边栏根层空白右键 |
 | Schema 浏览 | 左连接列表 Schema 子树 + 表结构 Tab |
 | 表数据浏览 | 数据 Tab + DataGrid |
 | SQL 编辑器 | SQL Tab |

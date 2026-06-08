@@ -80,7 +80,7 @@ func TestIntegrationPostgresConnectListTables(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tables, err := drv.ListTables(ctx)
+	tables, err := drv.ListTables(ctx, model.ListTablesOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

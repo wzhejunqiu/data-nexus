@@ -4,11 +4,68 @@
     "openCount": "Opened {{count}} connections",
     "noConnection": "Create or open a connection to get started"
   },
+  "menu": {
+    "file": {
+      "label": "File",
+      "newConnection": "New Connection…",
+      "openSqlite": "Open SQLite File…",
+      "closeConnection": "Close Connection",
+      "newGroup": "New Group…",
+      "quit": "Quit"
+    },
+    "view": {
+      "label": "View",
+      "sqlHistory": "SQL Execution History…",
+      "settings": "Settings…"
+    },
+    "help": {
+      "label": "Help",
+      "about": "About Data Nexus"
+    }
+  },
+  "connectionGroup": {
+    "defaultName": "My Connections",
+    "new": "New",
+    "rename": "Rename",
+    "delete": "Delete Group",
+    "newGroupName": "New Group",
+    "deleteSimpleConfirm": "Delete group \"{{name}}\" and its subgroups?",
+    "deleteWithConnections": "Delete group \"{{name}}\". Contains {{connCount}} connection(s).",
+    "deleteConnectionsToo": "Also delete these {{connCount}} connection(s)",
+    "deleteConnectionsHint": "When unchecked, connections become free connections at the root level.",
+    "emptyHint": "Use File → New Connection to add a connection",
+    "noGroupsHint": "Right-click blank area to create a group",
+    "createRoot": "New Group"
+  },
+  "sqlHistory": {
+    "title": "SQL Execution History",
+    "empty": "No executions yet",
+    "time": "Time",
+    "connection": "Connection",
+    "sql": "SQL",
+    "kind": "Kind",
+    "duration": "Duration"
+  },
+  "about": {
+    "title": "About Data Nexus",
+    "version": "Version {{version}}",
+    "platform": "Platform {{platform}}",
+    "description": "Cross-platform database client"
+  },
   "connection": {
     "new": "New connection",
     "open": "Open",
     "close": "Close",
     "remove": "Remove",
+    "delete": "Delete",
+    "openConnection": "Open Connection",
+    "closeConnection": "Close Connection",
+    "attachDatabase": "Attach Database…",
+    "attach": "Attach",
+    "attachAlias": "Alias",
+    "attachAliasOptional": "Optional, auto-generated if empty",
+    "attachedBadge": "Attached",
+    "emptyTables": "No tables",
     "readOnly": "Read-only",
     "rename": "Rename",
     "edit": "Edit",
@@ -49,6 +106,46 @@
       "auth": "Authentication failed",
       "network": "Network connection failed",
       "database": "Database not found"
+    }
+  },
+  "connectionForm": {
+    "titleNew": "New connection",
+    "titleEdit": "Edit connection",
+    "section": {
+      "general": "General",
+      "security": "Security & TLS",
+      "advanced": "Advanced"
+    },
+    "charset": "Charset",
+    "collation": "Collation",
+    "storageEngine": "Default storage engine",
+    "storageEngineDefault": "Server default",
+    "clientEncoding": "Client encoding",
+    "sslMode": {
+      "label": "SSL mode",
+      "disable": "Disable",
+      "allow": "Allow",
+      "prefer": "Prefer",
+      "require": "Require",
+      "verify-ca": "Verify CA",
+      "verify-full": "Verify full"
+    },
+    "testConnection": "Test connection",
+    "saveAndOpen": "Save and open",
+    "optional": "optional",
+    "passwordKeep": "Leave blank to keep current password",
+    "validation": {
+      "required": "Please enter {{field}}",
+      "invalidPort": "Port must be an integer between 1 and 65535"
+    },
+    "fields": {
+      "displayName": "Display name",
+      "filePath": "File path",
+      "host": "Host",
+      "port": "Port",
+      "database": "Database",
+      "user": "User",
+      "password": "Password"
     }
   },
   "vault": {
@@ -131,7 +228,11 @@
     "attach": "Attach database…",
     "detach": "Detach",
     "aliasPrompt": "Alias for attached database",
-    "mainDb": "Main database"
+    "mainDb": "Main database",
+    "showInFinder": "Show in Finder",
+    "showInFileManager": "Show in file manager",
+    "dropRequiresOpenSqlite": "Open a SQLite connection first to attach a database file",
+    "multiDropOpenedFirst": "Opened the first file as a new connection"
   },
   "data": {
     "selectTable": "Select a table from the sidebar",
@@ -284,7 +385,8 @@
     "maxSizeMB": "Max log file size (MB)",
     "maxBackups": "Max log backups",
     "maxAgeDays": "Max log age (days)",
-    "compress": "Compress rotated logs"
+    "compress": "Compress rotated logs",
+    "restoreOnStartup": "Restore open connections on startup"
   },
   "status": {
     "rows": "{{count}} rows",

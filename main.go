@@ -12,7 +12,6 @@ import (
 	"github.com/wzhejunqiu/data-nexus/internal/config"
 	"github.com/wzhejunqiu/data-nexus/internal/executionlog"
 	"github.com/wzhejunqiu/data-nexus/internal/logger"
-	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"github.com/wzhejunqiu/data-nexus/internal/secrets"
 	"github.com/wzhejunqiu/data-nexus/internal/service"
 	wailssvc "github.com/wzhejunqiu/data-nexus/internal/wails"
@@ -46,6 +45,7 @@ func main() {
 		log.Fatal("secrets store", zap.Error(err))
 	}
 	mgr := service.NewConnectionManager(store, secretStore, log)
+	groupSvc := service.NewConnectionGroupService(store.Catalog(), mgr)
 	execLog, err := executionlog.NewStore(config.DefaultExecutionLogConfig())
 	if err != nil {
 		log.Fatal("execution log store", zap.Error(err))
@@ -58,6 +58,7 @@ func main() {
 	importSvc := service.NewImportService(querySvc)
 
 	connWails := wailssvc.NewConnectionService(mgr, log)
+	groupWails := wailssvc.NewConnectionGroupService(groupSvc, log)
 	secretsWails := wailssvc.NewSecretsService(mgr, log)
 	schemaWails := wailssvc.NewSchemaService(querySvc, log)
 	tableWails := wailssvc.NewTableService(querySvc, log)
@@ -72,24 +73,6 @@ func main() {
 	appWails := wailssvc.NewAppService(log)
 
 	app := NewApp(log, connWails, dialogWails, exportWails, appWails, mgr, cli.DBPath)
-	app.SetOpenDatabaseHandler(func() {
-		path, err := dialogWails.OpenDatabaseFile()
-		if err != nil {
-			if appErr, ok := err.(*model.AppError); ok && appErr.Code == "DIALOG_CANCELLED" {
-				return
-			}
-			app.emitError(err)
-			log.Warn("open database dialog failed", zap.Error(err))
-			return
-		}
-		if conn, err := connWails.OpenConnectionFromFile(model.ConnectRequest{FilePath: path}); err != nil {
-			app.emitError(err)
-			log.Warn("open connection failed", zap.Error(err))
-			return
-		} else {
-			app.emitConnectionOpened(conn.ID)
-		}
-	})
 
 	err = wails.Run(&options.App{
 		Title:     "Data Nexus",
@@ -117,6 +100,7 @@ func main() {
 		Windows: &windows.Options{},
 		Bind: []interface{}{
 			connWails,
+			groupWails,
 			secretsWails,
 			schemaWails,
 			tableWails,

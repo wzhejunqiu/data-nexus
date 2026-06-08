@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/menu"
-	"github.com/wailsapp/wails/v2/pkg/menu/keys"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	wailssvc "github.com/wzhejunqiu/data-nexus/internal/wails"
@@ -25,8 +24,7 @@ type App struct {
 		PersistOpenConnections() error
 		RestoreConnectionsOnStartup(context.Context) error
 	}
-	startupDB      string
-	onOpenDatabase func()
+	startupDB string
 }
 
 func NewApp(
@@ -79,10 +77,6 @@ func (a *App) shutdown(_ context.Context) {
 	a.mgr.CloseAll()
 }
 
-func (a *App) SetOpenDatabaseHandler(fn func()) {
-	a.onOpenDatabase = fn
-}
-
 func (a *App) emitConnectionOpened(connectionID string) {
 	if a.ctx == nil || connectionID == "" {
 		return
@@ -112,86 +106,27 @@ func (a *App) emitError(err error) {
 	a.emitToast(msg, "error")
 }
 
-func (a *App) handleOpenDatabase() {
-	if a.onOpenDatabase != nil {
-		a.onOpenDatabase()
-	}
-}
-
-func (a *App) handleCloseConnection() {
-	id := a.appSvc.ActiveConnectionID()
-	if id == "" {
+func (a *App) handleFileDrop(x, y int, paths []string) {
+	if a.ctx == nil {
 		return
 	}
-	if err := a.conn.CloseConnection(id); err != nil {
-		a.log.Warn("close connection from menu failed", zap.Error(err))
-	}
-	runtime.EventsEmit(a.ctx, "app:connections-changed")
-}
-
-func (a *App) handleFileDrop(_ int, _ int, paths []string) {
+	dbPaths := make([]string, 0, len(paths))
 	for _, path := range paths {
 		ext := strings.ToLower(filepath.Ext(path))
-		if ext != ".db" && ext != ".sqlite" && ext != ".sqlite3" {
-			continue
-		}
-		if conn, err := a.conn.OpenConnectionFromFile(model.ConnectRequest{FilePath: path}); err != nil {
-			a.log.Warn("open dropped database failed", zap.String("path", path), zap.Error(err))
-			a.emitError(err)
-			continue
-		} else {
-			a.emitConnectionOpened(conn.ID)
-			return
+		if ext == ".db" || ext == ".sqlite" || ext == ".sqlite3" {
+			dbPaths = append(dbPaths, path)
 		}
 	}
+	if len(dbPaths) == 0 {
+		return
+	}
+	runtime.EventsEmit(a.ctx, "app:file-drop", map[string]interface{}{
+		"x":     x,
+		"y":     y,
+		"paths": dbPaths,
+	})
 }
 
 func (a *App) ApplicationMenu() *menu.Menu {
-	fileSub := menu.NewMenu()
-	fileSub.AddText("Open...", keys.CmdOrCtrl("O"), func(_ *menu.CallbackData) {
-		a.handleOpenDatabase()
-	})
-	fileSub.AddText("Close Connection", keys.CmdOrCtrl("W"), func(_ *menu.CallbackData) {
-		a.handleCloseConnection()
-	})
-	fileSub.AddSeparator()
-	fileSub.AddText("Quit", keys.CmdOrCtrl("Q"), func(_ *menu.CallbackData) {
-		runtime.Quit(a.ctx)
-	})
-
-	viewSub := menu.NewMenu()
-	viewSub.AddText("Theme: Light", nil, func(_ *menu.CallbackData) {
-		_ = a.appSvc.EmitThemeChange("light")
-	})
-	viewSub.AddText("Theme: Dark", nil, func(_ *menu.CallbackData) {
-		_ = a.appSvc.EmitThemeChange("dark")
-	})
-	viewSub.AddText("Theme: System", nil, func(_ *menu.CallbackData) {
-		_ = a.appSvc.EmitThemeChange("system")
-	})
-	viewSub.AddSeparator()
-	viewSub.AddText("Language: 中文", nil, func(_ *menu.CallbackData) {
-		_ = a.appSvc.EmitLanguageChange("zh-CN")
-	})
-	viewSub.AddText("Language: English", nil, func(_ *menu.CallbackData) {
-		_ = a.appSvc.EmitLanguageChange("en")
-	})
-	viewSub.AddSeparator()
-	viewSub.AddText("Settings...", keys.CmdOrCtrl(","), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(a.ctx, "app:settings")
-	})
-
-	helpSub := menu.NewMenu()
-	helpSub.AddText("About Data Nexus", nil, func(_ *menu.CallbackData) {
-		_ = a.appSvc.ShowAbout()
-	})
-
-	appMenu := menu.NewMenu()
-	appMenu.Append(menu.AppMenu())
-	appMenu.Append(menu.EditMenu())
-	appMenu.Append(menu.WindowMenu())
-	appMenu.Append(menu.SubMenu("File", fileSub))
-	appMenu.Append(menu.SubMenu("View", viewSub))
-	appMenu.Append(menu.SubMenu("Help", helpSub))
-	return appMenu
+	return a.platformApplicationMenu()
 }

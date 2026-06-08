@@ -20,6 +20,7 @@ export interface PostgresConfig {
   user: string
   sslMode?: string
   schema?: string
+  clientEncoding?: string
   readOnly: boolean
 }
 
@@ -30,6 +31,9 @@ export interface MySQLConfig {
   user: string
   tls: boolean
   tlsSkipVerify?: boolean
+  charset?: string
+  collation?: string
+  defaultStorageEngine?: string
   readOnly: boolean
 }
 
@@ -75,6 +79,7 @@ export interface PostgresSettingsUpdate {
   password?: string | null
   sslMode: string
   schema: string
+  clientEncoding?: string
   readOnly: boolean
 }
 
@@ -86,6 +91,9 @@ export interface MySQLSettingsUpdate {
   password?: string | null
   tls: boolean
   tlsSkipVerify: boolean
+  charset?: string
+  collation?: string
+  defaultStorageEngine?: string
   readOnly: boolean
 }
 
@@ -308,6 +316,71 @@ export interface VersionInfo {
   version: string
   platform: string
   arch: string
+}
+
+export interface ConnectionGroupNode {
+  id: string
+  name: string
+  childGroups: ConnectionGroupNode[]
+  connections: ConnectionListItem[]
+  memberItems?: GroupMemberRef[]
+}
+
+export interface ConnectionSidebarTree {
+  groups: ConnectionGroupNode[]
+  freeConnections: ConnectionListItem[]
+  rootItems?: SidebarRootItemRef[]
+}
+
+export interface ConnectionGroup {
+  id: string
+  name: string
+  parentId?: string | null
+  sortOrder: number
+}
+
+export interface DeleteGroupRequest {
+  id: string
+  deleteConnections: boolean
+}
+
+export interface MoveGroupRequest {
+  id: string
+  newParentId?: string | null
+  sortOrder: number
+}
+
+export interface GroupMemberRef {
+  memberType: 'group' | 'connection'
+  memberId: string
+}
+
+export interface SidebarRootItemRef {
+  itemType: 'group' | 'connection'
+  itemId: string
+}
+
+export interface NamespaceInfo {
+  name: string
+  kind: 'database' | 'attach'
+  filePath?: string
+}
+
+export interface NamespaceList {
+  items: NamespaceInfo[]
+}
+
+export interface SchemaInfo {
+  name: string
+}
+
+export interface SchemaList {
+  items: SchemaInfo[]
+}
+
+export interface ListTablesOptions {
+  database?: string
+  schema?: string
 }
 
 export * from './csv'

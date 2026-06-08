@@ -157,7 +157,16 @@ v0.5 起，左侧连接列表通过 **可嵌套 Group** 组织连接；连接配
 | **重命名** | 进入 §3.6.1 原地编辑 |
 | **删除** | §3.4 删除流程（含连接时带 checkbox） |
 
-顶层 Group 与嵌套 Group **同一套** 右键菜单。根层空白处右键可选「新建分组」（创建 `parent_id NULL` 的顶层 Group）。
+顶层 Group 与嵌套 Group **同一套** 右键菜单。
+
+**根层新建顶层 Group**（v0.5 已实现，两入口等价）：
+
+| 入口 | 实现 |
+|------|------|
+| **文件 → 新建分组…** | `AppMenuBar` / macOS `app:new-group` → `AppShell` → `createGroup('', '新分组')` |
+| **根层空白处右键「新建分组」** | `ConnectionTree` 包裹 `ContextMenu` → 同上 |
+
+删除默认「我的连接」后，显示 `connectionGroup.noGroupsHint` 引导用户（文案可提及文件菜单或空白右键）。
 
 #### 3.6.3 连接右键菜单
 
@@ -370,26 +379,28 @@ func (s *ConnectionGroupService) ReorderSidebarRoot(ordered []SidebarRootItemRef
 
 ```typescript
 interface ConnectionSidebarTree {
-  /** 顶层 Group（parent_id 空），各节点可嵌套 */
   groups: ConnectionGroupNode[]
-  /** 游离连接 — 与 groups 第一层同级 */
   freeConnections: ConnectionListItem[]
+  /** 根层交错顺序（Group + 游离连接）；DnD 排序与渲染依据 */
+  rootItems?: SidebarRootItemRef[]
 }
 
 interface ConnectionGroupNode {
   id: string
   name: string
   childGroups: ConnectionGroupNode[]
-  connections: ConnectionListItem[]  // 仅本 Group 直属连接
+  connections: ConnectionListItem[]
+  /** 组内子 Group + 连接交错顺序 */
+  memberItems?: GroupMemberRef[]
+}
+
+interface SidebarRootItemRef {
+  itemType: 'group' | 'connection'
+  itemId: string
 }
 ```
 
-前端 `ConnectionTree` 根级渲染：
-
-```tsx
-{tree.groups.map((g) => <ConnectionGroupNode key={g.id} node={g} />)}
-{tree.freeConnections.map((c) => <ConnectionTreeItem key={c.id} item={c} depth={0} />)}
-```
+前端 `ConnectionTree` 根级按 **`rootItems`** 渲染（fallback：`groups` + `freeConnections`）；组内按 **`memberItems`** 渲染。新建顶层 Group：**文件 → 新建分组…** 或根层空白 **ContextMenu → 新建分组**（`createGroup('', name)`）。
 
 连接节点下再挂 `ConnectionSchemaTree`（见 CONNECTION_TREE.md）。
 

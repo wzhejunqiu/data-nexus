@@ -17,9 +17,21 @@ func NewSchemaService(query *service.QueryService, log *zap.Logger) *SchemaServi
 	return &SchemaService{query: query, log: log}
 }
 
-func (s *SchemaService) ListTables(connectionID string) (*model.TableList, error) {
+func (s *SchemaService) ListNamespaces(connectionID string) (*model.NamespaceList, error) {
+	return call(s.log, "SchemaService.ListNamespaces", func() (*model.NamespaceList, error) {
+		return s.query.ListNamespaces(context.Background(), connectionID)
+	})
+}
+
+func (s *SchemaService) ListSchemas(connectionID, database string) (*model.SchemaList, error) {
+	return call(s.log, "SchemaService.ListSchemas", func() (*model.SchemaList, error) {
+		return s.query.ListSchemas(context.Background(), connectionID, database)
+	})
+}
+
+func (s *SchemaService) ListTables(connectionID string, opts model.ListTablesOptions) (*model.TableList, error) {
 	return call(s.log, "SchemaService.ListTables", func() (*model.TableList, error) {
-		return s.query.ListTables(context.Background(), connectionID)
+		return s.query.ListTables(context.Background(), connectionID, opts)
 	})
 }
 

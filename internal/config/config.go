@@ -116,6 +116,11 @@ func DefaultExecutionLogConfig() model.ExecutionLogConfig {
 	}
 }
 
+func CatalogDBPath() string {
+	return filepath.Join(ConfigDir(), "catalog.db")
+}
+
+// ConnectionsPath is deprecated; v0.5+ uses CatalogDBPath.
 func ConnectionsPath() string {
 	return filepath.Join(ConfigDir(), "connections.json")
 }

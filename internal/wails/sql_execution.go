@@ -28,3 +28,9 @@ func (s *SqlExecutionService) ListSqlExecutions(connectionID string, limit int) 
 		return s.svc.ListSqlExecutions(context.Background(), connectionID, limit)
 	})
 }
+
+func (s *SqlExecutionService) ListAllSqlExecutions(limit int) (*model.SqlExecutionList, error) {
+	return call(s.log, "SqlExecutionService.ListAllSqlExecutions", func() (*model.SqlExecutionList, error) {
+		return s.svc.ListAllSqlExecutions(context.Background(), limit)
+	})
+}

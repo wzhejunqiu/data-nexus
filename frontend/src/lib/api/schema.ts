@@ -2,9 +2,19 @@ import {
   DetectFTSTable,
   GetTableProfile,
   GetTableSchema,
+  ListNamespaces,
+  ListSchemas,
   ListTables,
 } from '../../../wailsjs/go/wails/SchemaService'
-import type { FTSInfo, TableList, TableProfile, TableSchema } from '../types'
+import type {
+  FTSInfo,
+  ListTablesOptions,
+  NamespaceList,
+  SchemaList,
+  TableList,
+  TableProfile,
+  TableSchema,
+} from '../types'
 import { mapWailsError } from './errors'
 
 async function wrap<T>(fn: () => Promise<T>): Promise<T> {
@@ -16,7 +26,12 @@ async function wrap<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export const schemaApi = {
-  listTables: (connectionId: string) => wrap(() => ListTables(connectionId) as Promise<TableList>),
+  listNamespaces: (connectionId: string) =>
+    wrap(() => ListNamespaces(connectionId) as Promise<NamespaceList>),
+  listSchemas: (connectionId: string, database: string) =>
+    wrap(() => ListSchemas(connectionId, database) as Promise<SchemaList>),
+  listTables: (connectionId: string, opts: ListTablesOptions = {}) =>
+    wrap(() => ListTables(connectionId, opts) as Promise<TableList>),
   getTableSchema: (connectionId: string, tableName: string) =>
     wrap(() => GetTableSchema(connectionId, tableName) as Promise<TableSchema>),
   getTableProfile: (connectionId: string, tableName: string) =>

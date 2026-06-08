@@ -73,6 +73,25 @@ func TestCloseNilDB(t *testing.T) {
 	}
 }
 
+func TestListNamespaces(t *testing.T) {
+	drv, mock := newMockDriver(t)
+	mock.ExpectQuery("SHOW DATABASES").
+		WillReturnRows(sqlmock.NewRows([]string{"Database"}).
+			AddRow("testdb").
+			AddRow("otherdb"))
+
+	namespaces, err := drv.ListNamespaces(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(namespaces) != 2 || namespaces[0].Name != "testdb" || namespaces[0].Kind != model.NamespaceKindDatabase {
+		t.Fatalf("unexpected namespaces: %+v", namespaces)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestListTables(t *testing.T) {
 	drv, mock := newMockDriver(t)
 	mock.ExpectQuery(`SELECT TABLE_NAME, TABLE_TYPE`).
@@ -83,7 +102,7 @@ func TestListTables(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM `testdb`.`users`")).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(3))
 
-	tables, err := drv.ListTables(context.Background())
+	tables, err := drv.ListTables(context.Background(), model.ListTablesOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

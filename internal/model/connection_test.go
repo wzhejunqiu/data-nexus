@@ -29,6 +29,34 @@ func TestPostgresConfigNormalized(t *testing.T) {
 	if pg.NormalizedSSLMode() != "require" {
 		t.Fatalf("expected require ssl mode, got %q", pg.NormalizedSSLMode())
 	}
+	if pg.NormalizedClientEncoding() != "UTF8" {
+		t.Fatalf("expected UTF8 client encoding, got %q", pg.NormalizedClientEncoding())
+	}
+	pg.ClientEncoding = "LATIN1"
+	if pg.NormalizedClientEncoding() != "LATIN1" {
+		t.Fatalf("expected LATIN1 client encoding, got %q", pg.NormalizedClientEncoding())
+	}
+}
+
+func TestMySQLConfigNormalized(t *testing.T) {
+	my := &model.MySQLConfig{}
+	if my.NormalizedPort() != 3306 {
+		t.Fatalf("expected default port 3306, got %d", my.NormalizedPort())
+	}
+	if my.NormalizedCharset() != "utf8mb4" {
+		t.Fatalf("expected utf8mb4 charset, got %q", my.NormalizedCharset())
+	}
+	if my.NormalizedCollation() != "utf8mb4_unicode_ci" {
+		t.Fatalf("expected utf8mb4_unicode_ci collation, got %q", my.NormalizedCollation())
+	}
+	my.Charset = "gbk"
+	my.Collation = "gbk_chinese_ci"
+	if my.NormalizedCharset() != "gbk" {
+		t.Fatalf("expected gbk charset, got %q", my.NormalizedCharset())
+	}
+	if my.NormalizedCollation() != "gbk_chinese_ci" {
+		t.Fatalf("expected gbk_chinese_ci collation, got %q", my.NormalizedCollation())
+	}
 }
 
 func TestMySQLConfigNormalizedPort(t *testing.T) {

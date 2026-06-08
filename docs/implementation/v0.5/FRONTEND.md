@@ -17,6 +17,7 @@ interface AppMenuBarProps {
   activeConnectionId: string | null
   // Dialog 控制
   onNewConnection: () => void
+  onNewGroup: () => void
   onOpenSettings: () => void
   onOpenSqlHistory: () => void
   onOpenAbout: () => void
@@ -26,10 +27,12 @@ interface AppMenuBarProps {
 
 ### 实现要点
 
-1. 基于 `@radix-ui/react-menubar` + `components/ui/Menubar.tsx`
-2. 「打开 SQLite」：`dialogApi.openDatabaseFile()` → `connectionApi.openFromFile({ filePath, readOnly: false, wal: false })`（快速打开默认选项；完整选项走新建连接 Dialog）
-3. 「关闭当前连接」：`activeConnectionId` 为空时 `disabled`
-4. 右侧：`wizardTitle ?? t('app.openCount', { count: openCount })`
+1. 基于 `@radix-ui/react-menubar` + `components/ui/Menubar.tsx`（**仅 Win/Linux 渲染**）
+2. **macOS：** `useIsMacOS()`（`lib/platform.ts` + `appApi.getPlatform()`）隐藏 Menubar；菜单由 `app_menu_darwin.go` 系统栏提供
+3. 「打开 SQLite」：`dialogApi.openDatabaseFile()` → `connectionApi.openFromFile(...)`（快速新建/复用连接并 open；macOS 亦可通过 `app:open-sqlite` 触发）
+4. 「新建分组」：`connectionGroupApi.createGroup('', t('connectionGroup.newGroupName'))`；macOS 经 `app:new-group` → `AppShell.createRootGroup`
+5. 「关闭当前连接」：`activeConnectionId` 为空时 disabled
+6. 右侧：`wizardTitle ?? t('app.openCount', { count: openCount })`
 
 ### openCount 数据来源
 
@@ -43,8 +46,9 @@ interface AppMenuBarProps {
 
 ```tsx
 export function Header(props: AppMenuBarProps) {
+  const isMacOS = useIsMacOS()
   return (
-    <header className="flex h-12 items-center border-b border-border px-4">
+    <header className={`flex items-center border-b border-border px-4 ${isMacOS ? 'h-9' : 'h-12'}`}>
       <AppMenuBar {...props} />
     </header>
   )
@@ -63,10 +67,13 @@ export function Header(props: AppMenuBarProps) {
 useQuery({ queryKey: ['connectionSidebarTree'], queryFn: groupApi.getSidebarTree })
 ```
 
-- `ConnectionTree` 根级：`groups.map` + `freeConnections.map`（**同 depth=0**）
-- `ConnectionGroupNode` — 顶层/嵌套 📁；**inline 重命名**（Enter）；右键 **新建/重命名/删除**；**draggable**
-- `ConnectionTreeItem` — 连接行；右键 **打开/关闭/编辑/删除**（SQLite open 时第五项「附加数据库…」）；**draggable**
-- `SidebarDndContext` — `@dnd-kit` 根 context（Group 改父级、连接移动、同级排序）
+- `ConnectionTree` 根级：按 **`rootItems`** 混排渲染（fallback：`groups` + `freeConnections`）
+- **根层空白右键** 或 **文件 → 新建分组…** → `createGroup('', name)`；无分组时显示 `connectionGroup.noGroupsHint`
+- `ConnectionGroupNode` — 顶层/嵌套 📁；**inline 重命名**；右键 **新建/重命名/删除**；**draggable + sortable**
+- `ConnectionTreeItem` — 连接行；右键 **打开/关闭/编辑/删除**（SQLite 第五项「附加数据库…」）；**`data-sqlite-drop-target`** 供拖放 attach
+- `SidebarDndContext` — `@dnd-kit` + **`@dnd-kit/sortable`**（改父级 + **`ReorderSidebarRoot` / `ReorderGroupMembers`**）
+- `useSidebarFileDrop` — 监听 `app:file-drop`
+- `sidebarOrder.ts` — `rootItems` / `memberItems` 排序辅助
 - `DeleteGroupDialog` — 未勾选时文案：变为 **游离连接**
 - 连接 open 后挂载 `ConnectionSchemaTree`
 
@@ -88,9 +95,10 @@ useQuery({ queryKey: ['connectionSidebarTree'], queryFn: groupApi.getSidebarTree
 - **invalidate：** `['namespaces', id]`、`['tables', id]`、`['attached', id]`
 - 完整规格：[CONNECTION_TREE.md §3.6](./CONNECTION_TREE.md#36-sqlite-attach--detach)
 
-### 2.3 移除
+### 2.3 移除（已完成）
 
-- `SchemaSubtree.tsx`、`RemoteNamespaceSwitch` — 合并后删除
+- **`SchemaSubtree.tsx`**、**`SchemaSubtree.test.tsx`** — 已删除
+- `RemoteNamespaceSwitch` — 未保留
 - v0.4 Attach 顶部按钮与 `window.prompt` — 迁至 `AttachDatabaseDialog`
 
 ### 2.4 Vault
@@ -271,7 +279,7 @@ useEffect(() => {
 }, [activeConnectionId, ...])
 ```
 
-保留 `EventsOn('app:settings', () => setSettingsOpen(true))`。
+保留 macOS 原生菜单事件，含 `EventsOn('app:settings', ...)`、`EventsOn('app:new-group', () => createRootGroup())` 等。`createRootGroup` 调用 `connectionGroupApi.createGroup('', t('connectionGroup.newGroupName'))` 并 invalidate 侧边栏树。
 
 ### 渲染
 
@@ -281,6 +289,7 @@ useEffect(() => {
   wizardTitle={...}
   activeConnectionId={activeConnectionId}
   onNewConnection={() => setNewConnectionOpen(true)}
+  onNewGroup={() => void createRootGroup()}
   onOpenSettings={() => setSettingsOpen(true)}
   onOpenSqlHistory={() => setSqlHistoryOpen(true)}
   onOpenAbout={() => setAboutOpen(true)}
@@ -372,6 +381,7 @@ npm install @radix-ui/react-menubar @radix-ui/react-context-menu
       "newConnection": "新建连接…",
       "openSQLite": "打开 SQLite 文件…",
       "closeConnection": "关闭当前连接",
+      "newGroup": "新建分组…",
       "quit": "退出"
     },
     "view": {

@@ -95,7 +95,31 @@ func (d *Driver) Ping(ctx context.Context) error {
 	return d.db.PingContext(ctx)
 }
 
-func (d *Driver) ListTables(ctx context.Context) ([]model.TableInfo, error) {
+func (d *Driver) ListTables(ctx context.Context, opts model.ListTablesOptions) ([]model.TableInfo, error) {
+	ns := sqliteNamespaceFromOpts(opts)
+	if ns != "" {
+		if ns == "main" {
+			mainSchema := "main"
+			return d.listTablesInSchema(ctx, mainSchema, &mainSchema)
+		}
+		attached, err := d.ListAttached(ctx)
+		if err != nil {
+			return nil, err
+		}
+		found := false
+		for _, a := range attached {
+			if a.Alias == ns {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, model.ErrInvalidRequest("unknown namespace: " + ns)
+		}
+		label := ns
+		return d.listTablesInSchema(ctx, ns, &label)
+	}
+
 	mainSchema := "main"
 	items, err := d.listTablesInSchema(ctx, mainSchema, &mainSchema)
 	if err != nil {

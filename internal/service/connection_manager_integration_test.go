@@ -131,7 +131,7 @@ func TestIntegrationThreeDriversConcurrentOpen(t *testing.T) {
 		if err != nil {
 			t.Fatalf("driver for %s: %v", id, err)
 		}
-		if _, err := drv.ListTables(ctx); err != nil {
+		if _, err := drv.ListTables(ctx, model.ListTablesOptions{}); err != nil {
 			t.Fatalf("ListTables for %s: %v", id, err)
 		}
 	}

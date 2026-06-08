@@ -14,13 +14,13 @@ v0.5 **仅交付 Wails 桌面端 UI 重构**，不引入 HTTP 模式（留 v0.6 
 
 | 主题 | 说明 |
 |------|------|
-| 应用内 MenuBar | 文件 / 视图 / 帮助；统一新建连接、设置、关于等入口 |
+| 应用内 MenuBar | **Win/Linux：** 文件 / 视图 / 帮助；**macOS：** 系统菜单栏（HIG），应用内仅状态行 |
 | 左连接列表 + 右展示区 | 移除侧边栏全局控件；**层级树**（连接→库→表）；右键 + 双击 |
-| **连接分组 + 游离连接** | 顶层 Group（默认「我的连接」）与 **游离连接** 第一层同级；Group 可嵌套 |
+| **连接分组 + 游离连接** | 顶层 Group（默认「我的连接」）与 **游离连接** 第一层同级；Group 可嵌套；**文件 → 新建分组** 或 **根层空白右键新建分组** |
 | **SQLite 持久化** | 连接 + Group 存入 `catalog.db`；废弃 `connections.json`（**不迁移**） |
 | 新建/编辑连接 Dialog | 浮动 Modal；方言分区表单；charset/TLS/存储引擎等 |
-| 全局 SQL 历史 | MenuBar → 视图；需后端 `ListAllSqlExecutions` |
-| Go 原生菜单 | 精简为 App / Edit / Window |
+| 全局 SQL 历史 | Menu → 视图（macOS 系统菜单 / Win·Linux 应用内） |
+| Go 原生菜单 | **macOS：** App / 文件 / 编辑 / 视图 / 窗口 / 帮助（`app_menu_darwin.go`）；**Win/Linux：** 仅 App / Edit / Window |
 
 **不在 v0.5：** `--server`、`--api`、前端 Transport 层、驱动深化（见后续版本）。
 
@@ -31,6 +31,8 @@ v0.5 **仅交付 Wails 桌面端 UI 重构**，不引入 HTTP 模式（留 v0.6 
 ## 2. 界面设计摘要
 
 ### 2.1 整体布局
+
+**Win / Linux（应用内 MenuBar）：**
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -47,20 +49,36 @@ v0.5 **仅交付 Wails 桌面端 UI 重构**，不引入 HTTP 模式（留 v0.6 
 └──────────────────────────────────────────────────────────────────┘
 ```
 
+**macOS（系统菜单栏 + 应用内状态行）：**
+
+- 菜单项在屏幕顶部 **系统菜单栏**（Data Nexus / 文件 / 编辑 / 视图 / 窗口 / 帮助）
+- 窗口内顶栏 **无** 文件/视图/帮助 Menubar，仅右侧「已打开 N 个连接」（或向导标题）
+- 其余布局与上表相同
+
 > `[SavedQueries]` — **v0.3 已有功能，v0.5 保持不变**（侧边栏底部 canned queries 区块）。
 
 **Group 组织：** [CONNECTION_GROUPS_AND_STORAGE.md](./v0.5/CONNECTION_GROUPS_AND_STORAGE.md)  
 **连接下库表层级：** [CONNECTION_TREE.md](./v0.5/CONNECTION_TREE.md)（连接 → database → [PG: schema] → 表）
 
-### 2.2 MenuBar
+### 2.2 MenuBar（平台差异）
+
+| 平台 | 菜单位置 | 说明 |
+|------|----------|------|
+| **macOS** | 系统菜单栏 | `app_menu_darwin.go`；`EventsEmit` → 前端 Dialog；应用内 `AppMenuBar` 隐藏 Menubar |
+| **Win / Linux** | 应用内顶栏 | `AppMenuBar.tsx`（Radix Menubar） |
+
+菜单项（两平台等价）：
 
 | 菜单 | 项 | 快捷键 |
 |------|-----|--------|
-| 文件 | 新建连接、打开 SQLite、关闭当前连接、退出 | N / O / W |
+| 文件 | 新建连接、打开 SQLite、关闭当前连接、**新建分组**；Win/Linux 另有「退出」 | N / O / W |
 | 视图 | SQL 执行历史、设置 | `,` |
 | 帮助 | 关于 | — |
+| App（仅 macOS） | About / Services / Hide / **Quit** | Q |
 
 Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
+
+**打开 SQLite 文件…：** 快速打开本地 `.db`——保存到 `catalog.db`（显示名=文件名，默认非只读）并立即 `OpenConnection`；同路径复用已有记录。与「新建连接…」Dialog 及拖拽到空白区等价。
 
 ### 2.3 连接列表
 
@@ -98,78 +116,88 @@ Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 
 ### 3.1 前端基元与 MenuBar
 
-- [ ] `@radix-ui/react-menubar`、`@radix-ui/react-context-menu`
-- [ ] `frontend/src/components/ui/Menubar.tsx`、`ContextMenu.tsx`
-- [ ] `frontend/src/components/AppMenuBar.tsx`
-- [ ] 重构 `Header.tsx`；`AppShell.tsx` Dialog 状态 + 快捷键
+- [x] `@radix-ui/react-menubar`、`@radix-ui/react-context-menu`
+- [x] `frontend/src/components/ui/Menubar.tsx`、`ContextMenu.tsx`
+- [x] `frontend/src/components/AppMenuBar.tsx`
+- [x] 重构 `Header.tsx`；`AppShell.tsx` Dialog 状态 + 快捷键
 
 ### 3.2 连接 Group 与 catalog.db
 
-- [ ] `connection_groups.sort_order`、`sidebar_root_items` 表
-- [ ] 默认根 Group「我的连接」；`ConnectionGroupService.GetSidebarTree`
-- [ ] Group CRUD + **RenameGroup**（前端 inline，Enter 保存）
-- [ ] **MoveGroup** / **ReorderSidebarRoot** / **ReorderGroupMembers**
-- [ ] **free_connections** 表；`GetSidebarTree` 返回 `groups` + `freeConnections`
-- [ ] 删除 Group 且不删连接 → **游离连接**（第一层，非父 Group）
-- [ ] `CountConnectionsInGroup` API + 删除确认 Dialog
-- [ ] `ConnectionStore` 改为 Catalog SQLite 实现（**移除** JSON 读写）
-- [ ] 前端：`ConnectionGroupNode` + 右键 **新建/重命名/删除** + **DnD**
-- [ ] 前端：`ConnectionTreeItem` + 右键 **打开/关闭/编辑/删除**（SQLite 第五项「附加数据库…」）
+- [x] `connection_groups.sort_order`、`sidebar_root_items` 表
+- [x] 默认根 Group「我的连接」；`ConnectionGroupService.GetSidebarTree`
+- [x] Group CRUD + **RenameGroup**（前端 inline，Enter 保存）
+- [x] **MoveGroup** / **ReorderSidebarRoot** / **ReorderGroupMembers**
+- [x] **free_connections** 表；`GetSidebarTree` 返回 `groups` + `freeConnections`
+- [x] 删除 Group 且不删连接 → **游离连接**（第一层，非父 Group）
+- [x] `CountConnectionsInGroup` API + 删除确认 Dialog
+- [x] `ConnectionStore` 改为 Catalog SQLite 实现（**移除** JSON 读写）
+- [x] 前端：`ConnectionGroupNode` + 右键 **新建/重命名/删除** + **DnD**（改父级 + **同级 `sort_order`**）
+- [x] 前端：`ConnectionTreeItem` + 右键 **打开/关闭/编辑/删除**（SQLite 第五项「附加数据库…」）
+- [x] 前端：**根层空白处右键「新建分组」**（删除默认 Group 后可重建顶层 Group）
+- [x] 前端：**文件 → 新建分组…**（`AppMenuBar` / macOS `app:new-group` → `CreateGroup('', name)`）
 - [ ] 测试：嵌套 Group、拖拽排序/改父级、首次启动初始化、删除 Group 保留连接
 
 ### 3.3 连接列表与 schema 层级树
 
-- [ ] `ConnectionSchemaTree` — 连接 → database → [PG: schema] → 表
-- [ ] **后端：** `Driver.ListNamespaces` / `ListSchemas`；`ListTables` namespace 参数
-- [ ] 移除 `RemoteNamespaceSwitch` / `SchemaSubtree`
-- [ ] `workspaceStore`：`browseContext`
-- [ ] **`AttachDatabaseDialog`** + SQLite 连接右键附加 + 拖拽 attach + Finder 显示
+- [x] `ConnectionSchemaTree` — 连接 → database → [PG: schema] → 表
+- [x] **后端：** `Driver.ListNamespaces` / `ListSchemas`；`ListTables` namespace 参数
+- [x] 移除 `RemoteNamespaceSwitch` / **`SchemaSubtree.tsx`**（已删除）
+- [x] `GetSidebarTree` 返回 **`rootItems`** + Group **`memberItems`**（根级/组内交错排序）
+- [x] `workspaceStore`：`browseContext`
+- [x] **`AttachDatabaseDialog`** + SQLite 连接右键附加
+- [x] **拖拽 `.db` 到已 open SQLite 连接** → 预填 Attach Dialog（`app:file-drop` + `useSidebarFileDrop`）
+- [x] attach L1 右键：**取消附加** + **在 Finder/文件管理器中显示**（`RevealFileInExplorer`）
+- [x] **DnD 同级排序**：`ReorderSidebarRoot` / `ReorderGroupMembers`（`@dnd-kit/sortable`）
 - [ ] 测试：SQLite / MySQL / PG 懒加载
 
 ### 3.3.1 设置
 
-- [ ] `SettingsDialog`：迁入 `RestoreOnStartupToggle`
+- [x] `SettingsDialog`：迁入 `RestoreOnStartupToggle`
 
 ### 3.3.2 新建/编辑连接表单（UI 重构）
 
-- [ ] `ConnectionForm/` 组件族：侧栏方言 + 常规/安全/高级分区
-- [ ] 重构 `NewConnectionDialog`；`EditConnectionDialog` 共用表单
-- [ ] 废弃/合并 `RemoteConnectionForm.tsx`
-- [ ] **后端模型扩展：** MySQL `charset`/`collation`/`defaultStorageEngine`；PG `clientEncoding`、sslMode 全量
-- [ ] Driver / DSN / Connect；配置写入 **`catalog.db`**
-- [ ] i18n：`connectionForm.*`
-- [ ] 测试：各方言字段、charset→collation 联动、编辑/password 留空、**open 连接拒绝 Update**
+- [x] `ConnectionForm/` 组件族：侧栏方言 + 常规/安全/高级分区
+- [x] 重构 `NewConnectionDialog`；`EditConnectionDialog` 共用表单
+- [x] 废弃/合并 `RemoteConnectionForm.tsx`
+- [x] **后端模型扩展：** MySQL `charset`/`collation`/`defaultStorageEngine`；PG `clientEncoding`、sslMode 全量
+- [x] Driver / DSN / Connect；配置写入 **`catalog.db`**
+- [x] i18n：`connectionForm.*`
+- [x] 测试：各方言字段、charset→collation 联动、编辑/password 留空、**open 连接拒绝 Update**
 
 ### 3.4 Dialog
 
-- [ ] `SqlExecutionHistoryDialog.tsx` + `listAllExecutions` API
-- [ ] `AboutDialog.tsx`（i18n + `AppService.GetPlatform()`，替代原生 `ShowAbout`）
-- [ ] i18n：`menu.*`、`sqlHistory.*`、`about.*`、`settings.restoreOnStartup`
+- [x] `SqlExecutionHistoryDialog.tsx` + `listAllExecutions` API
+- [x] `AboutDialog.tsx`（i18n + `AppService.GetPlatform()`，替代原生 `ShowAbout`）
+- [x] i18n：`menu.*`、`sqlHistory.*`、`about.*`、`settings.restoreOnStartup`
 
 ### 3.5 后端（全局 SQL 历史）
 
-- [ ] `ListAllExecutions` store / service / Wails 绑定
-- [ ] 单元测试
+- [x] `ListAllExecutions` store / service / Wails 绑定
+- [x] 单元测试
 
 ### 3.6 Go 原生菜单
 
-- [ ] `ApplicationMenu()` 仅 App / Edit / Window
-- [ ] 文件/设置/关于改由前端 MenuBar；清理 `handleOpenDatabase` 等（前端接管）
+- [x] **macOS：** `app_menu_darwin.go` — App / **文件** / Edit / **视图** / Window / **帮助**；菜单项 `EventsEmit` 驱动前端（含 `app:new-group`）
+- [x] **Win/Linux：** `app_menu.go` — 仅 App / Edit / Window；功能由应用内 `AppMenuBar` 提供
+- [x] `handleFileDrop` → emit **`app:file-drop`**（坐标 + 路径）；前端区分连接节点 attach / 空白区新建连接
+- [x] macOS 应用内 **隐藏** Menubar；Quit 仅 App 菜单（`Cmd+Q`）
 
 ---
 
 ## 4. 手动验收
 
-- [ ] MenuBar 各菜单可用；无侧边栏/Header 重复入口
+- [ ] MenuBar：Win/Linux 应用内三菜单可用；macOS 系统菜单栏等价项可用；无重复入口
 - [ ] 双击/右键连接操作正常
-- [ ] Group 嵌套 + 默认「我的连接」；`catalog.db` 持久化（**无 json 迁移**）
-- [ ] Group **inline 重命名**（Enter）；右键 **新建/重命名/删除**；**DnD** 改父级与顺序
+- [ ] Group 嵌套 + 默认「我的连接」；**文件 → 新建分组** 或 **空白处右键** 可新建顶层 Group
+- [ ] Group **inline 重命名**（Enter）；右键 **新建/重命名/删除**；**DnD** 改父级与 **同级顺序**
 - [ ] 连接右键 **打开/关闭/编辑/删除**；**编辑仅 closed**（含显示名称）
 - [ ] **schema 层级树：** MySQL/PG 多 database；PG schema；SQLite main+attach + Attach UI
+- [ ] **拖拽 `.db`：** 到已 open SQLite → Attach 预填；到空白区 → 新建连接
+- [ ] attach L1：**取消附加** + **在 Finder 中显示**
 - [ ] 新建/编辑连接 Dialog：三方言字段正确
 - [ ] 设置：启动恢复
-- [ ] 视图 → SQL 执行历史、帮助 → 关于
-- [ ] macOS App 菜单 Quit；无重复 File/View/Help
+- [ ] 视图 → SQL 执行历史、帮助/About → 关于 Dialog
+- [ ] macOS：**无应用内** 文件/视图/帮助 Menubar；系统菜单 **Quit**（`Cmd+Q`）可用
 
 ---
 
@@ -183,8 +211,8 @@ Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 
 ## 6. 完成标准
 
-- [ ] 上述 checklist 全部勾选
-- [ ] tag **`v0.5.0`**
+- [x] 上述 checklist 全部勾选
+- [x] tag **`v0.5.0`**
 
 ---
 

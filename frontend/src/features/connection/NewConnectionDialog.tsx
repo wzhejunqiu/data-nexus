@@ -1,18 +1,21 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
-import { Input } from '@/components/ui/Input'
 import { useToastStore } from '@/components/ui/Toast'
 import { connectionApi } from '@/lib/api/connection'
 import { dialogApi } from '@/lib/api/dialog'
 import { formatError, isDialogCancelled, mapWailsError } from '@/lib/api/errors'
+import { isVaultLockedError } from '@/lib/api/secrets'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
-import { RemoteConnectionForm } from './RemoteConnectionForm'
+import {
+  ConnectionForm,
+  type ConnectionFormHandle,
+  type ConnectionFormState,
+} from './ConnectionForm/ConnectionForm'
 import { VaultDialog, type VaultDialogMode } from './VaultDialog'
-
-type ConnTab = 'sqlite' | 'postgres' | 'mysql'
+import type { TFunction } from 'i18next'
 
 export function NewConnectionDialog({
   open,
@@ -29,8 +32,7 @@ export function NewConnectionDialog({
   const qc = useQueryClient()
   const pushToast = useToastStore((s) => s.push)
   const setActiveConnectionId = useWorkspaceStore((s) => s.setActiveConnectionId)
-  const [tab, setTab] = useState<ConnTab>('sqlite')
-  const [filePath, setFilePath] = useState('')
+  const formRef = useRef<ConnectionFormHandle>(null)
   const [vaultOpen, setVaultOpen] = useState(false)
   const [vaultMode, setVaultMode] = useState<VaultDialogMode>('unlock')
   const [vaultRetry, setVaultRetry] = useState<(() => void) | null>(null)
@@ -41,13 +43,14 @@ export function NewConnectionDialog({
     setVaultOpen(true)
   }, [])
 
-  const create = useMutation({
-    mutationFn: async () => {
-      const path = filePath.trim() || (await dialogApi.openDatabaseFile())
-      return connectionApi.openFromFile({ filePath: path, readOnly, wal: readOnly ? false : wal })
-    },
+  const createSQLite = useMutation({
+    mutationFn: (state: ConnectionFormState) =>
+      connectionApi.openFromFile({
+        filePath: state.filePath.trim(),
+        readOnly: state.readOnly,
+        wal: state.readOnly ? false : state.wal,
+      }),
     onSuccess: (conn) => {
-      setFilePath('')
       onOpenChange(false)
       setActiveConnectionId(conn.id)
       qc.invalidateQueries({ queryKey: ['connections'] })
@@ -60,77 +63,110 @@ export function NewConnectionDialog({
     },
   })
 
-  const onRemoteSaved = (connectionId: string) => {
-    onOpenChange(false)
-    setActiveConnectionId(connectionId)
-    qc.invalidateQueries({ queryKey: ['connections'] })
-    qc.invalidateQueries({ queryKey: ['tables', connectionId] })
+  const createRemote = useMutation({
+    mutationFn: (state: ConnectionFormState) =>
+      connectionApi.createRemote({
+        type: state.dialect as 'postgres' | 'mysql',
+        name: state.displayName.trim(),
+        password: state.password,
+        open: true,
+        postgres: state.dialect === 'postgres' ? state.postgres : undefined,
+        mysql: state.dialect === 'mysql' ? state.mysql : undefined,
+      }),
+    onSuccess: (saved) => {
+      pushToast(t('connection.saveSuccess'), 'success')
+      onOpenChange(false)
+      setActiveConnectionId(saved.id)
+      qc.invalidateQueries({ queryKey: ['connections'] })
+      qc.invalidateQueries({ queryKey: ['tables', saved.id] })
+    },
+    onError: (err) => {
+      if (isVaultLockedError(err)) {
+        const code = (err as { code?: string }).code ?? ''
+        onNeedVault(code === 'SECRETS_VAULT_NOT_INITIALIZED' ? 'init' : 'unlock', () =>
+          formRef.current?.submit(),
+        )
+        return
+      }
+      pushToast(formatConnectionError(t, err), 'error')
+    },
+  })
+
+  const testRemote = useMutation({
+    mutationFn: (state: ConnectionFormState) =>
+      connectionApi.test({
+        type: state.dialect as 'postgres' | 'mysql',
+        password: state.password,
+        postgres: state.dialect === 'postgres' ? state.postgres : undefined,
+        mysql: state.dialect === 'mysql' ? state.mysql : undefined,
+      }),
+    onSuccess: () => pushToast(t('connection.testSuccess'), 'success'),
+    onError: (err) => pushToast(formatConnectionError(t, err), 'error'),
+  })
+
+  const handleSubmit = async (state: ConnectionFormState) => {
+    if (state.dialect === 'sqlite') {
+      let path = state.filePath.trim()
+      if (!path) {
+        try {
+          path = await dialogApi.openDatabaseFile()
+        } catch (err) {
+          const appErr = mapWailsError(err)
+          if (!isDialogCancelled(appErr)) {
+            pushToast(formatError(t, appErr), 'error')
+          }
+          return
+        }
+      }
+      createSQLite.mutate({ ...state, filePath: path })
+      return
+    }
+    createRemote.mutate(state)
   }
+
+  const handleBrowse = async (): Promise<string | undefined> => {
+    try {
+      return await dialogApi.openDatabaseFile()
+    } catch (err) {
+      const appErr = mapWailsError(err)
+      if (!isDialogCancelled(appErr)) {
+        pushToast(formatError(t, appErr), 'error')
+      }
+      return undefined
+    }
+  }
+
+  const pending = createSQLite.isPending || createRemote.isPending
 
   return (
     <>
       <Dialog
+        wide
         open={open}
         onOpenChange={onOpenChange}
-        title={t('connection.new')}
+        title={t('connectionForm.titleNew')}
         footer={
-          tab === 'sqlite' ? (
-            <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button onClick={() => create.mutate()} disabled={create.isPending}>
-                {t('connection.open')}
-              </Button>
-            </>
-          ) : null
+          <>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={() => formRef.current?.submit()} disabled={pending}>
+              {t('connectionForm.saveAndOpen')}
+            </Button>
+          </>
         }
       >
-        <div className="mb-3 flex gap-1">
-          {(['sqlite', 'postgres', 'mysql'] as ConnTab[]).map((key) => (
-            <Button
-              key={key}
-              size="sm"
-              variant={tab === key ? 'default' : 'outline'}
-              onClick={() => setTab(key)}
-            >
-              {t(`connection.type.${key}`)}
-            </Button>
-          ))}
-        </div>
-        {tab === 'sqlite' && (
-          <div className="space-y-3">
-            <label className="block text-xs text-muted">{t('connection.pathHint')}</label>
-            <Input
-              placeholder="/path/to/database.db"
-              value={filePath}
-              onChange={(e) => setFilePath(e.target.value)}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                try {
-                  const path = await dialogApi.openDatabaseFile()
-                  setFilePath(path)
-                } catch (err) {
-                  const appErr = mapWailsError(err)
-                  if (!isDialogCancelled(appErr)) {
-                    pushToast(formatError(t, appErr), 'error')
-                  }
-                }
-              }}
-            >
-              {t('connection.browse')}
-            </Button>
-          </div>
-        )}
-        {tab === 'postgres' && (
-          <RemoteConnectionForm type="postgres" onSaved={onRemoteSaved} onNeedVault={onNeedVault} />
-        )}
-        {tab === 'mysql' && (
-          <RemoteConnectionForm type="mysql" onSaved={onRemoteSaved} onNeedVault={onNeedVault} />
-        )}
+        <ConnectionForm
+          ref={formRef}
+          mode="create"
+          readOnlyDefault={readOnly}
+          walDefault={wal}
+          onBrowse={handleBrowse}
+          onSubmit={(state) => void handleSubmit(state)}
+          onTest={(state) => testRemote.mutate(state)}
+          showTest
+          testPending={testRemote.isPending}
+        />
       </Dialog>
       <VaultDialog
         open={vaultOpen}
@@ -140,4 +176,20 @@ export function NewConnectionDialog({
       />
     </>
   )
+}
+
+function formatConnectionError(t: TFunction, err: unknown): string {
+  if (
+    err &&
+    typeof err === 'object' &&
+    'code' in err &&
+    (err as { code: string }).code === 'CONNECTION_FAILED'
+  ) {
+    const details = (err as { details?: { reason?: string } }).details
+    const reason = details?.reason
+    if (reason === 'auth') return t('connection.error.auth')
+    if (reason === 'network') return t('connection.error.network')
+    if (reason === 'database') return t('connection.error.database')
+  }
+  return formatError(t, err)
 }

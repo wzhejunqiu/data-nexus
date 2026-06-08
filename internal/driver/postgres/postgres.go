@@ -16,6 +16,7 @@ type Driver struct {
 	db       *sql.DB
 	readOnly bool
 	schema   string
+	database string
 }
 
 func New() *Driver { return &Driver{} }
@@ -34,6 +35,7 @@ func (d *Driver) Connect(ctx context.Context, cfg model.DriverConfig) error {
 	pg := cfg.Postgres
 	d.readOnly = pg.ReadOnly
 	d.schema = pg.NormalizedSchema()
+	d.database = pg.Database
 	u := &url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(pg.User, pg.Password),
@@ -42,6 +44,7 @@ func (d *Driver) Connect(ctx context.Context, cfg model.DriverConfig) error {
 	}
 	q := u.Query()
 	q.Set("sslmode", pg.NormalizedSSLMode())
+	q.Set("client_encoding", pg.NormalizedClientEncoding())
 	if pg.ReadOnly {
 		q.Set("default_transaction_read_only", "on")
 	}

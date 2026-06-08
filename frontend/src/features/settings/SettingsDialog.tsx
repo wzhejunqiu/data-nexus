@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { useToastStore } from '@/components/ui/Toast'
 import { configApi, type AppConfig } from '@/lib/api/config'
+import { connectionApi } from '@/lib/api/connection'
 import { formatError } from '@/lib/api/errors'
 import { APP_LANGUAGES, getAppLanguage, setAppLanguage, type AppLanguage } from '@/i18n/language'
 import {
@@ -66,6 +67,18 @@ function SettingsForm({
   const [touched, setTouched] = useState(false)
   const [lang, setLang] = useState<AppLanguage>(() => getAppLanguage())
   const themeMode = useThemeStore((s) => s.mode)
+  const [restoreOpen, setRestoreOpen] = useState(false)
+  const [restoreLoaded, setRestoreLoaded] = useState(false)
+
+  useEffect(() => {
+    connectionApi
+      .getRestoreOpenOnStartup()
+      .then((v) => {
+        setRestoreOpen(v)
+        setRestoreLoaded(true)
+      })
+      .catch((err) => pushToast(formatError(t, err), 'error'))
+  }, [pushToast, t])
 
   const errors = useMemo(() => validateSettingsForm(form), [form])
   const hasErrors = Object.keys(errors).length > 0
@@ -234,6 +247,25 @@ function SettingsForm({
           />
           {t('settings.compress')}
         </label>
+        {restoreLoaded && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={restoreOpen}
+              onChange={async (e) => {
+                const next = e.target.checked
+                setRestoreOpen(next)
+                try {
+                  await connectionApi.setRestoreOpenOnStartup(next)
+                } catch (err) {
+                  setRestoreOpen(!next)
+                  pushToast(formatError(t, err), 'error')
+                }
+              }}
+            />
+            {t('settings.restoreOnStartup')}
+          </label>
+        )}
       </div>
     </Dialog>
   )

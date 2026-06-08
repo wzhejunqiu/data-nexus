@@ -115,3 +115,36 @@ func TestStoreListRequiresConnectionID(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestStoreListAllExecutions(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	_ = store.Insert(ctx, model.SqlExecutionRecord{
+		ConnectionID: "c1", SQL: "SELECT 1", Kind: model.SqlExecutionResult,
+		EffectRows: 1, DurationMs: 1, ExecutedAt: time.Date(2026, 6, 7, 10, 0, 0, 0, time.UTC),
+	})
+	_ = store.Insert(ctx, model.SqlExecutionRecord{
+		ConnectionID: "c2", SQL: "SELECT 2", Kind: model.SqlExecutionResult,
+		EffectRows: 1, DurationMs: 2, ExecutedAt: time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC),
+	})
+
+	all, err := store.ListAllExecutions(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("expected 2, got %d", len(all))
+	}
+	if all[0].ConnectionID != "c2" {
+		t.Fatalf("expected newest first, got %s", all[0].ConnectionID)
+	}
+
+	capped, err := store.ListAllExecutions(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(capped) != 1 {
+		t.Fatalf("expected limit 1, got %d", len(capped))
+	}
+}

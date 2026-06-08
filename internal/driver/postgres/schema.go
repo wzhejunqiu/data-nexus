@@ -10,8 +10,11 @@ import (
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 )
 
-func (d *Driver) ListTables(ctx context.Context) ([]model.TableInfo, error) {
-	schema := d.schemaRef()
+func (d *Driver) ListTables(ctx context.Context, opts model.ListTablesOptions) ([]model.TableInfo, error) {
+	if opts.Database != "" && opts.Database != d.database {
+		return nil, nil
+	}
+	schema := d.resolveSchema(opts)
 	rows, err := d.db.QueryContext(ctx, `
 		SELECT table_name, table_type
 		FROM information_schema.tables

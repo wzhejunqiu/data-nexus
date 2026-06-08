@@ -198,3 +198,53 @@ func (s *Store) ListExecutions(ctx context.Context, connectionID string, limit i
 	}
 	return out, nil
 }
+
+func (s *Store) ListAllExecutions(ctx context.Context, limit int) ([]model.SqlExecutionRecord, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, connection_id, sql_text, kind, effect_rows, duration_ms, executed_at
+		FROM sql_executions
+		ORDER BY executed_at DESC
+		LIMIT ?`, limit)
+	if err != nil {
+		return nil, model.ErrInternal(err.Error())
+	}
+	defer func() { _ = rows.Close() }()
+
+	var out []model.SqlExecutionRecord
+	for rows.Next() {
+		var rec model.SqlExecutionRecord
+		var kind int
+		var executedAt string
+		if err := rows.Scan(
+			&rec.ID,
+			&rec.ConnectionID,
+			&rec.SQL,
+			&kind,
+			&rec.EffectRows,
+			&rec.DurationMs,
+			&executedAt,
+		); err != nil {
+			return nil, model.ErrInternal(err.Error())
+		}
+		rec.Kind = model.SqlExecutionKind(kind)
+		parsed, err := time.Parse(time.RFC3339, executedAt)
+		if err != nil {
+			return nil, model.ErrInternal(err.Error())
+		}
+		rec.ExecutedAt = parsed
+		out = append(out, rec)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, model.ErrInternal(err.Error())
+	}
+	if out == nil {
+		out = []model.SqlExecutionRecord{}
+	}
+	return out, nil
+}

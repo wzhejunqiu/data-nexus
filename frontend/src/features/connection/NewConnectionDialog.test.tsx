@@ -6,6 +6,7 @@ vi.mock('@/lib/api/connection', () => ({
   connectionApi: {
     openFromFile: vi.fn(),
     createRemote: vi.fn(),
+    test: vi.fn(),
   },
 }))
 
@@ -21,12 +22,12 @@ vi.mock('@tanstack/react-query', () => ({
     onError,
     onSuccess,
   }: {
-    mutationFn: () => Promise<unknown>
+    mutationFn: (arg: unknown) => Promise<unknown>
     onError?: (err: unknown) => void
     onSuccess?: (data: unknown) => void
   }) => ({
-    mutate: () => {
-      void mutationFn()
+    mutate: (arg?: unknown) => {
+      void mutationFn(arg)
         .then((data) => onSuccess?.(data))
         .catch((err) => onError?.(err))
     },
@@ -84,9 +85,9 @@ describe('NewConnectionDialog', () => {
 
     render(<NewConnectionDialog open onOpenChange={() => {}} readOnly wal={false} />)
 
-    const input = screen.getByPlaceholderText('/path/to/database.db')
+    const input = screen.getByLabelText(/connectionForm.fields.filePath/i)
     fireEvent.change(input, { target: { value: '/tmp/test.db' } })
-    fireEvent.click(screen.getByRole('button', { name: 'connection.open' }))
+    fireEvent.click(screen.getByRole('button', { name: 'connectionForm.saveAndOpen' }))
 
     expect(connectionApi.openFromFile).toHaveBeenCalledWith({
       filePath: '/tmp/test.db',
@@ -105,7 +106,7 @@ describe('NewConnectionDialog', () => {
     } as never)
 
     render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal />)
-    fireEvent.click(screen.getByRole('button', { name: 'connection.open' }))
+    fireEvent.click(screen.getByRole('button', { name: 'connectionForm.saveAndOpen' }))
 
     await waitFor(() => {
       expect(dialogApi.openDatabaseFile).toHaveBeenCalled()
@@ -124,7 +125,7 @@ describe('NewConnectionDialog', () => {
     render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
     fireEvent.click(screen.getByRole('button', { name: 'connection.browse' }))
 
-    const input = screen.getByPlaceholderText('/path/to/database.db') as HTMLInputElement
+    const input = screen.getByLabelText(/connectionForm.fields.filePath/i) as HTMLInputElement
     await waitFor(() => {
       expect(input.value).toBe('/picked/browse.db')
     })
@@ -158,17 +159,21 @@ describe('NewConnectionDialog', () => {
     })
   })
 
-  it('shows remote form when postgres tab is selected', () => {
+  it('shows remote test when postgres dialect is selected', () => {
     render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
     fireEvent.click(screen.getByRole('button', { name: 'connection.type.postgres' }))
-    expect(screen.getByRole('button', { name: 'connection.test' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'connection.saveAndOpen' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'connectionForm.testConnection' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'connectionForm.saveAndOpen' })).toBeInTheDocument()
   })
 
-  it('shows remote form when mysql tab is selected', () => {
+  it('shows remote form when mysql dialect is selected', () => {
     render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
     fireEvent.click(screen.getByRole('button', { name: 'connection.type.mysql' }))
-    expect(screen.getByRole('button', { name: 'connection.test' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'connectionForm.testConnection' }),
+    ).toBeInTheDocument()
   })
 
   it('opens vault dialog and retries createRemote on vault locked', async () => {
@@ -181,7 +186,19 @@ describe('NewConnectionDialog', () => {
 
     render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
     fireEvent.click(screen.getByRole('button', { name: 'connection.type.postgres' }))
-    fireEvent.click(screen.getByRole('button', { name: 'connection.saveAndOpen' }))
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.displayName/i), {
+      target: { value: 'pg-local' },
+    })
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.database/i), {
+      target: { value: 'app' },
+    })
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.user/i), {
+      target: { value: 'admin' },
+    })
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.password/i), {
+      target: { value: 'secret' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'connectionForm.saveAndOpen' }))
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText('vault.masterPassword')).toBeInTheDocument()

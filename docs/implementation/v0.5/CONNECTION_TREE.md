@@ -174,7 +174,7 @@ PG/MySQL **不出现**此项。`main` L1 **不提供** Attach 入口；无 L1 gh
 
 - 触发：`.db` / `.sqlite` / `.sqlite3` 拖到侧边栏 **已 open 的 SQLite 连接 L0**
 - 行为：打开 `AttachDatabaseDialog`，**预填文件路径**；alias 默认 basename
-- 与窗口级 `handleFileDrop` 区分：空白区 drop 仍为新建连接；连接节点 drop 由前端拦截
+- 与窗口级 drop 区分：Go `handleFileDrop` **emit `app:file-drop`**（含 x/y + paths）；前端 `useSidebarFileDrop` 用 `elementFromPoint` 命中 `data-sqlite-drop-target` → Attach；否则 `openFromFile` 新建连接
 - 未 open / 非 SQLite：Toast「请先打开 SQLite 连接」
 - 多文件：逐个 Dialog，不 silent 批量 attach
 
@@ -186,7 +186,7 @@ PG/MySQL **不出现**此项。`main` L1 **不提供** Attach 入口；无 L1 gh
 #### 3.6.5 L1 节点视觉
 
 - `main`：默认库，无 Detach
-- attach 节点：badge「已附加」（`connectionTree.attached`）；hover 显示源文件完整路径
+- attach 节点：badge「已附加」（`connection.attachedBadge`）；hover 显示源文件完整路径；**右键：取消附加 + 在 Finder/文件管理器中显示**
 
 #### 3.6.6 browseContext 联动
 
@@ -313,7 +313,7 @@ features/connection/
 ['tables', connectionId, database, schema?]
 ```
 
-**废弃：** `SchemaSubtree.tsx` 逻辑迁入 `ConnectionSchemaTree`；`RemoteNamespaceSwitch` 删除。
+**已删除：** `SchemaSubtree.tsx`、`SchemaSubtree.test.tsx`（逻辑在 `ConnectionSchemaTree`）；`RemoteNamespaceSwitch` 未保留。
 
 ---
 

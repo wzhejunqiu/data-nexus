@@ -45,14 +45,15 @@ func (d *Driver) parseTableRef(tableName string) (tableRef, error) {
 	}, nil
 }
 
-func (d *Driver) ListTables(ctx context.Context) ([]model.TableInfo, error) {
+func (d *Driver) ListTables(ctx context.Context, opts model.ListTablesOptions) ([]model.TableInfo, error) {
+	dbName := d.resolveDatabase(opts)
 	query := `
 		SELECT TABLE_NAME, TABLE_TYPE
 		FROM information_schema.TABLES
 		WHERE TABLE_SCHEMA = ?
 		  AND TABLE_TYPE IN ('BASE TABLE', 'VIEW')
 		ORDER BY TABLE_NAME`
-	rows, err := d.db.QueryContext(ctx, query, d.database)
+	rows, err := d.db.QueryContext(ctx, query, dbName)
 	if err != nil {
 		return nil, model.ErrSQL(err.Error())
 	}
@@ -75,7 +76,7 @@ func (d *Driver) ListTables(ctx context.Context) ([]model.TableInfo, error) {
 	}
 	_ = rows.Close()
 
-	schemaLabel := d.database
+	schemaLabel := dbName
 	var items []model.TableInfo
 	for _, entry := range entries {
 		info := model.TableInfo{Name: entry.name, Schema: &schemaLabel}
@@ -84,7 +85,7 @@ func (d *Driver) ListTables(ctx context.Context) ([]model.TableInfo, error) {
 			items = append(items, info)
 			continue
 		}
-		fromRef := tableFromRef(d.database, entry.name)
+		fromRef := tableFromRef(dbName, entry.name)
 		var rowCount int64
 		if err := d.db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %s", fromRef)).Scan(&rowCount); err != nil {
 			return nil, model.ErrSQL(err.Error())

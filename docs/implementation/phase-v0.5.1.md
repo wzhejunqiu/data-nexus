@@ -30,7 +30,8 @@ v0.5 完成 MenuBar 与设置 Dialog 后，本版本补齐 **macOS 标准 `⌘,`
 **实现要点：**
 
 - [ ] 前端 `AppShell` 全局监听 `Cmd/Ctrl+,`（v0.5 已有则验收 macOS WebView 焦点下仍生效）
-- [ ] macOS：可选在 `ApplicationMenu()` 的 App 菜单保留 **Settings…** 项（`keys.CmdOrCtrl(",")`）→ `runtime.EventsEmit("app:settings")` 或等价；与 v0.5「移除 View 重复菜单」不冲突（App 菜单为标准位置）
+- [x] macOS：`Cmd+,` 已在 **系统菜单栏 → 视图 → 设置**（`app_menu_darwin.go` → `app:settings`）；v0.5.1 验收 WebView 焦点下仍生效
+- [ ] macOS：可选将 Settings 移至 App 菜单（HIG 推荐位置）；原生菜单文案随 i18n 动态更新
 - [ ] MenuBar「视图 → 设置」与上述快捷键 **同一入口**，显示固定文案 `⌘,` / `Ctrl+,`
 
 ---

@@ -65,6 +65,8 @@
 | 操作 | 行为 |
 |------|------|
 | **新建连接** | MenuBar → 文件 → 新建连接 → Dialog → 保存到列表 → 可选立即打开 |
+| **打开 SQLite** | MenuBar → 文件 → 打开 SQLite → 选文件 → 保存并立即 open（快速通道） |
+| **新建顶层分组** | MenuBar → 文件 → 新建分组；或侧边栏根层空白右键 |
 | **打开**（○ 连接） | 双击连接 item，或右键 → 打开 → `OpenConnection(savedId)` |
 | **关闭**（● 连接） | 右键 → 关闭，或 MenuBar → 文件 → 关闭当前连接 |
 | **删除** | 右键 → 删除 → `RemoveConnection`（打开中需 confirm） |
@@ -148,7 +150,7 @@ v0.5 起，database/schema **不再**用手输框切换，改为连接列表内 
 | MySQL | 连接 → database → 表 |
 | PostgreSQL | 连接 → database → schema → 表 |
 
-**Attach：** 仅 SQLite；attach 库为 L1 节点，与 `main` 同级。
+**Attach：** 仅 SQLite；attach 库为 L1 节点，与 `main` 同级。入口：连接 L0 右键「附加数据库…」、拖拽 `.db` 到已 open SQLite 连接。L1 attach 节点右键：**取消附加**、**在 Finder/文件管理器中显示**（`RevealFileInExplorer`）。
 
 ### 7.5 连接失败文案
 

@@ -167,15 +167,18 @@ func TestConnectionStore_FindByID_NotFound(t *testing.T) {
 	}
 }
 
-func TestConnectionStore_LoadCorruptJSON(t *testing.T) {
+func TestConnectionStore_FreshCatalogInit(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "connections.json")
-	if err := os.WriteFile(path, []byte("{not json"), 0o644); err != nil {
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
 		t.Fatal(err)
 	}
-	_, err := service.NewConnectionStore(path)
-	if err == nil {
-		t.Fatal("expected error for corrupt JSON")
+	tree, err := service.NewConnectionGroupService(store.Catalog(), service.NewTestConnectionManager(store)).GetSidebarTree()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tree.Groups) < 1 {
+		t.Fatal("expected default group on fresh catalog")
 	}
 }
 
@@ -269,12 +272,19 @@ func TestConnectionStoreUpsertRemote(t *testing.T) {
 	if err := store.Save(); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := os.ReadFile(filepath.Join(dir, "connections.json"))
+	reloaded, ok := store.FindByID(pwItem.ID)
+	if !ok {
+		t.Fatal("expected saved connection")
+	}
+	if reloaded.Config.Postgres != nil && reloaded.Config.Postgres.Password != "" {
+		t.Fatal("password must not be stored in connection config after reload")
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(raw), `"password"`) {
-		t.Fatalf("connections.json must not contain password field: %s", raw)
+		t.Fatalf("catalog.db must not contain password field")
 	}
 }
 

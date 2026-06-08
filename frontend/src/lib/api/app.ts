@@ -1,5 +1,7 @@
 import {
+  GetPlatform,
   GetVersion,
+  RevealFileInExplorer,
   SetActiveConnection,
   SetWindowTitle,
 } from '../../../wailsjs/go/wails/AppService'
@@ -16,6 +18,8 @@ async function wrap<T>(fn: () => Promise<T>): Promise<T> {
 
 export const appApi = {
   getVersion: () => wrap(() => GetVersion() as Promise<VersionInfo>),
+  getPlatform: () => wrap(() => GetPlatform() as Promise<string>),
+  revealFileInExplorer: (filePath: string) => wrap(() => RevealFileInExplorer(filePath)),
   setWindowTitle: (title: string) => wrap(() => SetWindowTitle(title)),
   setActiveConnection: (connectionId: string) => wrap(() => SetActiveConnection(connectionId)),
 }

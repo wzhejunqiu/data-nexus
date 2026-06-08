@@ -100,55 +100,70 @@ make test
 
 ---
 
-## 2. Go 原生菜单精简
+## 2. Go 原生菜单
 
-### 2.1 现状
+### 2.1 平台策略（v0.5 定稿）
 
-`app.go` → `ApplicationMenu()` 当前包含:
+| 平台 | 文件 | 策略 |
+|------|------|------|
+| **darwin** | `app_menu_darwin.go` | 系统菜单栏提供 File/View/Help；`EventsEmit` 驱动 React Dialog |
+| **!darwin** | `app_menu.go` | 仅 App / Edit / Window；菜单功能由前端 `AppMenuBar` 提供 |
 
-- App / Edit / Window（标准）
-- **File:** Open, Close Connection, Quit
-- **View:** Theme Light/Dark/System, Language 中文/English, Settings
-- **Help:** About Data Nexus
+`ApplicationMenu()` 委托 `platformApplicationMenu()`。
 
-### 2.2 目标
-
-仅保留 **App / Edit / Window**；File/View/Help 功能改由前端 MenuBar 提供。
+### 2.2 macOS 菜单结构
 
 ```go
-func (a *App) ApplicationMenu() *menu.Menu {
-    appMenu := menu.NewMenu()
-    appMenu.Append(menu.AppMenu())      // 含 Quit (Cmd+Q)
-    appMenu.Append(menu.EditMenu())
-    appMenu.Append(menu.WindowMenu())
-
-    // 可选：macOS App 菜单 Settings（v0.5.1 衔接）
-    // runtime.EventsEmit(a.ctx, "app:settings")
-
-    return appMenu
-}
+// app_menu_darwin.go — 顺序遵循 HIG：App 必须首位
+appMenu.Append(menu.AppMenu())
+appMenu.Append(menu.SubMenu("文件", fileSub))   // N/O/W + 新建分组 → app:new-group 等
+appMenu.Append(menu.EditMenu())
+appMenu.Append(menu.SubMenu("视图", viewSub))   // SQL 历史、设置（Cmd+,）
+appMenu.Append(menu.WindowMenu())
+appMenu.Append(menu.SubMenu("帮助", helpSub))   // 关于 → app:about
 ```
 
-### 2.3 清理处理器
+菜单文案按 `LANG` 环境变量中/英（默认中文）；与前端 i18n 完全同步待 v0.5.1。
 
-以下 Go 侧 handler 在移除原生 File 菜单后 **可删除**（若前端完全接管）:
+### 2.3 Win/Linux 菜单结构
 
-| Handler | 前端替代 |
-|---------|----------|
-| `handleOpenDatabase()` | MenuBar → 打开 SQLite → `dialogApi.openDatabaseFile` + `connectionApi.openFromFile` |
-| `handleCloseConnection()` | MenuBar → 关闭当前连接 → `connectionApi.close(activeId)` |
-| View 主题/语言菜单 | SettingsDialog |
-| `ShowAbout()` | AboutDialog |
+```go
+// app_menu.go
+appMenu.Append(menu.AppMenu())
+appMenu.Append(menu.EditMenu())
+appMenu.Append(menu.WindowMenu())
+```
 
-**保留:**
+### 2.4 文件拖放
 
-- `handleFileDrop()` — 拖拽 `.db` 到**窗口空白区** → 新建连接/打开文件；拖到已 open SQLite 连接节点由前端 Attach 流程处理
-- `EventsEmit("app:settings")` — 若 App 菜单保留 Settings 项
+`handleFileDrop(x, y, paths)` **不再**在 Go 侧直接 `OpenConnectionFromFile`，改为：
 
-### 2.4 macOS 注意事项
+```go
+runtime.EventsEmit(a.ctx, "app:file-drop", map[string]interface{}{
+    "x": x, "y": y, "paths": dbPaths,
+})
+```
 
-- `menu.AppMenu()` 已含 **Quit**（`Cmd+Q`）；前端 MenuBar「退出」在 macOS 可隐藏或 disabled（遵循 HIG）
-- v0.5.1 将在 App 菜单加 **Settings…**（`Cmd+,`）；v0.5 可选预置
+前端 `useSidebarFileDrop`：
+
+- `elementFromPoint(x,y)` 命中已 open SQLite 连接 → `AttachDatabaseDialog` 预填路径
+- 否则 → `connectionApi.openFromFile`（空白区新建连接）
+
+### 2.5 已移除的 Go handler
+
+| Handler | 替代 |
+|---------|------|
+| `handleOpenDatabase()` | macOS：`app:open-sqlite`；Win/Linux：`AppMenuBar` |
+| `handleCloseConnection()` | `app:close-connection` → 前端 `connectionApi.close` |
+| 新建顶层 Group | `app:new-group` → `AppShell.createRootGroup` |
+| View 主题/语言原生项 | SettingsDialog |
+| `ShowAbout()` 原生对话框 | `app:about` → `AboutDialog` |
+
+### 2.6 macOS 注意事项
+
+- `menu.AppMenu()` 含 **Quit**（`Cmd+Q`）；应用内 MenuBar **不显示**「退出」
+- 应用内顶栏无 Menubar，避免与系统栏重复（HIG）
+- v0.5.1：原生菜单文案随 `app:language` 动态更新、`MenuUpdateApplicationMenu`
 
 ---
 
@@ -357,11 +372,10 @@ v0.6 `--api` 实施时再添加 HTTP handler；v0.5 仅 Wails 绑定。
 - [ ] Wails `ListAllSqlExecutions` 绑定
 - [ ] **`Driver.ListNamespaces` / `ListSchemas`** + `SchemaService` 扩展
 - [ ] **`ListTables` 扩展** + Wails 绑定
-- [ ] **`ConnectionGroupService.GetSidebarTree`** + Wails 绑定
-- [ ] **连接模型扩展** + Driver DSN/Connect 行为 + password 留空语义
-- [ ] ConnectionStore 读写新字段（catalog.db）
+- [ ] **`GetSidebarTree`** 返回 `rootItems` + Group `memberItems`
 - [ ] **`AppService.GetPlatform`** + **`RevealFileInExplorer`**
 - [ ] 单元测试通过
-- [ ] `ApplicationMenu()` 移除 File/View/Help
-- [ ] 清理无用 Go menu handler
+- [ ] **`app_menu_darwin.go`** macOS 系统菜单 + EventsEmit
+- [ ] **`app_menu.go`** Win/Linux 精简菜单
+- [ ] **`handleFileDrop`** → `app:file-drop`
 - [ ] `wails generate` 更新前端绑定

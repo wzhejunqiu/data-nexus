@@ -16,7 +16,9 @@ type Driver interface {
 	Close() error
 	Ping(ctx context.Context) error
 	ReadOnly() bool
-	ListTables(ctx context.Context) ([]model.TableInfo, error)
+	ListNamespaces(ctx context.Context) ([]model.NamespaceInfo, error)
+	ListSchemas(ctx context.Context, database string) ([]model.SchemaInfo, error)
+	ListTables(ctx context.Context, opts model.ListTablesOptions) ([]model.TableInfo, error)
 	GetTableSchema(ctx context.Context, tableName string) (*model.TableSchema, error)
 	GetTableProfile(ctx context.Context, tableName string) (*model.TableProfile, error)
 	BrowseTable(ctx context.Context, tableName string, opts model.BrowseOptions) (*model.PaginatedTableData, error)
