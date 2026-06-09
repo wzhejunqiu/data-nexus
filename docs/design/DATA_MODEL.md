@@ -33,14 +33,14 @@ type Connection struct {
 | `DisplayName` | 文件名 | 用户自定义别名 |
 | `Config` | SQLiteConfig | 联合类型 |
 
-> **活跃连接** 与 **已保存连接** 共用 `id`：保存于 `connections.json`；`OpenConnection` 后在内存中挂载 Driver。
+> **活跃连接** 与 **已保存连接** 共用 `id`：保存于 `catalog.db`；`OpenConnection` 后在内存中挂载 Driver。
 
 **ConnectionManager（MVP）:**
 
 ```go
 type ConnectionManager struct {
     mu      sync.RWMutex
-    store   *ConnectionStore      // connections.json
+    store   *ConnectionStore      // catalog.db
     active  map[string]*Session   // id -> open driver session
 }
 
@@ -105,9 +105,9 @@ type SavedConnection struct {
 }
 ```
 
-**密码边界:** 远程连接 password 存于 Keychain 或 `~/.data-nexus/vault/`，**不**出现在 `connections.json`。见 [SECRETS.md](./SECRETS.md).
+**密码边界:** 远程连接 password 存于 Keychain 或 `~/.data-nexus/vault/`，**不**出现在 `catalog.db`。见 [SECRETS.md](./SECRETS.md).
 
-**存储文件:** `~/.data-nexus/connections.json`
+**存储文件:** `~/.data-nexus/catalog.db`
 
 ```json
 {
@@ -698,4 +698,4 @@ type SqlExecutionRecord struct {
 
 ### 9.4 其它会话状态
 
-`workspaceStore`（localStorage）仍持久化 Tab、筛选、排序等；见 v0.3 workspace 设计。连接列表由 `connections.json` 持久化。
+`workspaceStore`（localStorage）仍持久化 Tab、筛选、排序等；见 v0.3 workspace 设计。连接列表由 `catalog.db` 持久化。

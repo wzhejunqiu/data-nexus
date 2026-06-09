@@ -254,6 +254,12 @@ func (s *ConnectionGroupService) ReorderGroupMembers(groupID string, ordered []G
 func (s *ConnectionGroupService) ReorderSidebarRoot(ordered []SidebarRootItemRef) error
 ```
 
+**`MoveGroup` 错误：**
+
+- `newParentId` 与被移动 Group 的 `id` 相同 → `INVALID_REQUEST`（`cannot move group into itself`）
+- `newParentId` 为目标子孙 Group → `INVALID_REQUEST`（`cannot move group into its descendant`）
+- 实现：`internal/catalog/sqlite/groups.go` `ensureNotDescendantLocked`；单元测试见 `store_test.go` `TestStoreMoveGroupIntoItself` / `TestStoreMoveGroupIntoDescendant`
+
 Wails 绑定：`ConnectionGroupService.GetSidebarTree` 等（见 `internal/wails/connection_group.go`）。
 
 ### 5.4 首次启动

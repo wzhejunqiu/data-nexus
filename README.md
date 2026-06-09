@@ -92,7 +92,7 @@ Release 版本默认将日志写入文件（`log.output: auto`）：
 - **Windows**：`%LOCALAPPDATA%\data-nexus\logs\data-nexus.log`
 - **Linux**：`~/.local/share/data-nexus/logs/data-nexus.log`
 
-连接信息保存在 `~/.data-nexus/connections.json`，命名查询保存在 `~/.data-nexus/queries.json`。
+连接信息与分组保存在 `~/.data-nexus/catalog.db`，命名查询保存在 `~/.data-nexus/queries.json`。
 
 ## 已知限制
 

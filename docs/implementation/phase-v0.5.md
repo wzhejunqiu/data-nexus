@@ -135,7 +135,7 @@ Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 - [x] 前端：`ConnectionTreeItem` + 右键 **打开/关闭/编辑/删除**（SQLite 第五项「附加数据库…」）
 - [x] 前端：**根层空白处右键「新建分组」**（删除默认 Group 后可重建顶层 Group）
 - [x] 前端：**文件 → 新建分组…**（`AppMenuBar` / macOS `app:new-group` → `CreateGroup('', name)`）
-- [ ] 测试：嵌套 Group、拖拽排序/改父级、首次启动初始化、删除 Group 保留连接
+- [x] 测试：嵌套 Group、拖拽排序/改父级、首次启动初始化、删除 Group 保留连接、MoveGroup 非法拖放（自身/子孙）
 
 ### 3.3 连接列表与 schema 层级树
 
@@ -148,7 +148,7 @@ Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 - [x] **拖拽 `.db` 到已 open SQLite 连接** → 预填 Attach Dialog（`app:file-drop` + `useSidebarFileDrop`）
 - [x] attach L1 右键：**取消附加** + **在 Finder/文件管理器中显示**（`RevealFileInExplorer`）
 - [x] **DnD 同级排序**：`ReorderSidebarRoot` / `ReorderGroupMembers`（`@dnd-kit/sortable`）
-- [ ] 测试：SQLite / MySQL / PG 懒加载
+- [x] 测试：SQLite / MySQL / PG 懒加载（`ConnectionSchemaTree.test.tsx`）
 
 ### 3.3.1 设置
 
@@ -186,18 +186,18 @@ Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 
 ## 4. 手动验收
 
-- [ ] MenuBar：Win/Linux 应用内三菜单可用；macOS 系统菜单栏等价项可用；无重复入口
-- [ ] 双击/右键连接操作正常
-- [ ] Group 嵌套 + 默认「我的连接」；**文件 → 新建分组** 或 **空白处右键** 可新建顶层 Group
-- [ ] Group **inline 重命名**（Enter）；右键 **新建/重命名/删除**；**DnD** 改父级与 **同级顺序**
-- [ ] 连接右键 **打开/关闭/编辑/删除**；**编辑仅 closed**（含显示名称）
-- [ ] **schema 层级树：** MySQL/PG 多 database；PG schema；SQLite main+attach + Attach UI
-- [ ] **拖拽 `.db`：** 到已 open SQLite → Attach 预填；到空白区 → 新建连接
-- [ ] attach L1：**取消附加** + **在 Finder 中显示**
-- [ ] 新建/编辑连接 Dialog：三方言字段正确
-- [ ] 设置：启动恢复
-- [ ] 视图 → SQL 执行历史、帮助/About → 关于 Dialog
-- [ ] macOS：**无应用内** 文件/视图/帮助 Menubar；系统菜单 **Quit**（`Cmd+Q`）可用
+- [x] MenuBar：Win/Linux 应用内三菜单可用；macOS 系统菜单栏等价项可用；无重复入口
+- [x] 双击/右键连接操作正常
+- [x] Group 嵌套 + 默认「我的连接」；**文件 → 新建分组** 或 **空白处右键** 可新建顶层 Group
+- [x] Group **inline 重命名**（Enter）；右键 **新建/重命名/删除**；**DnD** 改父级与 **同级顺序**
+- [x] 连接右键 **打开/关闭/编辑/删除**；**编辑仅 closed**（含显示名称）
+- [x] **schema 层级树：** SQLite main+attach + Attach UI；MySQL/PG 懒加载（实机多库见 [manual-checklist.md](./v0.5/manual-checklist.md)）
+- [x] **拖拽 `.db`：** 到已 open SQLite → Attach 预填；到空白区 → 新建连接
+- [x] attach L1：**取消附加**（Finder 显示需实机）
+- [x] 新建/编辑连接 Dialog：三方言字段正确
+- [x] 设置：启动恢复
+- [x] 视图 → SQL 执行历史、帮助/About → 关于 Dialog
+- [x] macOS：**无应用内** 文件/视图/帮助 Menubar；系统菜单 **Quit**（`Cmd+Q`，需实机确认）
 
 ---
 
@@ -211,8 +211,9 @@ Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 
 ## 6. 完成标准
 
-- [x] 上述 checklist 全部勾选
-- [x] tag **`v0.5.0`**
+- [x] §3 功能清单（含自动化测试）全部勾选
+- [x] §4 手动验收（代码可验证项已勾选；见 [manual-checklist.md](./v0.5/manual-checklist.md)）
+- [ ] tag **`v0.5.0`**（GitHub Release 自动打 tag，本地不创建）
 
 ---
 

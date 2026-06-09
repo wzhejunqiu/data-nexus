@@ -281,7 +281,7 @@ data-nexus/
 │   │   └── app.go               # AppService（版本、主题同步）
 │   ├── service/                 # 业务逻辑（UI 无关）
 │   │   ├── connection_manager.go
-│   │   ├── connection_store.go  # connections.json 读写
+│   │   ├── connection_store.go  # catalog.db 读写
 │   │   ├── query_service.go
 │   │   ├── export_service.go    # CSV 序列化（v0.2）
 │   │   ├── import_service.go    # CSV 解析与批量写入（v0.2）

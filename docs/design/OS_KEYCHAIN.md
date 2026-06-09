@@ -8,7 +8,7 @@
 
 ## 1. 设计目标
 
-- 远程连接（PostgreSQL / MySQL）密码**绝不**写入 `connections.json`
+- 远程连接（PostgreSQL / MySQL）密码**绝不**写入 `catalog.db`
 - 优先委托操作系统密钥环加密存储，用户**无需**设置主密码
 - Keychain 不可用时自动 fallback 到本地 Vault（见 [SECRETS.md](./SECRETS.md)）
 - 通过统一 `Store` 接口屏蔽底层差异，`ConnectionManager` 无感知
@@ -147,7 +147,7 @@ Keychain 模式下，Vault 相关方法均为空操作：
 
 ## 5. 远程连接密码生命周期
 
-密码**绝不**写入 `connections.json`，只通过 `ConnectionManager` 与 Secrets Store 交互。
+密码**绝不**写入 `catalog.db`，只通过 `ConnectionManager` 与 Secrets Store 交互。
 
 ```mermaid
 sequenceDiagram
@@ -256,7 +256,7 @@ Keychain 用户创建/打开远程连接时**不会**触发 `VaultDialog`。仅 
 
 ## 8. 安全边界（v1.0）
 
-- 密码不进 `connections.json`、不进日志、不进 Wails 持久化绑定缓存
+- 密码不进 `catalog.db`、不进日志、不进 Wails 持久化绑定缓存
 - 不支持 Touch ID / 生物识别解锁
 - 不跨设备同步（换机需重新输入连接密码）
 - `TestConnection` 的密码仅在请求内存中短暂存在，不持久化
@@ -267,7 +267,7 @@ Keychain 用户创建/打开远程连接时**不会**触发 `VaultDialog`。仅 
 ## 9. 验收要点
 
 - [ ] macOS / Windows / Linux（有 Secret Service）环境下 Probe 成功，backend 为 `keychain`
-- [ ] 创建远程连接后，密码不出现在 `connections.json`
+- [ ] 创建远程连接后，密码不出现在 `catalog.db`
 - [ ] 重启应用后可打开已保存的远程连接（无需主密码）
 - [ ] 删除连接后，Keychain 中对应条目被清除
 - [ ] `TestConnection` 不读写 Keychain

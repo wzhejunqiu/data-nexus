@@ -6,7 +6,7 @@
 
 ## 1. 目标
 
-- 远程连接（PostgreSQL / MySQL）密码**绝不**写入 `connections.json`
+- 远程连接（PostgreSQL / MySQL）密码**绝不**写入 `catalog.db`
 - 优先使用操作系统 Keychain / Secret Service
 - Keychain 不可用时 fallback 到本地 **Vault**（RSA-4096 + AES-256），由用户主密码保护
 - **按需解锁**：仅打开/保存/编辑远程连接密码时询问主密码；应用启动不弹窗
@@ -115,7 +115,7 @@ AES 数据密钥
 
 ## 8. 边界与非目标
 
-- 密码不进 `connections.json`、不进日志、不进 Wails 持久化绑定缓存
+- 密码不进 `catalog.db`、不进日志、不进 Wails 持久化绑定缓存
 - 不跨设备同步 vault（换机需重新输入连接密码）
 - v1.0 不支持 Touch ID / 生物识别解锁
 - v1.0 不支持证书/IAM 等替代认证

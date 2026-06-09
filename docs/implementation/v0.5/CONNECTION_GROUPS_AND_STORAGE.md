@@ -204,6 +204,15 @@ Attach/Detach 完整 UI 见 [CONNECTION_TREE.md §3.6](./CONNECTION_TREE.md#36-s
 - **拖 Group → 根层空白/根 drop 区**：`parent_id = NULL`，进入顶层（与「我的连接」同级）
 - **同级排序**：在同一父下拖动 → 仅更新 `sort_order` / `group_members.sort_order`
 
+**`MoveGroup` 校验（后端 `ensureNotDescendantLocked`）：**
+
+| 场景 | 错误码 | 说明 |
+|------|--------|------|
+| `newParentId` 等于被拖 Group 自身 `id` | `INVALID_REQUEST` | `cannot move group into itself` |
+| `newParentId` 为被拖 Group 的子孙 | `INVALID_REQUEST` | `cannot move group into its descendant` |
+
+校验失败时 catalog **不修改**树结构。前端 [`SidebarDndContext`](../../../frontend/src/features/connection/dnd/SidebarDndContext.tsx) 在 `onDragEnd` 捕获错误并通过 `formatError` Toast 提示用户。
+
 #### 3.6.5 拖拽 — 连接移入 Group / 游离
 
 - **拖连接 → Group 上**：`MoveConnectionToGroup(connectionId, groupId)`；从 `free_connections` 或原 `group_members` 移出

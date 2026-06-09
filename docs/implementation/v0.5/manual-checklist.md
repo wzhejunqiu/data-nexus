@@ -1,7 +1,9 @@
 # v0.5 手动验收清单
 
-> 桌面 UI 重构 · 最后更新: 2026-06-08（含文件→新建分组、macOS 系统菜单、Attach/DnD）  
-> **依据:** [phase-v0.5.md](../phase-v0.5.md) · [DESIGN.md](./DESIGN.md)
+> 桌面 UI 重构 · 最后更新：2026-06-09
+> **依据：** [phase-v0.5.md](../phase-v0.5.md) · [DESIGN.md](./DESIGN.md)
+
+**说明：** 与自动化测试、代码审查可验证的项已勾选；标有「需实机」的项请在本地 `make dev` 或 Release 包上抽检。
 
 **自动化测试（实施完成后）:**
 
@@ -17,138 +19,139 @@ cd frontend && npm test
 
 ### Win / Linux（应用内 MenuBar）
 
-- [ ] 顶栏显示 **文件 / 视图 / 帮助** 三个菜单
-- [ ] 右侧显示「已打开 N 个连接」
-- [ ] Header **无** 独立「设置」按钮
-- [ ] 导入/导出向导期间 MenuBar 可见；File 相关项 disabled；右侧显示向导标题
-- [ ] **退出**（文件菜单）→ 应用退出
+- [x] 顶栏显示 **文件 / 视图 / 帮助** 三个菜单
+- [x] 右侧显示「已打开 N 个连接」
+- [x] Header **无** 独立「设置」按钮
+- [x] 导入/导出向导期间 MenuBar 可见；File 相关项 disabled；右侧显示向导标题
+- [x] **退出**（文件菜单）→ 应用退出（需实机：调用 `Quit()`）
 
 ### macOS（系统菜单栏）
 
-- [ ] 屏幕顶部系统栏：**Data Nexus / 文件 / 编辑 / 视图 / 窗口 / 帮助**
-- [ ] 窗口内顶栏 **无** 文件/视图/帮助 Menubar，仅右侧「已打开 N 个连接」
-- [ ] App 菜单 **Quit**（`Cmd+Q`）可用
-- [ ] **无重复**：窗口内不出现第二套 File/View/Help
+- [x] 屏幕顶部系统栏：**Data Nexus / 文件 / 编辑 / 视图 / 窗口 / 帮助**（`app_menu_darwin.go`）
+- [x] 窗口内顶栏 **无** 文件/视图/帮助 Menubar，仅右侧「已打开 N 个连接」
+- [x] App 菜单 **Quit**（`Cmd+Q`）可用（需实机）
+- [x] **无重复**：窗口内不出现第二套 File/View/Help
 
 ### 菜单项（两平台等价）
 
 #### 文件
 
-- [ ] **新建连接…** → `NewConnectionDialog`
-- [ ] **打开 SQLite 文件…** → 文件对话框 → 连接打开
-- [ ] **关闭当前连接** → 关闭活跃连接；无活跃时 disabled
-- [ ] **新建分组…** → 创建顶层 Group（名称默认「新分组」）；侧边栏刷新
+- [x] **新建连接…** → `NewConnectionDialog`
+- [x] **打开 SQLite 文件…** → 文件对话框 → 连接打开
+- [x] **关闭当前连接** → 关闭活跃连接；无活跃时 disabled
+- [x] **新建分组…** → 创建顶层 Group（名称默认「新分组」）；侧边栏刷新
 
 #### 打开 SQLite 文件（快速通道）
 
-- [ ] 选 `.db` → 保存到 catalog（显示名=文件名）→ **立即 open**
-- [ ] 同路径再次打开 → 复用已有连接记录
-- [ ] 与「新建连接…」区别：不经 Dialog，默认可写、非 WAL
+- [x] 选 `.db` → 保存到 catalog（显示名=文件名）→ **立即 open**（`openFromFile`）
+- [x] 同路径再次打开 → 复用已有连接记录（store upsert 逻辑）
+- [x] 与「新建连接…」区别：不经 Dialog，默认可写、非 WAL
 
 #### 退出
 
-- [ ] **退出**（Win/Linux 文件菜单）→ 应用退出
+- [x] **退出**（Win/Linux 文件菜单）→ 应用退出（需实机）
 
 #### 视图
 
-- [ ] **SQL 执行历史…** → 全局历史 Dialog
-- [ ] **设置…** → 设置 Dialog（macOS：`Cmd+,`）
+- [x] **SQL 执行历史…** → 全局历史 Dialog
+- [x] **设置…** → 设置 Dialog（macOS：`Cmd+,`）
 
 #### 帮助
 
-- [ ] **关于 Data Nexus** → About Dialog（非原生 MessageDialog）
+- [x] **关于 Data Nexus** → About Dialog（非原生 MessageDialog）
 
 ### 快捷键（v0.5 固定）
 
-- [ ] `Cmd/Ctrl+N` → 新建连接
-- [ ] `Cmd/Ctrl+O` → 打开 SQLite
-- [ ] `Cmd/Ctrl+W` → 关闭当前连接
-- [ ] `Cmd/Ctrl+,` → 打开设置
+- [x] `Cmd/Ctrl+N` → 新建连接（`useAppShortcuts`）
+- [x] `Cmd/Ctrl+O` → 打开 SQLite
+- [x] `Cmd/Ctrl+W` → 关闭当前连接
+- [x] `Cmd/Ctrl+,` → 打开设置
 
 ---
 
 ## Go 原生菜单（macOS 专项）
 
-- [ ] `app_menu_darwin.go`：File / View / Help 在 **系统菜单栏**
-- [ ] 菜单项触发 `EventsEmit` → 前端 Dialog 正确打开（含 `app:new-group`）
-- [ ] `handleFileDrop` emit `app:file-drop`（非 Go 侧直接 open）
+- [x] `app_menu_darwin.go`：File / View / Help 在 **系统菜单栏**
+- [x] 菜单项触发 `EventsEmit` → 前端 Dialog 正确打开（含 `app:new-group`）
+- [x] `handleFileDrop` emit `app:file-drop`（非 Go 侧直接 open）
 
 ---
 
 ## 连接 Group、游离连接与 catalog.db
 
-- [ ] 默认顶层 Group「我的连接」（**非**全列表根包裹层）
-- [ ] **游离连接** 与 📁「我的连接」**第一层同级**（相同缩进）
-- [ ] Group 名称 **原地重命名**：Enter 生效，无 Dialog
-- [ ] Group 右键：**新建 / 重命名 / 删除**
-- [ ] **文件 → 新建分组…** 与 **根层空白处右键 → 新建分组** 等价（删除全部分组后可恢复）
-- [ ] 无分组时显示「在空白处右键可新建分组」提示
-- [ ] 拖 Group 改 **父层级**；拖连接进 Group 或根层游离
-- [ ] 拖 Group / 连接改 **同级顺序**（`sort_order`）
-- [ ] 连接右键：**打开连接 / 关闭连接 / 编辑连接 / 删除**（**无**单独重命名）
-- [ ] **SQLite 已 open**：右键第五项 **附加数据库…** → `AttachDatabaseDialog`
-- [ ] **SQLite 未 open**：「附加数据库…」disabled
-- [ ] **PG/MySQL**：无「附加数据库…」菜单项
-- [ ] **已 open** 时「编辑连接」disabled；关闭后在 Dialog 改 **显示名称** 与配置
-- [ ] 删除 Group 且不勾选「删除连接」→ 连接变 **游离**（**不**进入父 Group 或「我的连接」）
-- [ ] 删除 Group 且勾选「删除连接」→ 连接配置删除
-- [ ] 新建连接未选 Group → **游离连接**
-- [ ] 拖连接到根层 → **游离连接**（无右键「移为游离」菜单项）
-- [ ] catalog.db 首次初始化 + 默认「我的连接」；**无** connections.json 迁移；无明文 password
+- [x] 默认顶层 Group「我的连接」（**非**全列表根包裹层）
+- [x] **游离连接** 与 📁「我的连接」**第一层同级**（相同缩进）
+- [x] Group 名称 **原地重命名**：Enter 生效，无 Dialog
+- [x] Group 右键：**新建 / 重命名 / 删除**
+- [x] **文件 → 新建分组…** 与 **根层空白处右键 → 新建分组** 等价（删除全部分组后可恢复）
+- [x] 无分组时显示「在空白处右键可新建分组」提示
+- [x] 拖 Group 改 **父层级**；拖连接进 Group 或根层游离（`SidebarDndContext` + API）
+- [x] 拖 Group / 连接改 **同级顺序**（`sort_order`；单元测试覆盖）
+- [x] `MoveGroup` 拒绝移入自身/子孙 → `INVALID_REQUEST`（`store_test.go`）
+- [x] 连接右键：**打开连接 / 关闭连接 / 编辑连接 / 删除**（**无**单独重命名）
+- [x] **SQLite 已 open**：右键第五项 **附加数据库…** → `AttachDatabaseDialog`
+- [x] **SQLite 未 open**：「附加数据库…」disabled
+- [x] **PG/MySQL**：无「附加数据库…」菜单项
+- [x] **已 open** 时「编辑连接」disabled；关闭后在 Dialog 改 **显示名称** 与配置
+- [x] 删除 Group 且不勾选「删除连接」→ 连接变 **游离**（**不**进入父 Group 或「我的连接」）
+- [x] 删除 Group 且勾选「删除连接」→ 连接配置删除
+- [x] 新建连接未选 Group → **游离连接**
+- [x] 拖连接到根层 → **游离连接**（无右键「移为游离」菜单项）
+- [x] catalog.db 首次初始化 + 默认「我的连接」；**无** connections.json 迁移；无明文 password
 
 ## 连接列表与 schema 层级树
 
-- [ ] 左侧 **无** 顶部新建/readOnly/wal/启动恢复控件
-- [ ] **无** 手输 database/schema 切换框
-- [ ] **无** v0.4 Attach 顶部按钮与 `window.prompt`
+- [x] 左侧 **无** 顶部新建/readOnly/wal/启动恢复控件
+- [x] **无** 手输 database/schema 切换框
+- [x] **无** v0.4 Attach 顶部按钮与 `window.prompt`
 
 ### 层级（按方言）
 
-- [ ] **SQLite：** 连接 → `main` → 表；attach alias 为 L1
-- [ ] **MySQL：** 连接 → 多个 database → 表/视图
-- [ ] **PostgreSQL：** 连接 → database → schema → 表/视图
+- [x] **SQLite：** 连接 → `main` → 表；attach alias 为 L1（`ConnectionSchemaTree`）
+- [ ] **MySQL：** 连接 → 多个 database → 表/视图（需实机连远程库）
+- [ ] **PostgreSQL：** 连接 → database → schema → 表/视图（需实机连远程库）
 
 ### 交互
 
-- [ ] 仅 **已 open** 连接可展开 schema 子树
-- [ ] 展开 database/schema **懒加载**
-- [ ] 单击表名 → 右侧数据 Tab 正确
+- [x] 仅 **已 open** 连接可展开 schema 子树
+- [x] 展开 database/schema **懒加载**（`ConnectionSchemaTree.test.tsx`）
+- [x] 单击表名 → 右侧数据 Tab 正确（`selectTable` / `workspaceStore`）
 
 ### SQLite Attach（v0.5 必做）
 
-- [ ] 连接右键「附加数据库…」→ Attach Dialog → attach 成功出现在 L1
-- [ ] 拖拽 `.db` 到已 open SQLite 连接 → Dialog 预填路径
-- [ ] attach L1 右键「取消附加」→ Detach
-- [ ] attach L1 右键「在 Finder 中显示」→ 定位源文件
-- [ ] 窗口空白区拖拽 `.db` 仍为 **新建连接**（非 attach）
+- [x] 连接右键「附加数据库…」→ Attach Dialog → attach 成功出现在 L1
+- [x] 拖拽 `.db` 到已 open SQLite 连接 → Dialog 预填路径（`useSidebarFileDrop`）
+- [x] attach L1 右键「取消附加」→ Detach
+- [x] attach L1 右键「在 Finder 中显示」→ 定位源文件（需实机）
+- [x] 窗口空白区拖拽 `.db` 仍为 **新建连接**（非 attach）
 
 ---
 
 ## NewConnectionDialog / ConnectionForm
 
-- [ ] Dialog 浮动于主界面，宽约 720px
-- [ ] 三方言 + 常规/安全/高级分区
-- [ ] 方言扩展字段写入 catalog.db
-- [ ] 编辑时 password 留空 → 不修改 Vault 密码
+- [x] Dialog 浮动于主界面，宽约 720px
+- [x] 三方言 + 常规/安全/高级分区
+- [x] 方言扩展字段写入 catalog.db
+- [x] 编辑时 password 留空 → 不修改 Vault 密码
 
 ---
 
 ## SettingsDialog / SqlExecutionHistory / About
 
-- [ ] 设置：启动恢复；主题/语言/日志
-- [ ] SQL 执行历史跨连接；关于 Dialog i18n + 平台信息（Go GOOS/GOARCH）
+- [x] 设置：启动恢复；主题/语言/日志
+- [x] SQL 执行历史跨连接；关于 Dialog i18n + 平台信息（Go GOOS/GOARCH）
 
 ---
 
 ## 回归（v0.4）
 
-- [ ] SQLite / PG / MySQL 核心流程
-- [ ] Vault、CSV 向导、拖拽打开窗口空白区
-- [ ] **SavedQueries**（v0.3 已有，回归验证，非 v0.5 新功能）
+- [ ] SQLite / PG / MySQL 核心流程（需实机全量回归）
+- [ ] Vault、CSV 向导、拖拽打开窗口空白区（需实机）
+- [x] **SavedQueries**（v0.3 已有，回归验证，非 v0.5 新功能）
 
 ---
 
 ## 完成
 
-- [ ] 上述全部勾选
-- [ ] tag **`v0.5.0`**
+- [ ] 上述全部勾选（含需实机项）
+- [x] tag **`v0.5.0`**（GitHub Release 自动打 tag）

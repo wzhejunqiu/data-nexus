@@ -120,7 +120,7 @@ v0.5 起，连接 item **不再** 显示行内「打开 / 关闭 / 编辑 / 删�
 - SQLite：文件路径 + 浏览（不变）
 - 远程：host / port / database / user / password / SSL / 只读
 - **[测试连接]**：临时 Connect+Ping，不触发 vault
-- **[保存并打开]**：写入 `connections.json` + Secrets + 可选立即 Open
+- **[保存并打开]**：写入 `catalog.db` + Secrets + 可选立即 Open
 
 ### 7.2 Vault 按需解锁
 

@@ -118,7 +118,7 @@ func (s *FileService) WriteTextFile(path string, content string) error
 
 ## 3. ConnectionService
 
-管理**多条并存**的活跃连接 + 与 `connections.json` 联动。详见 [CONNECTION_UX.md](./CONNECTION_UX.md)。
+管理**多条并存**的活跃连接 + 与 `catalog.db` 联动。详见 [CONNECTION_UX.md](./CONNECTION_UX.md)。
 
 ### 3.1 ListConnections
 
@@ -158,7 +158,7 @@ func (s *ConnectionService) ListConnections() (*ConnectionListView, error)
 func (s *ConnectionService) CreateConnection(req ConnectRequest) (*SavedConnection, error)
 ```
 
-新建连接配置并 **upsert** 到 `connections.json`；**不自动打开**。用户需再调 `OpenConnection`。
+新建连接配置并 **upsert** 到 `catalog.db`；**不自动打开**。用户需再调 `OpenConnection`。
 
 ### 3.2a CreateRemoteConnection（v1.0）
 
@@ -223,7 +223,7 @@ func (s *ConnectionService) CloseConnection(connectionId string) error
 func (s *ConnectionService) RemoveConnection(connectionId string) error
 ```
 
-若仍打开则先 `CloseConnection`，再从 `connections.json` 删除。
+若仍打开则先 `CloseConnection`，再从 `catalog.db` 删除。
 
 ### 3.7 RenameConnection（P1，v0.5 UI 不暴露）
 
@@ -273,11 +273,52 @@ func (s *SecretsService) IsVaultRequiredForRemote() (bool, error)
 
 ---
 
+## 3.11 ConnectionGroupService（v0.5）
+
+连接分组与侧边栏树（`catalog.db`）。详见 [CONNECTION_GROUPS_AND_STORAGE.md](../implementation/v0.5/CONNECTION_GROUPS_AND_STORAGE.md)。
+
+```go
+func (s *ConnectionGroupService) GetSidebarTree() (*ConnectionSidebarTree, error)
+func (s *ConnectionGroupService) CreateGroup(parentID, name string) (*ConnectionGroup, error)
+func (s *ConnectionGroupService) RenameGroup(id, name string) (*ConnectionGroup, error)
+func (s *ConnectionGroupService) CountConnectionsInGroup(id string) (int, error)
+func (s *ConnectionGroupService) DeleteGroup(req DeleteGroupRequest) error
+func (s *ConnectionGroupService) MoveGroup(req MoveGroupRequest) error
+func (s *ConnectionGroupService) MoveConnectionToGroup(connectionID, groupID string, sortOrder int) error
+func (s *ConnectionGroupService) ReleaseConnection(connectionID string, sortOrder int) error
+func (s *ConnectionGroupService) ReorderGroupMembers(groupID string, ordered []GroupMemberRef) error
+func (s *ConnectionGroupService) ReorderSidebarRoot(ordered []SidebarRootItemRef) error
+```
+
+### MoveGroup
+
+```go
+func (s *ConnectionGroupService) MoveGroup(req MoveGroupRequest) error
+```
+
+```json
+{ "id": "group-id", "newParentId": "parent-id-or-null", "sortOrder": -1 }
+```
+
+- `newParentId` 为空 / `null`：移到根层（与默认「我的连接」同级）
+- `sortOrder`：目标兄弟位置；`-1` 表示追加到末尾
+
+**Errors:**
+
+| 条件 | Code |
+|------|------|
+| 移入自身（`newParentId == id`） | `INVALID_REQUEST` |
+| 移入子孙 Group | `INVALID_REQUEST` |
+
+失败时不改变分组树；前端 DnD 应 Toast 错误信息。
+
+---
+
 ## 4. SavedConnectionService（可选合并）
 
 > **实施建议:** MVP 可将 §4 合并进 `ConnectionService`，避免重复。下列方法可由 ConnectionService 直接提供。
 
-若独立实现，职责仅为 `connections.json` CRUD；**打开/关闭** 仍在 ConnectionService。
+若独立实现，职责仅为 `catalog.db` 中连接 CRUD；**打开/关闭** 仍在 ConnectionService。
 
 ~~原 ListSaved / RemoveSaved / SetAutoConnectLast~~ → 见 §3.1–3.8
 
