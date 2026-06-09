@@ -55,6 +55,17 @@ func TestBuildMySQLDSNWithTLSVerify(t *testing.T) {
 	}
 }
 
+func TestBuildMySQLDSNWithoutDatabase(t *testing.T) {
+	dsn := buildMySQLDSN(&model.MySQLConfig{
+		Host: "localhost",
+		Port: 3306,
+		User: "root",
+	}, "secret")
+	if !strings.Contains(dsn, "root:secret@tcp(localhost:3306)/?") {
+		t.Fatalf("unexpected dsn: %q", dsn)
+	}
+}
+
 func TestBuildMySQLDSNWithTLSSkipVerify(t *testing.T) {
 	dsn := buildMySQLDSN(&model.MySQLConfig{
 		Host:          "db.example.com",

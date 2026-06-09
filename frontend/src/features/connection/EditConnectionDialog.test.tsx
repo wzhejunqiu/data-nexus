@@ -163,6 +163,33 @@ describe('EditConnectionDialog', () => {
     })
   })
 
+  it('shows mysql database as optional without required asterisk', () => {
+    const mysqlItem: ConnectionListItem = {
+      id: 'my-1',
+      name: 'local-mysql',
+      type: 'mysql',
+      config: {
+        type: 'mysql',
+        mysql: {
+          host: 'localhost',
+          port: 3306,
+          database: '',
+          user: 'root',
+          tls: false,
+          readOnly: false,
+        },
+      },
+      status: 'closed',
+      lastUsedAt: '2026-01-01T00:00:00Z',
+    }
+
+    renderDialog(mysqlItem)
+    const label = screen.getByText(/connectionForm.fields.database/)
+    expect(label.textContent).toContain('connectionForm.optional')
+    expect(label.textContent).not.toContain('*')
+    expect(screen.getByLabelText(/connectionForm.fields.database/i)).toBeInTheDocument()
+  })
+
   it('saves mysql advanced settings including charset and storage engine', async () => {
     const { connectionApi } = await import('@/lib/api/connection')
     vi.mocked(connectionApi.updateMySQLSettings).mockResolvedValue({} as never)

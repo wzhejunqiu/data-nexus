@@ -284,9 +284,11 @@ type ListTablesOptions struct {
 
 ### 5.3 连接配置与 browse 上下文
 
-- **新建连接** 仍指定**默认 database**（PG/MySQL 连接串所需）
-- 打开连接后，树列出**实例上所有可访问 database**，不限于默认库
-- 在非常规 database 下查表：Driver 会话需支持 **catalog 切换** 或 **qualified 查询**（实施时选一种，MySQL 常用 USE / 三段名）
+- **PostgreSQL：** 新建连接仍须指定 **database**（协议层必须连到具体库）；v0.5.2 多库浏览完成后可改为可选
+- **MySQL：** 新建连接 **database 可选**；留空 → 实例级连接；填写 → DSN 默认库
+- 打开连接后，树列出**实例上所有可访问 database**
+- MySQL 在非常规 database 下查表：通过 `information_schema` 按 `opts.Database` 过滤（已实现）
+- PostgreSQL 跨库 schema/表：需 v0.5.2 Driver 按库重连（当前仅当前会话库可展开）
 
 ---
 
@@ -332,7 +334,8 @@ SQLite **无** L2 schema 层（除非未来 PRAGMA database_list 统一，当前
 
 ## 8. 与新建连接 Dialog 的关系
 
-- 新建 PG/MySQL 连接时填写的 **database** = 连接默认库 → 树展开后该节点标记 `default`，首次 open 自动展开并选中
+- **PostgreSQL：** 新建时填写的 **database** = 连接默认库（会话绑定该库）
+- **MySQL：** database **可选**；留空则在树中浏览各库；若填写则作为 DSN 默认库
 - 浏览其他 database **不需要** 修改已保存连接配置（与 v0.4「切换 database 要 UpdateMySQLSettings 重连」不同）
 
 ---

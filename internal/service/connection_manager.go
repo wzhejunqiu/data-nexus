@@ -588,9 +588,6 @@ func validateRemoteConnectRequest(req model.RemoteConnectRequest) error {
 		if strings.TrimSpace(req.MySQL.Host) == "" {
 			return model.ErrInvalidRequest("host is required")
 		}
-		if strings.TrimSpace(req.MySQL.Database) == "" {
-			return model.ErrInvalidRequest("database is required")
-		}
 		if strings.TrimSpace(req.MySQL.User) == "" {
 			return model.ErrInvalidRequest("user is required")
 		}

@@ -106,7 +106,7 @@ MenuBar → **打开 SQLite 文件…**（`Cmd+O`）仍为快速通道：文件�
 | 常规 | 显示名称 | text | — | **是** | trim 后非空 |
 | 常规 | 主机 | text | `localhost` | 否 | 有默认值；仍校验 trim 非空 |
 | 常规 | 端口 | number | `3306` | 否 | 1–65535 |
-| 常规 | 数据库 | text | — | **是** | |
+| 常规 | 数据库 | text | — | 否 | 标签旁「（可选）」；留空 → 实例级连接，在树中选库；填写 → DSN 默认库 |
 | 常规 | 用户 | text | — | **是** | |
 | 常规 | 密码 | password | — | **新建** | 编辑留空 = 不修改 |
 | 安全 | 启用 TLS | checkbox | off | 否 | MySQL 8 `caching_sha2_password` 建议开启 |
@@ -228,15 +228,15 @@ export function validateConnectionForm(
 ): ConnectionFormErrors
 ```
 
-| 字段 | SQLite | PostgreSQL / MySQL |
-|------|--------|-------------------|
-| `displayName` | 始终通过（空 → 后端 basename） | `trim()` 非空，否则 `required` |
-| `filePath` | `trim()` 非空 | — |
-| `host` | — | `trim()` 非空 |
-| `port` | — | 整数 1–65535，否则 `invalidPort` |
-| `database` | — | `trim()` 非空 |
-| `user` | — | `trim()` 非空 |
-| `password` | — | **create:** 非空；**edit:** 跳过（留空合法） |
+| 字段 | SQLite | PostgreSQL | MySQL |
+|------|--------|------------|-------|
+| `displayName` | 始终通过（空 → 后端 basename） | `trim()` 非空，否则 `required` | 同 PG |
+| `filePath` | `trim()` 非空 | — | — |
+| `host` | — | `trim()` 非空 | 同 PG |
+| `port` | — | 整数 1–65535，否则 `invalidPort` | 同 PG |
+| `database` | — | `trim()` 非空 | **不校验**（可选） |
+| `user` | — | `trim()` 非空 | 同 PG |
+| `password` | — | **create:** 非空；**edit:** 跳过 | 同 PG |
 
 有默认值的下拉（sslMode、charset、collation、clientEncoding、storageEngine）**不做**空值校验。
 

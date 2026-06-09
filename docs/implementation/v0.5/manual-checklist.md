@@ -108,6 +108,11 @@ cd frontend && npm test
 - [x] **无** 手输 database/schema 切换框
 - [x] **无** v0.4 Attach 顶部按钮与 `window.prompt`
 
+### 新建连接 database 字段
+
+- [x] **MySQL：** database **可选**（留空可保存；实例级连接后在树中选库）
+- [x] **PostgreSQL：** database **仍必填**
+
 ### 层级（按方言）
 
 - [x] **SQLite：** 连接 → `main` → 表；attach alias 为 L1（`ConnectionSchemaTree`）

@@ -2,6 +2,7 @@ package model
 
 import (
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -106,6 +107,10 @@ func (c *MySQLConfig) NormalizedCollation() string {
 		return "utf8mb4_unicode_ci"
 	}
 	return c.Collation
+}
+
+func (c *MySQLConfig) NormalizedDatabase() string {
+	return strings.TrimSpace(c.Database)
 }
 
 type ConnectRequest struct {

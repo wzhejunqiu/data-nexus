@@ -18,6 +18,7 @@ export function MySQLFields({
 }) {
   const { t } = useTranslation()
   const my = state.mysql
+  const optionalLabel = t('connectionForm.optional')
 
   const setMySQL = (patch: Partial<typeof my>) => onChange({ mysql: { ...my, ...patch } })
 
@@ -77,24 +78,10 @@ export function MySQLFields({
           />
         </FormField>
       </div>
-      <FormField
-        id="database"
-        label={t('connectionForm.fields.database')}
-        required
-        error={
-          errors.database
-            ? t('connectionForm.validation.required', {
-                field: t('connectionForm.fields.database'),
-              })
-            : undefined
-        }
-      >
+      <FormField id="database" label={t('connectionForm.fields.database')} optional={optionalLabel}>
         <Input
           id="database"
           value={my.database}
-          aria-required
-          aria-invalid={!!errors.database}
-          className={fieldErrorClass(!!errors.database)}
           onChange={(e) => setMySQL({ database: e.target.value })}
         />
       </FormField>

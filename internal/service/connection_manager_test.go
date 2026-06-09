@@ -518,6 +518,19 @@ func TestConnectionManagerTestConnectionInvalidRequest(t *testing.T) {
 	}); err == nil {
 		t.Fatal("expected host required")
 	}
+	if err := mgr.TestConnection(ctx, model.TestConnectionRequest{
+		Type:     model.DriverTypePostgres,
+		Postgres: &model.PostgresConfig{Host: "localhost", Database: "", User: "u"},
+	}); err == nil {
+		t.Fatal("expected postgres database required")
+	}
+	if _, err := mgr.CreateRemoteConnection(ctx, model.RemoteConnectRequest{
+		Type:     model.DriverTypeMySQL,
+		Password: "secret",
+		MySQL:    &model.MySQLConfig{Host: "localhost", User: "root"},
+	}); err != nil {
+		t.Fatalf("expected mysql without database to pass validation, got %v", err)
+	}
 }
 
 func TestConnectionManagerUpdateRemoteSettings(t *testing.T) {

@@ -231,6 +231,39 @@ describe('NewConnectionDialog', () => {
     ).toBeInTheDocument()
   })
 
+  it('creates mysql connection without database', async () => {
+    const { connectionApi } = await import('@/lib/api/connection')
+    const { moveNewConnectionToGroup } = await import('./placeConnectionInGroup')
+    vi.mocked(connectionApi.createRemote).mockResolvedValue({ id: 'mysql-1' } as never)
+    vi.mocked(moveNewConnectionToGroup).mockResolvedValue(undefined)
+
+    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
+    fireEvent.click(screen.getByRole('button', { name: 'connection.type.mysql' }))
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.displayName/i), {
+      target: { value: 'mysql-local' },
+    })
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.user/i), {
+      target: { value: 'root' },
+    })
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.password/i), {
+      target: { value: 'secret' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'connectionForm.saveAndOpen' }))
+
+    await waitFor(() => {
+      expect(connectionApi.createRemote).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'mysql',
+          mysql: expect.objectContaining({
+            database: '',
+            user: 'root',
+          }),
+        }),
+      )
+      expect(moveNewConnectionToGroup).toHaveBeenCalled()
+    })
+  })
+
   it('opens vault dialog and retries createRemote on vault locked', async () => {
     const { connectionApi } = await import('@/lib/api/connection')
     const { secretsApi } = await import('@/lib/api/secrets')

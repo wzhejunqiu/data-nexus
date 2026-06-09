@@ -187,7 +187,7 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
     }
   })
 
-  const tableNames = useMemo(() => tables?.items.map((t) => t.name) ?? [], [tables])
+  const tableNames = useMemo(() => (tables?.items ?? []).map((t) => t.name), [tables])
 
   const handleEditorMount: OnMount = (editor, monaco) => {
     editorRef.current = editor

@@ -198,7 +198,7 @@ func (s *QueryService) ListNamespaces(ctx context.Context, connectionID string) 
 	if err != nil {
 		return nil, err
 	}
-	return &model.NamespaceList{Items: items}, nil
+	return &model.NamespaceList{Items: ensureSlice(items)}, nil
 }
 
 func (s *QueryService) ListSchemas(ctx context.Context, connectionID, database string) (*model.SchemaList, error) {
@@ -210,7 +210,7 @@ func (s *QueryService) ListSchemas(ctx context.Context, connectionID, database s
 	if err != nil {
 		return nil, err
 	}
-	return &model.SchemaList{Items: items}, nil
+	return &model.SchemaList{Items: ensureSlice(items)}, nil
 }
 
 func (s *QueryService) ListTables(ctx context.Context, connectionID string, opts model.ListTablesOptions) (*model.TableList, error) {
@@ -222,7 +222,14 @@ func (s *QueryService) ListTables(ctx context.Context, connectionID string, opts
 	if err != nil {
 		return nil, err
 	}
-	return &model.TableList{Items: items}, nil
+	return &model.TableList{Items: ensureSlice(items)}, nil
+}
+
+func ensureSlice[T any](items []T) []T {
+	if items == nil {
+		return []T{}
+	}
+	return items
 }
 
 func (s *QueryService) GetTableSchema(ctx context.Context, connectionID, tableName string) (*model.TableSchema, error) {

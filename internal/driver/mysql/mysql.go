@@ -39,7 +39,7 @@ func buildMySQLDSN(my *model.MySQLConfig, password string) string {
 		}
 	}
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?%s",
-		my.User, password, my.Host, my.NormalizedPort(), my.Database, strings.Join(params, "&"))
+		my.User, password, my.Host, my.NormalizedPort(), my.NormalizedDatabase(), strings.Join(params, "&"))
 }
 
 func (d *Driver) Connect(ctx context.Context, cfg model.DriverConfig) error {
@@ -51,7 +51,7 @@ func (d *Driver) Connect(ctx context.Context, cfg model.DriverConfig) error {
 	}
 	my := cfg.MySQL
 	d.readOnly = my.ReadOnly
-	d.database = my.Database
+	d.database = my.NormalizedDatabase()
 
 	dsn := buildMySQLDSN(my, my.Password)
 	db, err := sql.Open("mysql", dsn)

@@ -41,7 +41,7 @@ export function validateConnectionForm(
     errors.port = 'invalidPort'
   }
 
-  if (!cfg.database.trim()) {
+  if (dialect === 'postgres' && !cfg.database.trim()) {
     errors.database = 'required'
   }
 

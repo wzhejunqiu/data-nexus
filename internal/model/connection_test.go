@@ -59,6 +59,17 @@ func TestMySQLConfigNormalized(t *testing.T) {
 	}
 }
 
+func TestMySQLConfigNormalizedDatabase(t *testing.T) {
+	my := &model.MySQLConfig{}
+	if my.NormalizedDatabase() != "" {
+		t.Fatalf("expected empty database, got %q", my.NormalizedDatabase())
+	}
+	my.Database = "  app  "
+	if my.NormalizedDatabase() != "app" {
+		t.Fatalf("expected trimmed app, got %q", my.NormalizedDatabase())
+	}
+}
+
 func TestMySQLConfigNormalizedPort(t *testing.T) {
 	my := &model.MySQLConfig{}
 	if my.NormalizedPort() != 3306 {

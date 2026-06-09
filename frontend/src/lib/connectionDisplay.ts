@@ -23,7 +23,9 @@ export function connectionSubtitle(item: ConnectionListItem): string {
   if (item.config.mysql) {
     const m = item.config.mysql
     const port = m.port || 3306
-    return `${m.user}@${m.host}:${port}/${m.database}`
+    const base = `${m.user}@${m.host}:${port}`
+    const db = m.database?.trim()
+    return db ? `${base}/${db}` : base
   }
   return ''
 }

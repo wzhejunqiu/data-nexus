@@ -121,7 +121,8 @@ v0.5 起，连接 item **不再** 显示行内「打开 / 关闭 / 编辑 / 删�
 `NewConnectionDialog`：**SQLite | PostgreSQL | MySQL**
 
 - SQLite：文件路径 + 浏览（不变）
-- 远程：host / port / database / user / password / SSL / 只读
+- PostgreSQL：host / port / **database（必填）** / user / password / SSL / 只读
+- MySQL：host / port / **database（可选）** / user / password / TLS / 只读
 - **[测试连接]**：临时 Connect+Ping，不触发 vault
 - **[保存并打开]**：写入 `catalog.db` + Secrets + 可选立即 Open
 
@@ -141,7 +142,7 @@ v0.5 起，连接 item **不再** 显示行内「打开 / 关闭 / 编辑 / 删�
 |------|------|--------|
 | SQLite | SQL | 文件路径 |
 | PostgreSQL | PG | `user@host:port/database` |
-| MySQL | MY | `user@host:port/database` |
+| MySQL | MY | `user@host:port/database`（database 为空时省略 `/database`） |
 
 ### 7.4 Schema / Database 浏览（v0.5 层级树）
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -364,7 +365,15 @@ func remoteDisplayName(req model.RemoteConnectRequest) string {
 		}
 	case model.DriverTypeMySQL:
 		if req.MySQL != nil {
-			return req.MySQL.User + "@" + req.MySQL.Host + "/" + req.MySQL.Database
+			my := req.MySQL
+			base := my.User + "@" + my.Host
+			if port := my.NormalizedPort(); port != 3306 {
+				base += ":" + strconv.Itoa(port)
+			}
+			if db := my.NormalizedDatabase(); db != "" {
+				return base + "/" + db
+			}
+			return base
 		}
 	}
 	return "remote"
