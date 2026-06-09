@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ContextMenu,
@@ -20,6 +20,7 @@ import { EditConnectionDialog } from './EditConnectionDialog'
 import type { VaultDialogMode } from './VaultDialog'
 import { AttachDatabaseDialog } from './AttachDatabaseDialog'
 import { ConnectionSchemaTree } from './tree/ConnectionSchemaTree'
+import { registerConnectionRenameHandler } from './sidebarRenameHandlers'
 
 export function ConnectionTreeItem({
   item,
@@ -39,9 +40,14 @@ export function ConnectionTreeItem({
   const isOpen = item.status === 'open'
   const subtitle = connectionSubtitle(item)
   const setActiveConnectionId = useWorkspaceStore((s) => s.setActiveConnectionId)
+  const setSidebarFocus = useWorkspaceStore((s) => s.setSidebarFocus)
+  const sidebarFocus = useWorkspaceStore((s) => s.sidebarFocus)
   const selectTable = useWorkspaceStore((s) => s.selectTable)
+  const isFocused = sidebarFocus?.kind === 'connection' && sidebarFocus.id === item.id
   const [editOpen, setEditOpen] = useState(false)
   const [attachOpen, setAttachOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState(item.name)
   const [error, setError] = useState<string | null>(null)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -53,6 +59,17 @@ export function ConnectionTreeItem({
     transition,
     opacity: isDragging ? 0.5 : 1,
   }
+
+  const renameMut = useMutation({
+    mutationFn: (name: string) => connectionApi.rename(item.id, name),
+    onSuccess: () => {
+      setEditing(false)
+      onRefresh()
+      qc.invalidateQueries({ queryKey: ['connections'] })
+      qc.invalidateQueries({ queryKey: ['connectionSidebarTree'] })
+    },
+    onError: (err) => setError(formatError(t, err)),
+  })
 
   const openConn = useMutation({
     mutationFn: () => connectionApi.open(item.id),
@@ -103,12 +120,40 @@ export function ConnectionTreeItem({
     },
   })
 
+  const commitRename = () => {
+    const trimmed = editName.trim()
+    if (!trimmed) {
+      setEditName(item.name)
+      setEditing(false)
+      return
+    }
+    if (trimmed !== item.name) renameMut.mutate(trimmed)
+    else setEditing(false)
+  }
+
+  const startRename = useCallback(() => {
+    if (editing) return
+    setEditName(item.name)
+    setEditing(true)
+  }, [editing, item.name])
+
+  useEffect(() => {
+    return registerConnectionRenameHandler(item.id, startRename)
+  }, [item.id, startRename])
+
+  const selectConnection = () => {
+    setActiveConnectionId(item.id)
+    setSidebarFocus({ kind: 'connection', id: item.id })
+  }
+
   return (
     <div style={{ paddingLeft: depth * 12, ...dragStyle }} className="mb-1" ref={setNodeRef}>
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
-            className="cursor-default rounded border border-border/40 p-2 hover:bg-muted/20"
+            className={`cursor-default rounded border border-border/40 p-2 hover:bg-muted/20 ${
+              isFocused ? 'bg-muted/20 ring-1 ring-accent' : ''
+            }`}
             data-sqlite-drop-target={item.type === 'sqlite' ? '' : undefined}
             data-connection-id={item.id}
             data-connection-type={item.type}
@@ -119,14 +164,34 @@ export function ConnectionTreeItem({
               if (isOpen) setActiveConnectionId(item.id)
               else openConn.mutate()
             }}
-            onClick={() => setActiveConnectionId(item.id)}
+            onClick={selectConnection}
           >
             <div className="flex items-center gap-1 text-sm font-medium">
               <span className="rounded bg-muted/40 px-1 text-[10px] font-bold text-muted">
                 {connectionTypeLabel(item.type)}
               </span>
               <span className={isOpen ? 'text-green-500' : 'text-muted'}>{isOpen ? '●' : '○'}</span>
-              <span className="truncate">{item.name}</span>
+              {editing ? (
+                <input
+                  data-sidebar-rename-input="true"
+                  className="min-w-0 flex-1 rounded border border-border bg-transparent px-1 text-sm"
+                  value={editName}
+                  autoFocus
+                  onChange={(e) => setEditName(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    e.stopPropagation()
+                    if (e.key === 'Enter') commitRename()
+                    if (e.key === 'Escape') {
+                      setEditName(item.name)
+                      setEditing(false)
+                    }
+                  }}
+                  onBlur={commitRename}
+                />
+              ) : (
+                <span className="truncate">{item.name}</span>
+              )}
             </div>
             <p className="truncate text-xs text-muted" title={subtitle}>
               {subtitle}
@@ -144,11 +209,20 @@ export function ConnectionTreeItem({
               {t('connection.closeConnection')}
             </ContextMenuItem>
           )}
-          <ContextMenuItem disabled={isOpen} onSelect={() => !isOpen && setEditOpen(true)}>
+          <ContextMenuItem onSelect={startRename}>{t('connection.rename')}</ContextMenuItem>
+          <ContextMenuItem
+            disabled={isOpen}
+            hint={isOpen ? t('connection.editRequiresClosed') : undefined}
+            onSelect={() => !isOpen && setEditOpen(true)}
+          >
             {t('connection.edit')}
           </ContextMenuItem>
           {item.type === 'sqlite' && (
-            <ContextMenuItem disabled={!isOpen} onSelect={() => isOpen && setAttachOpen(true)}>
+            <ContextMenuItem
+              disabled={!isOpen}
+              hint={!isOpen ? t('connection.attachRequiresOpen') : undefined}
+              onSelect={() => isOpen && setAttachOpen(true)}
+            >
               {t('connection.attachDatabase')}
             </ContextMenuItem>
           )}

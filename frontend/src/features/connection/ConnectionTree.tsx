@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ContextMenu,
@@ -12,6 +12,7 @@ import { connectionGroupApi } from '@/lib/api/connectionGroup'
 import { formatError } from '@/lib/api/errors'
 import { SavedQueries } from '@/features/saved-queries/SavedQueries'
 import type { SidebarRootItemRef } from '@/lib/types'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { ConnectionGroupNode } from './ConnectionGroupNode'
 import { ConnectionTreeItem } from './ConnectionTreeItem'
 import { AttachDatabaseDialog } from './AttachDatabaseDialog'
@@ -19,11 +20,22 @@ import { VaultDialog, type VaultDialogMode } from './VaultDialog'
 import { SidebarDndContext, RootDropZone } from './dnd/SidebarDndContext'
 import { collectGroupMemberMaps, defaultRootItems } from './dnd/sidebarOrder'
 import { useSidebarFileDrop, type FileAttachTarget } from './dnd/useSidebarFileDrop'
+import { invokeSidebarRename, isAnySidebarRenaming } from './sidebarRenameHandlers'
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return true
+  if (target.isContentEditable) return true
+  return Boolean(target.closest('.monaco-editor'))
+}
 
 export function ConnectionTree() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const pushToast = useToastStore((s) => s.push)
+  const sidebarFocus = useWorkspaceStore((s) => s.sidebarFocus)
+  const sidebarRef = useRef<HTMLDivElement>(null)
   const [sidebarWidth, setSidebarWidth] = useState(260)
   const [vaultOpen, setVaultOpen] = useState(false)
   const [vaultMode, setVaultMode] = useState<VaultDialogMode>('unlock')
@@ -44,6 +56,20 @@ export function ConnectionTree() {
     onAttach: setFileAttach,
     onRefresh: refresh,
   })
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'F2' && e.key !== 'Enter') return
+      if (isAnySidebarRenaming()) return
+      if (isEditableTarget(e.target)) return
+      if (document.querySelector('[role="dialog"]')) return
+      if (!sidebarFocus) return
+      e.preventDefault()
+      invokeSidebarRename(sidebarFocus)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [sidebarFocus])
 
   const createRootGroupMut = useMutation({
     mutationFn: () => connectionGroupApi.createGroup('', t('connectionGroup.newGroupName')),
@@ -117,7 +143,11 @@ export function ConnectionTree() {
         style={{ width: sidebarWidth, minWidth: 200, maxWidth: 480 }}
       >
         <SavedQueries />
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto p-2">
+        <div
+          ref={sidebarRef}
+          tabIndex={-1}
+          className="flex min-h-0 flex-1 flex-col overflow-auto p-2 outline-none"
+        >
           <SidebarDndContext onRefresh={refresh} rootItems={rootItems} groupMembers={groupMembers}>
             <ContextMenu>
               <ContextMenuTrigger asChild>

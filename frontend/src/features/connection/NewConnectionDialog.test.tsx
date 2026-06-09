@@ -10,6 +10,17 @@ vi.mock('@/lib/api/connection', () => ({
   },
 }))
 
+vi.mock('@/lib/api/connectionGroup', () => ({
+  connectionGroupApi: {
+    moveConnectionToGroup: vi.fn(),
+  },
+}))
+
+vi.mock('./placeConnectionInGroup', () => ({
+  openSqliteAndMaybePlace: vi.fn(),
+  moveNewConnectionToGroup: vi.fn(),
+}))
+
 vi.mock('@/lib/api/dialog', () => ({
   dialogApi: {
     openDatabaseFile: vi.fn(),
@@ -62,8 +73,11 @@ vi.mock('@/lib/api/secrets', () => ({
 }))
 
 vi.mock('@/stores/workspaceStore', () => ({
-  useWorkspaceStore: (selector: (s: { setActiveConnectionId: () => void }) => unknown) =>
-    selector({ setActiveConnectionId: vi.fn() }),
+  useWorkspaceStore: (selector: (s: Record<string, unknown>) => unknown) =>
+    selector({
+      setActiveConnectionId: vi.fn(),
+      selectedGroupId: 'group-1',
+    }),
 }))
 
 describe('NewConnectionDialog', () => {
@@ -77,8 +91,8 @@ describe('NewConnectionDialog', () => {
   })
 
   it('passes readOnly flag when opening from path', async () => {
-    const { connectionApi } = await import('@/lib/api/connection')
-    vi.mocked(connectionApi.openFromFile).mockResolvedValue({
+    const { openSqliteAndMaybePlace } = await import('./placeConnectionInGroup')
+    vi.mocked(openSqliteAndMaybePlace).mockResolvedValue({
       id: '1',
       displayName: 'test.db',
     } as never)
@@ -89,18 +103,55 @@ describe('NewConnectionDialog', () => {
     fireEvent.change(input, { target: { value: '/tmp/test.db' } })
     fireEvent.click(screen.getByRole('button', { name: 'connectionForm.saveAndOpen' }))
 
-    expect(connectionApi.openFromFile).toHaveBeenCalledWith({
-      filePath: '/tmp/test.db',
-      readOnly: true,
-      wal: false,
+    await waitFor(() => {
+      expect(openSqliteAndMaybePlace).toHaveBeenCalledWith(
+        {
+          filePath: '/tmp/test.db',
+          readOnly: true,
+          wal: false,
+        },
+        'group-1',
+        expect.anything(),
+      )
+    })
+  })
+
+  it('moves remote connection to selected group after create', async () => {
+    const { connectionApi } = await import('@/lib/api/connection')
+    const { moveNewConnectionToGroup } = await import('./placeConnectionInGroup')
+    vi.mocked(connectionApi.createRemote).mockResolvedValue({ id: 'remote-1' } as never)
+    vi.mocked(moveNewConnectionToGroup).mockResolvedValue(undefined)
+
+    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
+    fireEvent.click(screen.getByRole('button', { name: 'connection.type.postgres' }))
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.displayName/i), {
+      target: { value: 'pg-local' },
+    })
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.database/i), {
+      target: { value: 'app' },
+    })
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.user/i), {
+      target: { value: 'admin' },
+    })
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.password/i), {
+      target: { value: 'secret' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'connectionForm.saveAndOpen' }))
+
+    await waitFor(() => {
+      expect(moveNewConnectionToGroup).toHaveBeenCalledWith(
+        'remote-1',
+        'group-1',
+        expect.anything(),
+      )
     })
   })
 
   it('opens from file dialog when path is empty', async () => {
-    const { connectionApi } = await import('@/lib/api/connection')
+    const { openSqliteAndMaybePlace } = await import('./placeConnectionInGroup')
     const { dialogApi } = await import('@/lib/api/dialog')
     vi.mocked(dialogApi.openDatabaseFile).mockResolvedValue('/picked/app.db')
-    vi.mocked(connectionApi.openFromFile).mockResolvedValue({
+    vi.mocked(openSqliteAndMaybePlace).mockResolvedValue({
       id: '1',
       displayName: 'app.db',
     } as never)
@@ -110,11 +161,15 @@ describe('NewConnectionDialog', () => {
 
     await waitFor(() => {
       expect(dialogApi.openDatabaseFile).toHaveBeenCalled()
-      expect(connectionApi.openFromFile).toHaveBeenCalledWith({
-        filePath: '/picked/app.db',
-        readOnly: false,
-        wal: true,
-      })
+      expect(openSqliteAndMaybePlace).toHaveBeenCalledWith(
+        {
+          filePath: '/picked/app.db',
+          readOnly: false,
+          wal: true,
+        },
+        'group-1',
+        expect.anything(),
+      )
     })
   })
 

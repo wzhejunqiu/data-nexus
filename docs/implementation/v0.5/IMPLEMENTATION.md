@@ -116,10 +116,10 @@ v0.4 已完成 PostgreSQL / MySQL 远程连接。当前桌面 UI 仍沿用 MVP �
 
 | # | 任务 | 详情 |
 |---|------|------|
-| C1 | `ConnectionGroupNode.tsx` | 📁；**inline 重命名**（Enter）；右键 **新建/重命名/删除**；**DeleteGroupDialog** |
-| C1b | `ConnectionTreeItem.tsx` | 右键 **打开/关闭/编辑/删除**（SQLite open 时第五项「附加数据库…」见 Phase D）；draggable；**无** inline 重命名 |
-| C2 | `ConnectionTree.tsx` | `GetSidebarTree` 驱动；按 **`rootItems`** 混排；**根层空白右键新建分组** |
-| C3 | 新建连接入 Group | 当前选中 Group 或 root |
+| C1 | `ConnectionGroupNode.tsx` | 📁；**inline 重命名**（F2/Enter）；单击选中 + 拖放标记；右键 **新建/重命名/删除**；**DeleteGroupDialog** |
+| C1b | `ConnectionTreeItem.tsx` | 右键 **打开/关闭/重命名/编辑/删除**（SQLite open 时「附加数据库…」）；**inline 重命名**（open/closed）；draggable |
+| C2 | `ConnectionTree.tsx` | `GetSidebarTree` 驱动；**F2/Enter** 重命名；`selectedGroupId` / `sidebarFocus` |
+| C3 | 新建连接入 Group | `selectedGroupId`：NewConnectionDialog / Cmd+O / AppShell / 拖 `.db` 到 Group |
 | C4 | `SidebarDndContext` + hooks | Group 改父级；连接移 Group/游离；**`@dnd-kit/sortable` 同级排序** |
 | C5 | 后端 API | `MoveGroup`, `ReorderGroupMembers`, `ReorderSidebarRoot` |
 | C6 | 测试 | 嵌套、DnD、首次启动初始化后树正确 |
@@ -246,7 +246,11 @@ frontend/src/features/connection/ConnectionForm/
   fields/MySQLFields.tsx
   connectionFormDefaults.ts
   ConnectionForm.test.tsx
-frontend/src/components/AboutDialog.test.tsx
+frontend/src/features/connection/placeConnectionInGroup.ts
+frontend/src/features/connection/sidebarRenameHandlers.ts
+frontend/src/features/connection/ConnectionGroupNode.test.tsx
+frontend/src/features/connection/ConnectionTreeItem.test.tsx
+frontend/src/features/connection/dnd/useSidebarFileDrop.test.tsx
 internal/catalog/
   sqlite/store.go
   sqlite/groups.go

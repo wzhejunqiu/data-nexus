@@ -58,7 +58,7 @@
 | 规则 | 说明 |
 |------|------|
 | **仅关闭可编辑** | 连接 `status === 'open'` 时 **不得** 打开 `EditConnectionDialog`；右键菜单项 disabled |
-| 显示名称 | **编辑连接** Dialog 顶部「显示名称」字段；与配置 **一并** 提交 `UpdateConnection*`（**无** 单独重命名入口） |
+| 显示名称 | Edit Dialog 保留「显示名称」字段；与 **inline 重命名**（F2/Enter/右键）**并存**；两条路径均 `RenameConnection`；Edit 仅 **closed** 时可改配置 |
 | 后端校验 | `UpdateConnection*` / `UpdateConnectionPostgresSettings` / `UpdateConnectionMySQLSettings` / SQLite 路径更新：若连接在活跃 map 中 → `CONNECTION_OPEN` |
 | 密码留空 | `UpdateConnection*` 中 password 为空或 omitted → **跳过密码更新**，保留 Vault 现有值（见 [BACKEND.md §6.2](./BACKEND.md#62-密码更新语义)） |
 | 用户提示 | disabled 菜单 Tooltip：`connection.editRequiresClosed` →「请先关闭连接」 |

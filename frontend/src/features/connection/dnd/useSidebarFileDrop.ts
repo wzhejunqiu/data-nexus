@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQueryClient } from '@tanstack/react-query'
 import { EventsOn } from '../../../../wailsjs/runtime/runtime'
-import { connectionApi } from '@/lib/api/connection'
 import { formatError } from '@/lib/api/errors'
 import { useToastStore } from '@/components/ui/Toast'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { openSqliteAndMaybePlace } from '../placeConnectionInGroup'
 
 export type FileAttachTarget = {
   connectionId: string
@@ -14,6 +15,11 @@ export type FileAttachTarget = {
 function findSqliteDropTarget(x: number, y: number): HTMLElement | null {
   const el = document.elementFromPoint(x, y)
   return el?.closest('[data-sqlite-drop-target]') as HTMLElement | null
+}
+
+function findGroupDropTarget(x: number, y: number): HTMLElement | null {
+  const el = document.elementFromPoint(x, y)
+  return el?.closest('[data-group-drop-target]') as HTMLElement | null
 }
 
 function isDbPath(path: string) {
@@ -36,6 +42,7 @@ export function useSidebarFileDrop({
 }) {
   const { t } = useTranslation()
   const pushToast = useToastStore((s) => s.push)
+  const qc = useQueryClient()
 
   useEffect(() => {
     if (!hasWailsRuntime()) {
@@ -47,12 +54,12 @@ export function useSidebarFileDrop({
 
       const x = payload.x ?? 0
       const y = payload.y ?? 0
-      const target = findSqliteDropTarget(x, y)
+      const sqliteTarget = findSqliteDropTarget(x, y)
 
-      if (target) {
-        const connectionId = target.getAttribute('data-connection-id') ?? ''
-        const isOpen = target.getAttribute('data-connection-open') === 'true'
-        const isSqlite = target.getAttribute('data-connection-type') === 'sqlite'
+      if (sqliteTarget) {
+        const connectionId = sqliteTarget.getAttribute('data-connection-id') ?? ''
+        const isOpen = sqliteTarget.getAttribute('data-connection-open') === 'true'
+        const isSqlite = sqliteTarget.getAttribute('data-connection-type') === 'sqlite'
         if (!isSqlite || !isOpen) {
           pushToast(t('attach.dropRequiresOpenSqlite'), 'error')
           return
@@ -61,13 +68,20 @@ export function useSidebarFileDrop({
         return
       }
 
+      const groupTarget = findGroupDropTarget(x, y)
+      const groupId = groupTarget?.getAttribute('data-group-id') ?? null
+
       void (async () => {
         try {
-          const conn = await connectionApi.openFromFile({
-            filePath: paths[0],
-            readOnly: false,
-            wal: false,
-          })
+          const conn = await openSqliteAndMaybePlace(
+            {
+              filePath: paths[0],
+              readOnly: false,
+              wal: false,
+            },
+            groupId,
+            qc,
+          )
           useWorkspaceStore.getState().setActiveConnectionId(conn.id)
           onRefresh()
           if (paths.length > 1) {
@@ -78,5 +92,5 @@ export function useSidebarFileDrop({
         }
       })()
     })
-  }, [onAttach, onRefresh, pushToast, t])
+  }, [onAttach, onRefresh, pushToast, qc, t])
 }

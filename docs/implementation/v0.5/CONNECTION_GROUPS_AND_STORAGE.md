@@ -8,13 +8,13 @@ v0.5 起，左侧连接列表通过 **可嵌套 Group** 组织连接；连接配
 
 ## 1. 设计目标
 
-| 目标 | 说明 |
-|------|------|
-| 分组管理 | Group 可嵌套；Group 内可含子 Group 与连接（仅引用 `connection_id`） |
-| 数据分离 | 连接 **配置** 与 **分组结构** 分表存储；Group 不嵌入连接详情 |
-| SQLite 持久化 | 替代 JSON 文件；schema 版本迁移、索引、事务 |
-| 默认分组 | 首次启动创建顶层 Group **「我的连接」**（与普通 Group 同级，非全列表包裹层） |
-| 游离连接 | 不属于任何 Group 的连接，与顶层 📁 **同级** 展示 |
+| 目标          | 说明                                                                         |
+| ------------- | ---------------------------------------------------------------------------- |
+| 分组管理      | Group 可嵌套；Group 内可含子 Group 与连接（仅引用 `connection_id`）          |
+| 数据分离      | 连接 **配置** 与 **分组结构** 分表存储；Group 不嵌入连接详情                 |
+| SQLite 持久化 | 替代 JSON 文件；schema 版本迁移、索引、事务                                  |
+| 默认分组      | 首次启动创建顶层 Group **「我的连接」**（与普通 Group 同级，非全列表包裹层） |
+| 游离连接      | 不属于任何 Group 的连接，与顶层 📁 **同级** 展示                              |
 
 **非目标：** **不**从 `connections.json` 导入或迁移；v0.5 起直接使用 `catalog.db`（旧 json 数据不自动搬迁）。
 
@@ -45,13 +45,13 @@ v0.5 起，左侧连接列表通过 **可嵌套 Group** 组织连接；连接配
 
 **重要：** 「我的连接」**不是**包裹整个列表的根容器；**游离连接也不在被删 Group 的父 Group 里**，而是提升到 **连接列表第一层**，与「我的连接」**UI 同级**。
 
-| 概念 | 说明 |
-|------|------|
+| 概念             | 说明                                                          |
+| ---------------- | ------------------------------------------------------------- |
 | **第一层 Group** | `connection_groups.parent_id IS NULL`；至少含默认「我的连接」 |
-| **嵌套 Group** | `parent_id` 指向某 Group |
-| **Group 内连接** | 出现在 `group_members` 中 |
-| **游离连接** | **不在**任何 `group_members`；见 §4.2 `free_connections` |
-| 库/表子树 | 连接展开后 namespace → 表（见 CONNECTION_TREE.md） |
+| **嵌套 Group**   | `parent_id` 指向某 Group                                      |
+| **Group 内连接** | 出现在 `group_members` 中                                     |
+| **游离连接**     | **不在**任何 `group_members`；见 §4.2 `free_connections`      |
+| 库/表子树        | 连接展开后 namespace → 表（见 CONNECTION_TREE.md）            |
 
 ---
 
@@ -71,26 +71,37 @@ v0.5 起，左侧连接列表通过 **可嵌套 Group** 组织连接；连接配
 
 所有 Group 与连接在 **同级兄弟** 间均有 `sort_order`（整数，默认按创建顺序递增）。用户 **拖拽** 后批量更新序号。
 
-| 存储 | sort_order 作用域 |
-|------|-------------------|
-| `connection_groups.sort_order` | 同一 `parent_id` 下的 **Group 兄弟**（含顶层 `parent_id IS NULL`） |
-| `group_members.sort_order` | 同一 Group 内的 **子 Group + 连接** |
-| `free_connections.sort_order` | 游离连接之间 |
-| `sidebar_root_items.sort_order` | **根层** 顶层 Group 与游离连接的 **混合排序**（见 §4.2） |
+| 存储                            | sort_order 作用域                                                  |
+| ------------------------------- | ------------------------------------------------------------------ |
+| `connection_groups.sort_order`  | 同一 `parent_id` 下的 **Group 兄弟**（含顶层 `parent_id IS NULL`） |
+| `group_members.sort_order`      | 同一 Group 内的 **子 Group + 连接**                                |
+| `free_connections.sort_order`   | 游离连接之间                                                       |
+| `sidebar_root_items.sort_order` | **根层** 顶层 Group 与游离连接的 **混合排序**（见 §4.2）           |
 
 新建 Group / 连接时：`sort_order = max(同级) + 1`（或末尾插入）。
 
 ### 3.3 操作（CRUD / 移动）
 
-| 操作 | 行为 |
+| 操作             | 行为                                                                 |
+| ---------------- | -------------------------------------------------------------------- |
+| 新建顶层 Group   | `parent_id = NULL`；与「我的连接」同级                               |
+| 新建子 Group     | `parent_id = 当前选中 Group`                                         |
+| **重命名 Group** | **原地 inline** 编辑（见 §3.6）；非 Dialog                           |
+| **删除 Group**   | 见 §3.4                                                              |
+| 移入 Group       | 从 `free_connections` 删除 → 写入 `group_members`                    |
+| **移为游离**     | 从 `group_members` 删除 → 写入 `free_connections`                    |
+| 新建连接         | 选中某 Group → 入该 Group；**未选中 Group** → **游离连接**（第一层） |
+
+**`selectedGroupId`（前端，非持久化）：** 单击 Group 行设置；单击连接 **不清除**（便于先选 Group 再点连接）。以下入口读取该值并在创建后调用 `moveConnectionToGroup`：
+
+| 入口 | 行为 |
 |------|------|
-| 新建顶层 Group | `parent_id = NULL`；与「我的连接」同级 |
-| 新建子 Group | `parent_id = 当前选中 Group` |
-| **重命名 Group** | **原地 inline** 编辑（见 §3.6）；非 Dialog |
-| **删除 Group** | 见 §3.4 |
-| 移入 Group | 从 `free_connections` 删除 → 写入 `group_members` |
-| **移为游离** | 从 `group_members` 删除 → 写入 `free_connections` |
-| 新建连接 | 选中某 Group → 入该 Group；**未选中 Group** → **游离连接**（第一层） |
+| 文件 → 新建连接… | 保存成功后入选中 Group，否则游离 |
+| `Cmd/Ctrl+O` 打开 SQLite | 同上 |
+| macOS `app:open-sqlite` | 同上 |
+| 拖拽 `.db` 到 **Group 节点** | `openFromFile` + 入该 Group |
+| 拖拽到 **空白区** | 新建并 **游离**（不受 `selectedGroupId` 影响） |
+| 拖拽到 **已 open SQLite** | 保持 Attach 行为 |
 
 ### 3.4 删除 Group（递归校验）
 
@@ -98,10 +109,10 @@ v0.5 起，左侧连接列表通过 **可嵌套 Group** 组织连接；连接配
 
 **步骤 2 — 确认 UI：**
 
-| 递归连接数 | 对话框 |
-|------------|--------|
-| **0** | 简单确认：「删除分组「{{name}}」及其子分组？」 |
-| **≥ 1** | 扩展确认（见下） |
+| 递归连接数 | 对话框                                         |
+| ---------- | ---------------------------------------------- |
+| **0**      | 简单确认：「删除分组「{{name}}」及其子分组？」 |
+| **≥ 1**    | 扩展确认（见下）                               |
 
 **含连接时的删除对话框：**
 
@@ -120,10 +131,10 @@ v0.5 起，左侧连接列表通过 **可嵌套 Group** 组织连接；连接配
 
 **步骤 3 — 执行逻辑（事务）：**
 
-| `deleteConnections` | 行为 |
-|---------------------|------|
-| **false**（默认） | 1. 递归收集的连接：从 `group_members` **移除** → 插入 **`free_connections`**（**第一层游离**，与「我的连接」同级）<br>2. 删除该 Group 及全部子孙 Group<br>3. 清理相关 `group_members` 中 `member_type=group` 行 |
-| **true** | 1. 对每个递归连接 `RemoveConnection`（已 open 先 close）<br>2. 删除 Group 子树 |
+| `deleteConnections` | 行为                                                                                                                                                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **false**（默认）   | 1. 递归收集的连接：从 `group_members` **移除** → 插入 **`free_connections`**（**第一层游离**，与「我的连接」同级）<br>2. 删除该 Group 及全部子孙 Group<br>3. 清理相关 `group_members` 中 `member_type=group` 行 |
+| **true**            | 1. 对每个递归连接 `RemoveConnection`（已 open 先 close）<br>2. 删除 Group 子树                                                                                                                                  |
 
 **示例：** 删除「我的连接」下的「生产环境」（含 2 条连接）、不删连接 → 2 条连接出现在 **第一层**，与剩余顶层 📁 **并列**（**不会**自动进入「我的连接」或任何父 Group）。
 
@@ -140,7 +151,7 @@ v0.5 起，左侧连接列表通过 **可嵌套 Group** 组织连接；连接配
 #### 3.6.1 Group 原地重命名
 
 - **不弹出 Dialog**；在树节点 **原地** 变为 `<input>`
-- 触发：右键「重命名」、**F2**、或慢双击标题（可选）
+- 触发：右键「重命名」、**F2** 或 **Enter**（全平台；需先单击选中 Group）
 - **Enter** → 调用 `RenameGroup(id, name)` 持久化并退出编辑
 - **Esc** → 取消，恢复原名
 - 空名称：拒绝保存，保持编辑态或回滚
@@ -151,20 +162,20 @@ v0.5 起，左侧连接列表通过 **可嵌套 Group** 组织连接；连接配
 
 #### 3.6.2 Group 右键菜单
 
-| 菜单项 | 行为 |
-|--------|------|
-| **新建** | 在该 Group **下** 创建子 Group（inline 新建或默认名「新分组」并进入重命名态） |
-| **重命名** | 进入 §3.6.1 原地编辑 |
-| **删除** | §3.4 删除流程（含连接时带 checkbox） |
+| 菜单项     | 行为                                                                          |
+| ---------- | ----------------------------------------------------------------------------- |
+| **新建**   | 在该 Group **下** 创建子 Group（inline 新建或默认名「新分组」并进入重命名态） |
+| **重命名** | 进入 §3.6.1 原地编辑                                                          |
+| **删除**   | §3.4 删除流程（含连接时带 checkbox）                                          |
 
 顶层 Group 与嵌套 Group **同一套** 右键菜单。
 
 **根层新建顶层 Group**（v0.5 已实现，两入口等价）：
 
-| 入口 | 实现 |
-|------|------|
-| **文件 → 新建分组…** | `AppMenuBar` / macOS `app:new-group` → `AppShell` → `createGroup('', '新分组')` |
-| **根层空白处右键「新建分组」** | `ConnectionTree` 包裹 `ContextMenu` → 同上 |
+| 入口                           | 实现                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------- |
+| **文件 → 新建分组…**           | `AppMenuBar` / macOS `app:new-group` → `AppShell` → `createGroup('', '新分组')` |
+| **根层空白处右键「新建分组」** | `ConnectionTree` 包裹 `ContextMenu` → 同上                                      |
 
 删除默认「我的连接」后，显示 `connectionGroup.noGroupsHint` 引导用户（文案可提及文件菜单或空白右键）。
 
@@ -174,21 +185,32 @@ v0.5 起，左侧连接列表通过 **可嵌套 Group** 组织连接；连接配
 
 **PG / MySQL（四项）：**
 
-| 菜单项 | 显示条件 | 行为 |
-|--------|----------|------|
-| **打开连接** | `status !== 'open'` | `OpenConnection(id)` |
-| **关闭连接** | `status === 'open'` | `CloseConnection(id)` |
+| 菜单项       | 显示条件                                    | 行为                                                                                                            |
+| ------------ | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **打开连接** | `status !== 'open'`                         | `OpenConnection(id)`                                                                                            |
+| **关闭连接** | `status === 'open'`                         | `CloseConnection(id)`                                                                                           |
+| **重命名**   | 始终                                        | 树内 **inline** 编辑显示名称（`RenameConnection`）；**open / closed 均可**                                       |
 | **编辑连接** | 始终显示；**仅** `status !== 'open'` 时可点 | 打开 `EditConnectionDialog`（含 **显示名称** 与全部连接配置）；已 open 时 **disabled**，Tooltip「请先关闭连接」 |
-| **删除** | 始终（danger） | `RemoveConnection`；已 open 需 confirm |
+| **删除**     | 始终（danger）                              | `RemoveConnection`；已 open 需 confirm                                                                          |
 
 **SQLite 额外第五项：**
 
-| 菜单项 | 显示条件 | 行为 |
-|--------|----------|------|
-| **附加数据库…** | `type === 'sqlite'`；**仅** `status === 'open'` 时可点 | 打开 `AttachDatabaseDialog` |
-| （未 open 时） | `type === 'sqlite'` **且** `status !== 'open'` | **disabled** + Tooltip「请先打开连接」 |
+| 菜单项          | 显示条件                                               | 行为                                   |
+| --------------- | ------------------------------------------------------ | -------------------------------------- |
+| **附加数据库…** | `type === 'sqlite'`；**仅** `status === 'open'` 时可点 | 打开 `AttachDatabaseDialog`            |
+| （未 open 时）  | `type === 'sqlite'` **且** `status !== 'open'`         | **disabled** + Tooltip「请先打开连接」 |
 
-**显示名称（重命名）：** **不**单独提供右键「重命名」或树内 inline 编辑；与 host/端口等 **一并** 在「编辑连接」Dialog 的「显示名称」字段修改，保存时随 `UpdateConnection*` 持久化。
+**显示名称（重命名）— 双入口（并存、不冲突）：**
+
+| 入口 | 条件 | 可改内容 |
+|------|------|----------|
+| **inline 重命名**（F2 / Enter / 右键「重命名」） | open / closed 均可 | **仅**显示名称（`RenameConnection`） |
+| **编辑连接** Dialog | **仅 closed** | 显示名称 **+** host/密码/只读等全部配置 |
+
+- 两条路径均调用 `RenameConnection` 更新显示名；inline 适合快速改名，Edit Dialog 适合一次性改配置并顺带改名
+- **编辑连接**仍 **仅 closed**（改配置需关闭连接）；**inline 重命名**不受 open 限制
+- 空名称拒绝保存，保持编辑态或回滚（与 Group 一致）
+- **不支持**慢双击标题触发重命名
 
 **边界：** 连接树中所有节点均来自 `catalog.db` 持久化记录；新建连接在 Dialog 保存成功后才出现在树中，**无**「未保存连接」右键场景。
 
@@ -206,18 +228,21 @@ Attach/Detach 完整 UI 见 [CONNECTION_TREE.md §3.6](./CONNECTION_TREE.md#36-s
 
 **`MoveGroup` 校验（后端 `ensureNotDescendantLocked`）：**
 
-| 场景 | 错误码 | 说明 |
-|------|--------|------|
-| `newParentId` 等于被拖 Group 自身 `id` | `INVALID_REQUEST` | `cannot move group into itself` |
-| `newParentId` 为被拖 Group 的子孙 | `INVALID_REQUEST` | `cannot move group into its descendant` |
+| 场景                                   | 错误码            | 说明                                    |
+| -------------------------------------- | ----------------- | --------------------------------------- |
+| `newParentId` 等于被拖 Group 自身 `id` | `INVALID_REQUEST` | `cannot move group into itself`         |
+| `newParentId` 为被拖 Group 的子孙      | `INVALID_REQUEST` | `cannot move group into its descendant` |
 
 校验失败时 catalog **不修改**树结构。前端 [`SidebarDndContext`](../../../frontend/src/features/connection/dnd/SidebarDndContext.tsx) 在 `onDragEnd` 捕获错误并通过 `formatError` Toast 提示用户。
 
-#### 3.6.5 拖拽 — 连接移入 Group / 游离
+#### 3.6.5 拖拽 — 连接移入 Group / 游离 / 文件入组
 
 - **拖连接 → Group 上**：`MoveConnectionToGroup(connectionId, groupId)`；从 `free_connections` 或原 `group_members` 移出
 - **拖连接 → 根层空白（非 Group）**：`ReleaseConnection` → **游离连接**
 - **同级排序**：同一 Group 内或根层游离区拖动 → 更新 `sort_order`
+- **拖 `.db` 文件 → Group 节点**（macOS `app:file-drop`）：`OpenConnectionFromFile` + `MoveConnectionToGroup` 入该 Group
+- **拖 `.db` → 根层空白**：新建 SQLite 连接并 **游离**（不受 `selectedGroupId` 影响）
+- **拖 `.db` → 已 open SQLite 连接**：打开 `AttachDatabaseDialog`（Attach，非新建）
 
 #### 3.6.6 拖拽 — 根层混合排序
 
@@ -427,25 +452,28 @@ interface SidebarRootItemRef {
 ```
 features/connection/
 ├── ConnectionTree.tsx
-├── ConnectionGroupNode.tsx      # inline 重命名 + 右键菜单 + draggable
-├── ConnectionTreeItem.tsx       # 右键菜单 + draggable（无 inline 重命名）
+├── ConnectionGroupNode.tsx      # inline 重命名 + 选中/拖放标记 + 右键菜单 + draggable
+├── ConnectionTreeItem.tsx       # inline 重命名 + 右键菜单 + draggable
+├── placeConnectionInGroup.ts    # 新建/Cmd+O/拖放入组 helper
+├── sidebarRenameHandlers.ts     # F2/Enter 重命名 handler 注册表
 ├── dnd/
 │   ├── SidebarDndContext.tsx    # @dnd-kit 根 context
-│   ├── useGroupDragDrop.ts
-│   └── useConnectionDragDrop.ts
+│   ├── useSidebarFileDrop.ts    # app:file-drop（Group/空白/SQLite attach）
+│   └── sidebarOrder.ts
 ├── DeleteGroupDialog.tsx
 └── tree/ConnectionSchemaTree.tsx
 ```
 
 ### 6.2 交互摘要
 
-| 能力 | Group | 连接 |
-|------|-------|------|
-| 原地重命名 | Enter 保存；**无 Dialog** | **无**；displayName 在 **编辑连接** Dialog |
-| 右键 | **新建 / 重命名 / 删除** | **打开连接 / 关闭连接 / 编辑连接 / 删除** |
-| 编辑 | — | **仅 closed**；含显示名称 + 连接配置 |
-| 拖改父级 | 拖到 Group 上 / 根层 | 拖到 Group 上 / 根层游离 |
-| 拖改顺序 | 同级 `sort_order` | 同级 `sort_order` |
+| 能力       | Group                     | 连接                                       |
+| ---------- | ------------------------- | ------------------------------------------ |
+| 选中态     | 单击设置 `selectedGroupId` + `sidebarFocus` | 单击设置 `sidebarFocus`（保留 `selectedGroupId`） |
+| 原地重命名 | F2/Enter/右键；Enter 保存 | F2/Enter/右键「重命名」；**open/closed 均可** |
+| 右键       | **新建 / 重命名 / 删除**  | **打开/关闭/重命名/编辑/删除**（SQLite +附加） |
+| 编辑配置   | —                         | **仅 closed**；Edit Dialog 含显示名称 + 配置 |
+| 拖改父级   | 拖到 Group 上 / 根层      | 拖到 Group 上 / 根层游离；`.db` 拖 Group 入组 |
+| 拖改顺序   | 同级 `sort_order`         | 同级 `sort_order`                          |
 
 ### 6.3 Query
 
@@ -458,12 +486,12 @@ useQuery({ queryKey: ['connectionSidebarTree'], queryFn: groupApi.getSidebarTree
 
 ## 7. 废弃与兼容
 
-| 废弃 | 替代 |
-|------|------|
+| 废弃                             | 替代                                         |
+| -------------------------------- | -------------------------------------------- |
 | `~/.data-nexus/connections.json` | **废弃**；v0.5 **不迁移**，改用 `catalog.db` |
-| `ConnectionStore` JSON 读写 | `catalog/sqlite.Store` |
-| `model.ConnectionsFile` | DB 表 + `GetSidebarTree` API |
-| `config.ConnectionsPath()` | **移除**；统一 `config.CatalogDBPath()` |
+| `ConnectionStore` JSON 读写      | `catalog/sqlite.Store`                       |
+| `model.ConnectionsFile`          | DB 表 + `GetSidebarTree` API                 |
+| `config.ConnectionsPath()`       | **移除**；统一 `config.CatalogDBPath()`      |
 
 **文档/代码引用：** PRD、SECRETS、API 等全局文档在 v0.5 实施时批量改为 catalog.db 表述；密码边界不变。
 
@@ -471,24 +499,27 @@ useQuery({ queryKey: ['connectionSidebarTree'], queryFn: groupApi.getSidebarTree
 
 ## 8. i18n
 
-| Key | zh-CN |
-|-----|-------|
-| `connectionGroup.defaultName` | 我的连接 |
-| `connectionGroup.new` | 新建 |
-| `connectionGroup.rename` | 重命名 |
-| `connectionGroup.delete` | 删除分组 |
-| `connectionGroup.deleteSimpleConfirm` | 删除分组「{{name}}」及其子分组？ |
+| Key                                     | zh-CN                                                                         |
+| --------------------------------------- | ----------------------------------------------------------------------------- |
+| `connectionGroup.defaultName`           | 我的连接                                                                      |
+| `connectionGroup.new`                   | 新建                                                                          |
+| `connectionGroup.rename`                | 重命名                                                                        |
+| `connectionGroup.delete`                | 删除分组                                                                      |
+| `connectionGroup.deleteSimpleConfirm`   | 删除分组「{{name}}」及其子分组？                                              |
 | `connectionGroup.deleteWithConnections` | 将删除分组「{{name}}」及其 {{subCount}} 个子分组。内含 {{connCount}} 个连接。 |
-| `connectionGroup.deleteConnectionsToo` | 同时删除这 {{connCount}} 个连接 |
-| `connectionGroup.deleteConnectionsHint` | 未勾选时，连接将变为游离连接，与分组同级显示。 |
-| `connectionGroup.freeConnection` | 游离连接 |
-| `connectionGroup.moveTo` | （v0.5 不用菜单；DnD 移入 Group） |
-| `connectionGroup.empty` | 此分组暂无连接 |
-| `connection.open` | 打开连接 |
-| `connection.close` | 关闭连接 |
-| `connection.edit` | 编辑连接 |
-| `connection.editRequiresClosed` | 请先关闭连接 |
-| `connection.delete` | 删除 |
+| `connectionGroup.deleteConnectionsToo`  | 同时删除这 {{connCount}} 个连接                                               |
+| `connectionGroup.deleteConnectionsHint` | 未勾选时，连接将变为游离连接，与分组同级显示。                                |
+| `connectionGroup.freeConnection`        | 游离连接                                                                      |
+| `connectionGroup.moveTo`                | （v0.5 不用菜单；DnD 移入 Group）                                             |
+| `connectionGroup.empty`                 | 此分组暂无连接                                                                |
+| `connection.open`                       | 打开连接                                                                      |
+| `connection.close`                      | 关闭连接                                                                      |
+| `connection.edit`                       | 编辑连接                                                                      |
+| `connection.editRequiresClosed`         | 请先关闭连接                                                                  |
+| `connection.attachRequiresOpen`         | 请先打开连接                                                                  |
+| `connection.rename`                     | 重命名                                                                        |
+| `sqlHistory.effectRows`                 | 影响行                                                                        |
+| `connection.delete`                     | 删除                                                                          |
 
 ---
 
@@ -514,9 +545,13 @@ useQuery({ queryKey: ['connectionSidebarTree'], queryFn: groupApi.getSidebarTree
 - [ ] Group 内连接仅引用 ID；编辑连接后树仍正确
 - [ ] 首次启动创建 catalog.db + 默认「我的连接」；**无** connections.json 导入
 - [ ] catalog.db 无 password 字段
-- [ ] Group **原地重命名**：Enter 生效，无 Dialog
+- [ ] Group **原地重命名**：F2/Enter/右键；Enter 生效，无 Dialog
 - [ ] Group 右键：**新建 / 重命名 / 删除**
-- [ ] 连接右键：**打开连接 / 关闭连接 / 编辑连接 / 删除**（**无**单独重命名）
-- [ ] **已 open 连接**「编辑连接」disabled；关闭后在 Dialog 内可改 **显示名称** 与配置
+- [ ] 连接 **inline 重命名**：F2/Enter/右键「重命名」；**open 时也可**改显示名
+- [ ] 连接右键：**打开 / 关闭 / 重命名 / 编辑 / 删除**（SQLite +附加）
+- [ ] **已 open 连接**「编辑连接」disabled + Tooltip；关闭后在 Dialog 内可改 **显示名称** 与配置（与 inline **并存**）
+- [ ] 选中 Group → 新建连接 / Cmd+O → 连接出现在该 Group；未选 → 游离
+- [ ] 拖 `.db` 到 Group → 入组；空白 → 游离；open SQLite → Attach
+- [ ] SQL 执行历史 Dialog 显示 **影响行** 列
 - [ ] 拖 Group 改 **父层级**；拖连接进 Group 或根层游离
 - [ ] 拖 Group / 连接改 **同级顺序**（`sort_order`）

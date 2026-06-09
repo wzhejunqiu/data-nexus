@@ -28,19 +28,34 @@ export const ContextMenuItem = forwardRef<
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Item> & {
     inset?: boolean
     variant?: 'default' | 'danger'
+    hint?: string
   }
->(({ className, inset, variant = 'default', ...props }, ref) => (
-  <ContextMenuPrimitive.Item
-    ref={ref}
-    className={cn(
-      'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-muted/50',
-      variant === 'danger' && 'text-red-500 hover:bg-red-500/10',
-      inset && 'pl-8',
-      className,
-    )}
-    {...props}
-  />
-))
+>(({ className, inset, variant = 'default', hint, disabled, onSelect, ...props }, ref) => {
+  const ariaDisabled = Boolean(disabled && hint)
+  return (
+    <ContextMenuPrimitive.Item
+      ref={ref}
+      disabled={disabled && !hint ? true : undefined}
+      aria-disabled={ariaDisabled || undefined}
+      title={hint}
+      onSelect={(e) => {
+        if (ariaDisabled) {
+          e.preventDefault()
+          return
+        }
+        onSelect?.(e)
+      }}
+      className={cn(
+        'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-muted/50',
+        ariaDisabled && 'pointer-events-auto opacity-50',
+        variant === 'danger' && 'text-red-500 hover:bg-red-500/10',
+        inset && 'pl-8',
+        className,
+      )}
+      {...props}
+    />
+  )
+})
 ContextMenuItem.displayName = 'ContextMenuItem'
 
 export const ContextMenuSeparator = forwardRef<

@@ -12,15 +12,15 @@
 
 v0.5 **仅交付 Wails 桌面端 UI 重构**，不引入 HTTP 模式（留 v0.6 / v0.7）。
 
-| 主题 | 说明 |
-|------|------|
-| 应用内 MenuBar | **Win/Linux：** 文件 / 视图 / 帮助；**macOS：** 系统菜单栏（HIG），应用内仅状态行 |
-| 左连接列表 + 右展示区 | 移除侧边栏全局控件；**层级树**（连接→库→表）；右键 + 双击 |
+| 主题                    | 说明                                                                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 应用内 MenuBar          | **Win/Linux：** 文件 / 视图 / 帮助；**macOS：** 系统菜单栏（HIG），应用内仅状态行                                       |
+| 左连接列表 + 右展示区   | 移除侧边栏全局控件；**层级树**（连接→库→表）；右键 + 双击                                                               |
 | **连接分组 + 游离连接** | 顶层 Group（默认「我的连接」）与 **游离连接** 第一层同级；Group 可嵌套；**文件 → 新建分组** 或 **根层空白右键新建分组** |
-| **SQLite 持久化** | 连接 + Group 存入 `catalog.db`；废弃 `connections.json`（**不迁移**） |
-| 新建/编辑连接 Dialog | 浮动 Modal；方言分区表单；charset/TLS/存储引擎等 |
-| 全局 SQL 历史 | Menu → 视图（macOS 系统菜单 / Win·Linux 应用内） |
-| Go 原生菜单 | **macOS：** App / 文件 / 编辑 / 视图 / 窗口 / 帮助（`app_menu_darwin.go`）；**Win/Linux：** 仅 App / Edit / Window |
+| **SQLite 持久化**       | 连接 + Group 存入 `catalog.db`；废弃 `connections.json`（**不迁移**）                                                   |
+| 新建/编辑连接 Dialog    | 浮动 Modal；方言分区表单；charset/TLS/存储引擎等                                                                        |
+| 全局 SQL 历史           | Menu → 视图（macOS 系统菜单 / Win·Linux 应用内）                                                                        |
+| Go 原生菜单             | **macOS：** App / 文件 / 编辑 / 视图 / 窗口 / 帮助（`app_menu_darwin.go`）；**Win/Linux：** 仅 App / Edit / Window      |
 
 **不在 v0.5：** `--server`、`--api`、前端 Transport 层、驱动深化（见后续版本）。
 
@@ -57,24 +57,24 @@ v0.5 **仅交付 Wails 桌面端 UI 重构**，不引入 HTTP 模式（留 v0.6 
 
 > `[SavedQueries]` — **v0.3 已有功能，v0.5 保持不变**（侧边栏底部 canned queries 区块）。
 
-**Group 组织：** [CONNECTION_GROUPS_AND_STORAGE.md](./v0.5/CONNECTION_GROUPS_AND_STORAGE.md)  
+**Group 组织：** [CONNECTION_GROUPS_AND_STORAGE.md](./v0.5/CONNECTION_GROUPS_AND_STORAGE.md)
 **连接下库表层级：** [CONNECTION_TREE.md](./v0.5/CONNECTION_TREE.md)（连接 → database → [PG: schema] → 表）
 
 ### 2.2 MenuBar（平台差异）
 
-| 平台 | 菜单位置 | 说明 |
-|------|----------|------|
-| **macOS** | 系统菜单栏 | `app_menu_darwin.go`；`EventsEmit` → 前端 Dialog；应用内 `AppMenuBar` 隐藏 Menubar |
-| **Win / Linux** | 应用内顶栏 | `AppMenuBar.tsx`（Radix Menubar） |
+| 平台            | 菜单位置   | 说明                                                                               |
+| --------------- | ---------- | ---------------------------------------------------------------------------------- |
+| **macOS**       | 系统菜单栏 | `app_menu_darwin.go`；`EventsEmit` → 前端 Dialog；应用内 `AppMenuBar` 隐藏 Menubar |
+| **Win / Linux** | 应用内顶栏 | `AppMenuBar.tsx`（Radix Menubar）                                                  |
 
 菜单项（两平台等价）：
 
-| 菜单 | 项 | 快捷键 |
-|------|-----|--------|
-| 文件 | 新建连接、打开 SQLite、关闭当前连接、**新建分组**；Win/Linux 另有「退出」 | N / O / W |
-| 视图 | SQL 执行历史、设置 | `,` |
-| 帮助 | 关于 | — |
-| App（仅 macOS） | About / Services / Hide / **Quit** | Q |
+| 菜单            | 项                                                                        | 快捷键    |
+| --------------- | ------------------------------------------------------------------------- | --------- |
+| 文件            | 新建连接、打开 SQLite、关闭当前连接、**新建分组**；Win/Linux 另有「退出」 | N / O / W |
+| 视图            | SQL 执行历史、设置                                                        | `,`       |
+| 帮助            | 关于                                                                      | —         |
+| App（仅 macOS） | About / Services / Hide / **Quit**                                        | Q         |
 
 Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 
@@ -82,10 +82,10 @@ Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 
 ### 2.3 连接列表
 
-| 手势 | 行为 |
-|------|------|
-| 双击 | 打开连接（未 open → `OpenConnection`；已 open → `activeConnectionId`） |
-| 单击 | 选中/高亮，不 open |
+| 手势 | 行为                                                                        |
+| ---- | --------------------------------------------------------------------------- |
+| 双击 | 打开连接（未 open → `OpenConnection`；已 open → `activeConnectionId`）      |
+| 单击 | 选中/高亮，不 open                                                          |
 | 右键 | 打开/关闭、编辑（含显示名称）、删除；SQLite 已 open 时第五项「附加数据库…」 |
 
 **迁出侧边栏：** 新建连接按钮、`readOnly`/`wal` → `NewConnectionDialog`；启动恢复连接 → `SettingsDialog`。
@@ -102,11 +102,11 @@ Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 └───────────────────────────────────────────────────────────┘
 ```
 
-| 方言 | 典型高级项 |
-|------|------------|
-| SQLite | 只读、WAL |
-| PostgreSQL | SSL 模式（6 档）、客户端编码 |
-| MySQL | TLS、charset、collation、默认存储引擎 |
+| 方言       | 典型高级项                            |
+| ---------- | ------------------------------------- |
+| SQLite     | 只读、WAL                             |
+| PostgreSQL | SSL 模式（6 档）、客户端编码          |
+| MySQL      | TLS、charset、collation、默认存储引擎 |
 
 编辑连接（右键 → 编辑）与新建 **共用** `ConnectionForm` 组件。
 
@@ -189,10 +189,13 @@ Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 - [x] MenuBar：Win/Linux 应用内三菜单可用；macOS 系统菜单栏等价项可用；无重复入口
 - [x] 双击/右键连接操作正常
 - [x] Group 嵌套 + 默认「我的连接」；**文件 → 新建分组** 或 **空白处右键** 可新建顶层 Group
-- [x] Group **inline 重命名**（Enter）；右键 **新建/重命名/删除**；**DnD** 改父级与 **同级顺序**
-- [x] 连接右键 **打开/关闭/编辑/删除**；**编辑仅 closed**（含显示名称）
+- [x] Group **inline 重命名**（F2/Enter）；右键 **新建/重命名/删除**；**DnD** 改父级与 **同级顺序**
+- [x] 连接 **inline 重命名** + 右键「重命名」；**编辑仅 closed**（配置）；显示名双入口
+- [x] 选中 Group → 新建连接 / Cmd+O → 入组；拖 `.db` 到 Group → 入组
+- [x] 连接右键 **打开/关闭/重命名/编辑/删除**；disabled 项 Tooltip
 - [x] **schema 层级树：** SQLite main+attach + Attach UI；MySQL/PG 懒加载（实机多库见 [manual-checklist.md](./v0.5/manual-checklist.md)）
-- [x] **拖拽 `.db`：** 到已 open SQLite → Attach 预填；到空白区 → 新建连接
+- [x] **拖拽 `.db`：** 到 Group → 入组；到已 open SQLite → Attach 预填；到空白区 → 新建游离连接
+- [x] SQL 执行历史含 **影响行** 列
 - [x] attach L1：**取消附加**（Finder 显示需实机）
 - [x] 新建/编辑连接 Dialog：三方言字段正确
 - [x] 设置：启动恢复
@@ -213,24 +216,24 @@ Dialog 状态提升到 `AppShell`；移除 Header 独立「设置」按钮。
 
 - [x] §3 功能清单（含自动化测试）全部勾选
 - [x] §4 手动验收（代码可验证项已勾选；见 [manual-checklist.md](./v0.5/manual-checklist.md)）
-- [ ] tag **`v0.5.0`**（GitHub Release 自动打 tag，本地不创建）
+- [x] tag **`v0.5.0`**（GitHub Release 自动打 tag，本地不创建）
 
 ---
 
 ## 7. 相关文档
 
-| 文档 | 用途 |
-|------|------|
-| **[v0.5/IMPLEMENTATION.md](./v0.5/IMPLEMENTATION.md)** | **主实施方案**（任务分解、顺序、文件清单） |
-| [v0.5/DESIGN.md](./v0.5/DESIGN.md) | v0.5 UI/UX 设计规范 |
-| [v0.5/BACKEND.md](./v0.5/BACKEND.md) | 后端：`ListAllExecutions`、Go 菜单 |
-| [v0.5/CONNECTION_GROUPS_AND_STORAGE.md](./v0.5/CONNECTION_GROUPS_AND_STORAGE.md) | **Group 嵌套 + catalog.db** |
-| [v0.5/CONNECTION_TREE.md](./v0.5/CONNECTION_TREE.md) | 连接下 schema 层级树 |
-| [v0.5/CONNECTION_FORM.md](./v0.5/CONNECTION_FORM.md) | 新建/编辑连接表单 |
-| [v0.5/FRONTEND.md](./v0.5/FRONTEND.md) | 前端组件实施细节 |
-| [v0.5/manual-checklist.md](./v0.5/manual-checklist.md) | 手动验收清单 |
-| [UI_UX.md](../design/UI_UX.md) | MenuBar、两栏布局 |
-| [CONNECTION_UX.md §5](../design/CONNECTION_UX.md) | 右键菜单 |
-| [API.md §14](../design/API.md#14-sqlexecutionservicev03) | `ListAllSqlExecutions` |
-| [phase-v0.5.1.md](./phase-v0.5.1.md) | 下一版本：快捷键与 macOS ⌘, |
-| [phase-v0.4-multi-connection.md](./phase-v0.4-multi-connection.md) | 上一版本 |
+| 文档                                                                             | 用途                                       |
+| -------------------------------------------------------------------------------- | ------------------------------------------ |
+| **[v0.5/IMPLEMENTATION.md](./v0.5/IMPLEMENTATION.md)**                           | **主实施方案**（任务分解、顺序、文件清单） |
+| [v0.5/DESIGN.md](./v0.5/DESIGN.md)                                               | v0.5 UI/UX 设计规范                        |
+| [v0.5/BACKEND.md](./v0.5/BACKEND.md)                                             | 后端：`ListAllExecutions`、Go 菜单         |
+| [v0.5/CONNECTION_GROUPS_AND_STORAGE.md](./v0.5/CONNECTION_GROUPS_AND_STORAGE.md) | **Group 嵌套 + catalog.db**                |
+| [v0.5/CONNECTION_TREE.md](./v0.5/CONNECTION_TREE.md)                             | 连接下 schema 层级树                       |
+| [v0.5/CONNECTION_FORM.md](./v0.5/CONNECTION_FORM.md)                             | 新建/编辑连接表单                          |
+| [v0.5/FRONTEND.md](./v0.5/FRONTEND.md)                                           | 前端组件实施细节                           |
+| [v0.5/manual-checklist.md](./v0.5/manual-checklist.md)                           | 手动验收清单                               |
+| [UI_UX.md](../design/UI_UX.md)                                                   | MenuBar、两栏布局                          |
+| [CONNECTION_UX.md §5](../design/CONNECTION_UX.md)                                | 右键菜单                                   |
+| [API.md §14](../design/API.md#14-sqlexecutionservicev03)                         | `ListAllSqlExecutions`                     |
+| [phase-v0.5.1.md](./phase-v0.5.1.md)                                             | 下一版本：快捷键与 macOS ⌘,                |
+| [phase-v0.4-multi-connection.md](./phase-v0.4-multi-connection.md)               | 上一版本                                   |

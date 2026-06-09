@@ -81,18 +81,21 @@ cd frontend && npm test
 
 - [x] 默认顶层 Group「我的连接」（**非**全列表根包裹层）
 - [x] **游离连接** 与 📁「我的连接」**第一层同级**（相同缩进）
-- [x] Group 名称 **原地重命名**：Enter 生效，无 Dialog
+- [x] Group 名称 **原地重命名**：F2/Enter/右键；Enter 生效，无 Dialog
 - [x] Group 右键：**新建 / 重命名 / 删除**
+- [x] 单击 Group 高亮 → 新建连接 / Cmd+O → 连接入该 Group；未选 Group → 游离
+- [x] 拖 `.db` 到 Group → 入组；到空白 → 游离；到 open SQLite → Attach
+- [x] 连接 **inline 重命名**（F2/Enter/右键）；**open 时也可**改显示名
+- [x] 连接右键：**打开 / 关闭 / 重命名 / 编辑 / 删除**（SQLite +附加）
 - [x] **文件 → 新建分组…** 与 **根层空白处右键 → 新建分组** 等价（删除全部分组后可恢复）
 - [x] 无分组时显示「在空白处右键可新建分组」提示
 - [x] 拖 Group 改 **父层级**；拖连接进 Group 或根层游离（`SidebarDndContext` + API）
 - [x] 拖 Group / 连接改 **同级顺序**（`sort_order`；单元测试覆盖）
 - [x] `MoveGroup` 拒绝移入自身/子孙 → `INVALID_REQUEST`（`store_test.go`）
-- [x] 连接右键：**打开连接 / 关闭连接 / 编辑连接 / 删除**（**无**单独重命名）
 - [x] **SQLite 已 open**：右键第五项 **附加数据库…** → `AttachDatabaseDialog`
-- [x] **SQLite 未 open**：「附加数据库…」disabled
 - [x] **PG/MySQL**：无「附加数据库…」菜单项
-- [x] **已 open** 时「编辑连接」disabled；关闭后在 Dialog 改 **显示名称** 与配置
+- [x] **已 open** 时「编辑连接」disabled + Tooltip（`connection.editRequiresClosed`）
+- [x] **SQLite 未 open**：「附加数据库…」disabled + Tooltip（`connection.attachRequiresOpen`）
 - [x] 删除 Group 且不勾选「删除连接」→ 连接变 **游离**（**不**进入父 Group 或「我的连接」）
 - [x] 删除 Group 且勾选「删除连接」→ 连接配置删除
 - [x] 新建连接未选 Group → **游离连接**
@@ -139,7 +142,7 @@ cd frontend && npm test
 ## SettingsDialog / SqlExecutionHistory / About
 
 - [x] 设置：启动恢复；主题/语言/日志
-- [x] SQL 执行历史跨连接；关于 Dialog i18n + 平台信息（Go GOOS/GOARCH）
+- [x] SQL 执行历史跨连接；**影响行**列；关于 Dialog i18n + 平台信息（Go GOOS/GOARCH）
 
 ---
 

@@ -53,6 +53,7 @@ export function SqlExecutionHistoryDialog({
                 <th className="p-2">{t('sqlHistory.sql')}</th>
                 <th className="p-2">{t('sqlHistory.kind')}</th>
                 <th className="p-2">{t('sqlHistory.duration')}</th>
+                <th className="p-2">{t('sqlHistory.effectRows')}</th>
               </tr>
             </thead>
             <tbody>
@@ -67,6 +68,7 @@ export function SqlExecutionHistoryDialog({
                   <td className="max-w-[20rem] truncate p-2 font-mono text-xs">{row.sql}</td>
                   <td className="p-2 text-xs">{row.kind}</td>
                   <td className="p-2 text-xs">{row.durationMs}ms</td>
+                  <td className="p-2 text-xs">{row.effectRows}</td>
                 </tr>
               ))}
             </tbody>

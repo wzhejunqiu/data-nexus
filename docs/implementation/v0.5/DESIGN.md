@@ -186,7 +186,8 @@
 |--------|----------|------------|
 | 打开连接 | `status !== 'open'` | `OpenConnection` |
 | 关闭连接 | `status === 'open'` | `CloseConnection` |
-| 编辑连接 | 始终显示；**仅** `status !== 'open'` 可用 | `EditConnectionDialog` + `ConnectionForm`（含 **显示名称**） |
+| **重命名** | 始终 | inline 编辑显示名（`RenameConnection`）；**open / closed 均可** |
+| 编辑连接 | 始终显示；**仅** `status !== 'open'` 可用 | `EditConnectionDialog` + `ConnectionForm`（含 **显示名称** + 全部配置） |
 | 删除 | 始终（danger 样式） | `RemoveConnection`；打开中需 confirm |
 
 **SQLite 额外第五项：**
@@ -196,11 +197,11 @@
 | 附加数据库… | `type === 'sqlite'`；**仅** `status === 'open'` 可用 | `AttachDatabaseDialog` |
 | （未 open 时） | `type === 'sqlite'` **且** `status !== 'open'` | **disabled** + Tooltip「请先打开连接」 |
 
-**编辑连接：** 仅 **连接关闭** 时可编辑（**显示名称** + host/端口/库/密码等）。已 open 时菜单项 **disabled**，Tooltip「请先关闭连接」。**不提供** 单独「重命名」入口。
+**编辑连接：** 仅 **连接关闭** 时可编辑连接 **配置**（host/端口/库/密码等）。已 open 时菜单项 **disabled**，Tooltip `connection.editRequiresClosed`。**显示名称** 另有 **inline 重命名**（F2/Enter/右键「重命名」），**open / closed 均可**；与 Edit Dialog 内改显示名 **并存、不冲突**。
 
 **边界：** 连接树中所有节点均来自 `catalog.db` 持久化记录；新建连接在 Dialog 保存成功后才出现在树中，**无**「未保存连接」右键场景。
 
-**移除:** 行内 Open/Close 按钮；连接 **inline 重命名**；`RenameConnectionDialog`；`RemoteNamespaceSwitch` 手输切换。移入/移出 Group 仅 **拖拽**。
+**移除:** 行内 Open/Close 按钮；`RenameConnectionDialog`；`RemoteNamespaceSwitch` 手输切换。移入/移出 Group 除 **拖拽** 外，新建/Cmd+O/拖 `.db` 到 Group 亦可通过 `selectedGroupId` / drop target 入组。
 
 ### 4.5 自左侧迁出
 
@@ -343,16 +344,24 @@ attachDatabaseOpen: { connectionId: string; prefilledPath?: string } | null
 - **设置：** AppShell 渲染 `SettingsDialogContainer`（内部包装 `SettingsDialog`）；见 [FRONTEND.md §3.2 / §4](./FRONTEND.md#32-settingsdialog--settingsdialogcontainer)
 - **Attach：** `attachDatabaseOpen` 非 null 时渲染 `AttachDatabaseDialog`；右键与拖拽 `.db` 共用此状态
 
-### 6.2 连接选中态
-
-新增可选 store 字段或在 `ConnectionTree` 本地 state：
+### 6.2 侧边栏选中态（workspaceStore，非持久化）
 
 ```typescript
-selectedConnectionId: string | null  // 单击高亮，不同于 activeConnectionId
+selectedGroupId: string | null   // 新建连接 / Cmd+O / 拖 .db 入组目标
+setSelectedGroupId: (id: string | null) => void
+
+sidebarFocus: { kind: 'group' | 'connection'; id: string } | null  // F2/Enter inline 重命名焦点
+setSidebarFocus: (focus: ...) => void
 ```
 
-- `activeConnectionId`：当前工作区绑定的已打开连接
-- `selectedConnectionId`：列表选中高亮（可未打开）
+- 单击 **Group** → 设置 `selectedGroupId` + `sidebarFocus`
+- 单击 **连接** → 仅更新 `sidebarFocus`；**保留** `selectedGroupId`
+- `ConnectionTree` 监听 **F2 / Enter** → `invokeSidebarRename(sidebarFocus)`（Dialog/Monaco/input 焦点时忽略）
+
+**与 activeConnectionId 区别：**
+
+- `activeConnectionId`：当前工作区绑定的连接（可未打开时亦被单击选中）
+- `sidebarFocus`：键盘重命名与行高亮（Group 或连接）
 
 ---
 

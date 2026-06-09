@@ -28,7 +28,7 @@ v0.5 **仅交付 Wails 桌面端 UI 重构**，不引入 HTTP 模式（留 v0.6 
 | 主题 | 说明 |
 |------|------|
 | 应用内 MenuBar | **Win/Linux：** 顶栏 Menubar；**macOS：** 系统菜单栏（HIG），应用内仅状态行 |
-| 连接分组 + 游离连接 | 顶层 Group 与游离连接同级；catalog.db；**DnD 改父级/同级排序**；**文件 → 新建分组** 或 **根层空白右键** |
+| 连接分组 + 游离连接 | 顶层 Group 与游离连接同级；catalog.db；**DnD**；选中 Group 入组；连接 **inline 重命名** |
 | SQLite Attach 完善 | 拖 `.db` attach、L1 Detach/Finder、`SchemaSubtree` 已删 |
 | 左连接列表 + 右展示区 | Group 树 + 连接下 schema 层级；Group inline 重命名、右键、拖拽 |
 | 新建/编辑连接 Dialog | 浮动 Modal 重构；各库 charset、TLS、存储引擎等方言配置 |

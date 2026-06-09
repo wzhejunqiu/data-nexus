@@ -155,8 +155,8 @@ MVP 采用单页应用；**无 Welcome 页**，启动即进入主工作台。见
 |--------|------|
 | 打开 | `status !== 'open'` |
 | 关闭 | `status === 'open'` |
-| 重命名 | —（displayName 在 **编辑连接** Dialog） |
-| 编辑连接 | **仅** `status !== 'open'`（已 open 时 disabled；含显示名称） |
+| 重命名 | 始终（inline；F2/Enter/右键） |
+| 编辑连接 | **仅** `status !== 'open'`（已 open 时 disabled + Tooltip；含显示名称 + 配置） |
 | 删除 | 始终（danger；打开中需 confirm） |
 
 **自左侧移除（v0.5）：** 「新建连接」按钮、`readOnly`/`wal` 勾选（迁入新建连接 Dialog）、「启动时恢复已打开连接」（迁入设置）。

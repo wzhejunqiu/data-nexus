@@ -416,6 +416,14 @@ func TestSqlExecutionServiceWails(t *testing.T) {
 	if len(executions.Items) != 1 {
 		t.Fatalf("expected 1 execution, got %d", len(executions.Items))
 	}
+
+	all, err := svc.ListAllSqlExecutions(10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all.Items) != 1 {
+		t.Fatalf("expected 1 global execution, got %d", len(all.Items))
+	}
 }
 
 func TestTableServiceUpdateCellsBatch(t *testing.T) {

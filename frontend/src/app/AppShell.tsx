@@ -20,6 +20,7 @@ import { connectionApi } from '@/lib/api/connection'
 import { connectionGroupApi } from '@/lib/api/connectionGroup'
 import { dialogApi } from '@/lib/api/dialog'
 import { formatError } from '@/lib/api/errors'
+import { openSqliteAndMaybePlace } from '@/features/connection/placeConnectionInGroup'
 import { useExportStore } from '@/stores/exportStore'
 import { useImportStore } from '@/stores/importStore'
 import { setAppLanguage, isAppLanguage } from '@/i18n/language'
@@ -123,11 +124,16 @@ export function AppShell() {
           try {
             const path = await dialogApi.openDatabaseFile()
             if (path) {
-              const conn = await connectionApi.openFromFile({
-                filePath: path,
-                readOnly: false,
-                wal: false,
-              })
+              const groupId = useWorkspaceStore.getState().selectedGroupId
+              const conn = await openSqliteAndMaybePlace(
+                {
+                  filePath: path,
+                  readOnly: false,
+                  wal: false,
+                },
+                groupId,
+                qc,
+              )
               setActiveConnectionId(conn.id)
               invalidateConnections()
             }

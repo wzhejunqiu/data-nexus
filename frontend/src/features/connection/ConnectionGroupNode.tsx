@@ -2,7 +2,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ContextMenu,
@@ -15,11 +15,13 @@ import { connectionGroupApi } from '@/lib/api/connectionGroup'
 import { formatError } from '@/lib/api/errors'
 import { useToastStore } from '@/components/ui/Toast'
 import type { ConnectionGroupNode as GroupNode } from '@/lib/types'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { DeleteGroupDialog } from './DeleteGroupDialog'
 import { ConnectionTreeItem } from './ConnectionTreeItem'
 import type { VaultDialogMode } from './VaultDialog'
 import { GroupSortableList } from './dnd/SidebarDndContext'
 import { defaultMemberItems } from './dnd/sidebarOrder'
+import { registerGroupRenameHandler } from './sidebarRenameHandlers'
 
 const DEFAULT_GROUP_NAME = 'My Connections'
 
@@ -43,6 +45,10 @@ export function ConnectionGroupNode({
   const [editName, setEditName] = useState(node.name)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [expanded, setExpanded] = useState(true)
+  const sidebarFocus = useWorkspaceStore((s) => s.sidebarFocus)
+  const setSelectedGroupId = useWorkspaceStore((s) => s.setSelectedGroupId)
+  const setSidebarFocus = useWorkspaceStore((s) => s.setSidebarFocus)
+  const isFocused = sidebarFocus?.kind === 'group' && sidebarFocus.id === node.id
 
   const displayName =
     node.name === DEFAULT_GROUP_NAME ? t('connectionGroup.defaultName') : node.name
@@ -111,6 +117,21 @@ export function ConnectionGroupNode({
     else setEditing(false)
   }
 
+  const startRename = useCallback(() => {
+    if (editing) return
+    setEditName(node.name)
+    setEditing(true)
+  }, [editing, node.name])
+
+  useEffect(() => {
+    return registerGroupRenameHandler(node.id, startRename)
+  }, [node.id, startRename])
+
+  const selectGroup = () => {
+    setSelectedGroupId(node.id)
+    setSidebarFocus({ kind: 'group', id: node.id })
+  }
+
   return (
     <div style={{ paddingLeft: depth * 12 }} className="mb-1">
       <div ref={setRefs} style={style}>
@@ -119,12 +140,20 @@ export function ConnectionGroupNode({
             <div
               {...listeners}
               {...attributes}
-              className={`flex cursor-grab items-center gap-1 rounded px-1 py-0.5 hover:bg-muted/30 ${isOver ? 'ring-1 ring-accent' : ''}`}
+              data-group-drop-target=""
+              data-group-id={node.id}
+              className={`flex cursor-grab items-center gap-1 rounded px-1 py-0.5 hover:bg-muted/30 ${
+                isOver ? 'ring-1 ring-accent' : ''
+              } ${isFocused ? 'bg-muted/20 ring-1 ring-accent' : ''}`}
+              onClick={selectGroup}
             >
               <button
                 type="button"
                 className="text-xs text-muted"
-                onClick={() => setExpanded((e) => !e)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setExpanded((v) => !v)
+                }}
                 aria-label="toggle"
               >
                 {expanded ? '▼' : '▶'}
@@ -132,11 +161,14 @@ export function ConnectionGroupNode({
               <span className="text-sm">📁</span>
               {editing ? (
                 <input
+                  data-sidebar-rename-input="true"
                   className="min-w-0 flex-1 rounded border border-border bg-transparent px-1 text-sm"
                   value={editName}
                   autoFocus
                   onChange={(e) => setEditName(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => {
+                    e.stopPropagation()
                     if (e.key === 'Enter') commitRename()
                     if (e.key === 'Escape') {
                       setEditName(node.name)
@@ -154,14 +186,7 @@ export function ConnectionGroupNode({
             <ContextMenuItem onSelect={() => createChildMut.mutate()}>
               {t('connectionGroup.new')}
             </ContextMenuItem>
-            <ContextMenuItem
-              onSelect={() => {
-                setEditName(node.name)
-                setEditing(true)
-              }}
-            >
-              {t('connectionGroup.rename')}
-            </ContextMenuItem>
+            <ContextMenuItem onSelect={startRename}>{t('connectionGroup.rename')}</ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem variant="danger" onSelect={() => setDeleteOpen(true)}>
               {t('connectionGroup.delete')}

@@ -44,7 +44,8 @@
     "connection": "Connection",
     "sql": "SQL",
     "kind": "Kind",
-    "duration": "Duration"
+    "duration": "Duration",
+    "effectRows": "Rows"
   },
   "about": {
     "title": "About Data Nexus",
@@ -69,6 +70,8 @@
     "readOnly": "Read-only",
     "rename": "Rename",
     "edit": "Edit",
+    "editRequiresClosed": "Close the connection first",
+    "attachRequiresOpen": "Open the connection first",
     "readOnlyHint": "Write SQL is blocked in read-only mode. Open connections reconnect to apply changes.",
     "wal": "WAL mode",
     "walHint": "Enable Write-Ahead Logging for better write performance; not available for read-only connections",

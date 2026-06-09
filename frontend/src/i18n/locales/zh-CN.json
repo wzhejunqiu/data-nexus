@@ -44,7 +44,8 @@
     "connection": "连接",
     "sql": "SQL",
     "kind": "类型",
-    "duration": "耗时"
+    "duration": "耗时",
+    "effectRows": "影响行"
   },
   "about": {
     "title": "关于 Data Nexus",
@@ -69,6 +70,8 @@
     "readOnly": "只读",
     "rename": "重命名",
     "edit": "编辑",
+    "editRequiresClosed": "请先关闭连接",
+    "attachRequiresOpen": "请先打开连接",
     "readOnlyHint": "只读模式下写 SQL 将被拒绝；已打开的连接会重新连接以应用设置",
     "wal": "WAL 模式",
     "walHint": "启用 Write-Ahead Logging，可提升部分写入场景性能；只读连接不可用",

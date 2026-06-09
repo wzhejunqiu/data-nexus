@@ -69,10 +69,12 @@ useQuery({ queryKey: ['connectionSidebarTree'], queryFn: groupApi.getSidebarTree
 
 - `ConnectionTree` 根级：按 **`rootItems`** 混排渲染（fallback：`groups` + `freeConnections`）
 - **根层空白右键** 或 **文件 → 新建分组…** → `createGroup('', name)`；无分组时显示 `connectionGroup.noGroupsHint`
-- `ConnectionGroupNode` — 顶层/嵌套 📁；**inline 重命名**；右键 **新建/重命名/删除**；**draggable + sortable**
-- `ConnectionTreeItem` — 连接行；右键 **打开/关闭/编辑/删除**（SQLite 第五项「附加数据库…」）；**`data-sqlite-drop-target`** 供拖放 attach
+- `ConnectionGroupNode` — 顶层/嵌套 📁；**inline 重命名**（F2/Enter）；单击设置 `selectedGroupId`；`data-group-drop-target`；右键 **新建/重命名/删除**；**draggable + sortable**
+- `ConnectionTreeItem` — 连接行；**inline 重命名**；右键 **打开/关闭/重命名/编辑/删除**（SQLite 第五项「附加数据库…」）；**`data-sqlite-drop-target`** 供拖放 attach
+- `placeConnectionInGroup.ts` — 新建/Cmd+O/拖 `.db` 入组 helper
+- `sidebarRenameHandlers.ts` — F2/Enter handler 注册
 - `SidebarDndContext` — `@dnd-kit` + **`@dnd-kit/sortable`**（改父级 + **`ReorderSidebarRoot` / `ReorderGroupMembers`**）
-- `useSidebarFileDrop` — 监听 `app:file-drop`
+- `useSidebarFileDrop` — 监听 `app:file-drop`（Group 入组 / 空白游离 / open SQLite attach）
 - `sidebarOrder.ts` — `rootItems` / `memberItems` 排序辅助
 - `DeleteGroupDialog` — 未勾选时文案：变为 **游离连接**
 - 连接 open 后挂载 `ConnectionSchemaTree`

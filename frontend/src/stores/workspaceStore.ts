@@ -21,6 +21,8 @@ interface BrowseContext {
   schema?: string
 }
 
+export type SidebarFocus = { kind: 'group' | 'connection'; id: string }
+
 interface WorkspaceState {
   activeConnectionId: string | null
   selectedTable: string | null
@@ -29,6 +31,8 @@ interface WorkspaceState {
   editorSql: string
   browseContext: Record<string, BrowseContext>
   tableStates: Record<string, Record<string, TableBrowseState>>
+  selectedGroupId: string | null
+  sidebarFocus: SidebarFocus | null
   setActiveConnectionId: (id: string | null) => void
   setSelectedTable: (table: string | null) => void
   setActiveTab: (tab: 'schema' | 'data' | 'sql') => void
@@ -40,6 +44,8 @@ interface WorkspaceState {
   selectTable: (connectionId: string, table: string, ctx?: BrowseContext) => void
   getTableState: (connectionId: string, table: string) => TableBrowseState
   setTableState: (connectionId: string, table: string, patch: Partial<TableBrowseState>) => void
+  setSelectedGroupId: (id: string | null) => void
+  setSidebarFocus: (focus: SidebarFocus | null) => void
 }
 
 export const useWorkspaceStore = create<WorkspaceState>()(
@@ -52,6 +58,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       editorSql: 'SELECT 1;',
       browseContext: {},
       tableStates: {},
+      selectedGroupId: null,
+      sidebarFocus: null,
       setActiveConnectionId: (id) => set({ activeConnectionId: id }),
       setSelectedTable: (table) => set({ selectedTable: table }),
       setActiveTab: (tab) => set({ activeTab: tab }),
@@ -89,6 +97,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         all[connectionId] = conn
         set({ tableStates: all })
       },
+      setSelectedGroupId: (id) => set({ selectedGroupId: id }),
+      setSidebarFocus: (focus) => set({ sidebarFocus: focus }),
     }),
     {
       name: 'data-nexus:workspace',

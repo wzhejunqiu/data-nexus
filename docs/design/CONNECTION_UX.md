@@ -70,7 +70,9 @@
 | **打开**（○ 连接） | 双击连接 item，或右键 → 打开 → `OpenConnection(savedId)` |
 | **关闭**（● 连接） | 右键 → 关闭，或 MenuBar → 文件 → 关闭当前连接 |
 | **删除** | 右键 → 删除 → `RemoveConnection`（打开中需 confirm） |
-| **重命名 / 编辑** | 右键 → **编辑连接**（含显示名称） |
+| **重命名 / 编辑** | 右键 → **重命名**（inline，随时）或 **编辑连接**（closed，含显示名称 + 配置） |
+| **单击 Group** | 设置 `selectedGroupId`（新建连接/Cmd+O 入组目标）并高亮 |
+| **单击连接** | 选中/高亮；**保留** `selectedGroupId` |
 | **双击 ○ 或 ● 连接** | 打开：未打开则 `OpenConnection`；已打开则设为当前 `activeConnectionId` |
 | **单击连接** | 仅选中/高亮，不 open |
 | **点击表名** | 主区切到「数据」Tab，上下文为当前连接 |
@@ -86,14 +88,15 @@ v0.5 起，连接 item **不再** 显示行内「打开 / 关闭 / 编辑 / 删�
 |--------|----------|------------|
 | 打开连接 | `status !== 'open'` | `OpenConnection` |
 | 关闭连接 | `status === 'open'` | `CloseConnection` |
-| 编辑连接 | 始终显示；**仅** `status !== 'open'` 可用 | `EditConnectionDialog` + `ConnectionForm`（含 **显示名称**） |
+| **重命名** | 始终 | 树内 **inline** 编辑显示名（`RenameConnection`）；**open / closed 均可** |
+| 编辑连接 | 始终显示；**仅** `status !== 'open'` 可用 | `EditConnectionDialog` + `ConnectionForm`（含 **显示名称** + 全部配置） |
 | 删除 | 始终（danger） | `RemoveConnection` |
 
-**双击** 为打开连接的主入口（见 §4）。
+**键盘：** 侧边栏内最后一次单击选中的 Group 或连接，按 **F2** 或 **Enter** 进入 **inline 重命名**（Dialog 打开或 Monaco 焦点时忽略）。
 
-**显示名称（重命名）：** 在 **编辑连接** Dialog 的「显示名称」字段修改，与连接配置 **一并保存**；**无** 单独重命名菜单或 inline 编辑。
+**显示名称 — 双入口（并存）：** inline（F2/Enter/右键「重命名」）随时改显示名；**编辑连接** Dialog（**仅 closed**）可同时改显示名与连接配置。两条路径均调用 `RenameConnection`。
 
-**编辑连接：** 仅 **连接关闭** 时可编辑；已 open 时右键「编辑连接」**disabled**（Tooltip：请先关闭连接）。
+**编辑连接配置：** 仅 **连接关闭** 时可编辑；已 open 时右键「编辑连接」**disabled**（Tooltip：`connection.editRequiresClosed`）。
 
 **自左侧移除：** 「新建连接」按钮、SQLite `readOnly`/`wal` 勾选（迁入 `NewConnectionDialog`）、「启动时恢复已打开连接」（迁入 `SettingsDialog`）。
 

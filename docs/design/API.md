@@ -225,13 +225,13 @@ func (s *ConnectionService) RemoveConnection(connectionId string) error
 
 若仍打开则先 `CloseConnection`，再从 `catalog.db` 删除。
 
-### 3.7 RenameConnection（P1，v0.5 UI 不暴露）
+### 3.7 RenameConnection（P1，v0.5 UI **已暴露**）
 
 ```go
 func (s *ConnectionService) RenameConnection(connectionId string, name string) (*SavedConnection, error)
 ```
 
-**v0.5：** 前端 **不** 提供单独重命名入口；`displayName` 随 `UpdateConnection*` 在 **编辑连接** Dialog 一并保存。本 API 可保留供兼容或内部复用。
+**v0.5：** 前端通过侧边栏 **inline 重命名**（F2 / Enter / 右键「重命名」）调用；**open / closed 均可**改显示名。Edit Dialog 保存时若名称变更亦调用本 API。**编辑连接配置**仍仅 closed。
 
 ### 3.8 SetRestoreOpenOnStartup（P1）
 

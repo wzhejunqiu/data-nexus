@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Selected Group placement: new connections, Cmd/Ctrl+O, and `.db` drop onto Group nodes use `selectedGroupId` + `moveConnectionToGroup`
+- Sidebar inline rename for connections (F2/Enter/context menu); open and closed connections supported
+- Disabled context menu hints for edit (requires closed) and attach (requires open)
+- SQL execution history **effect rows** column
+
+### Changed
+
+- Connection display name: dual entry — inline rename and Edit Dialog (closed) coexist; both call `RenameConnection`
+
 ## [0.5.0] - 2026-06-09
 
 ### Added

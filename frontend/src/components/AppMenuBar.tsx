@@ -1,9 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import { useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Quit } from '../../wailsjs/runtime/runtime'
 import { connectionApi } from '@/lib/api/connection'
 import { dialogApi } from '@/lib/api/dialog'
 import { useIsMacOS } from '@/lib/platform'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { openSqliteAndMaybePlace } from '@/features/connection/placeConnectionInGroup'
 import {
   Menubar,
   MenubarContent,
@@ -32,6 +35,9 @@ function modKey(e: React.KeyboardEvent | KeyboardEvent) {
 
 export function useAppShortcuts(props: AppMenuBarProps) {
   const { activeConnectionId, onNewConnection, onOpenSettings, disabled } = props
+  const qc = useQueryClient()
+  const selectedGroupId = useWorkspaceStore((s) => s.selectedGroupId)
+  const setActiveConnectionId = useWorkspaceStore((s) => s.setActiveConnectionId)
 
   const handleKeyDown = useCallback(
     async (e: KeyboardEvent) => {
@@ -44,8 +50,14 @@ export function useAppShortcuts(props: AppMenuBarProps) {
         e.preventDefault()
         try {
           const path = await dialogApi.openDatabaseFile()
-          if (path)
-            await connectionApi.openFromFile({ filePath: path, readOnly: false, wal: false })
+          if (path) {
+            const conn = await openSqliteAndMaybePlace(
+              { filePath: path, readOnly: false, wal: false },
+              selectedGroupId,
+              qc,
+            )
+            setActiveConnectionId(conn.id)
+          }
         } catch {
           /* cancelled or error via toast */
         }
@@ -58,7 +70,15 @@ export function useAppShortcuts(props: AppMenuBarProps) {
         onOpenSettings()
       }
     },
-    [activeConnectionId, disabled, onNewConnection, onOpenSettings],
+    [
+      activeConnectionId,
+      disabled,
+      onNewConnection,
+      onOpenSettings,
+      qc,
+      selectedGroupId,
+      setActiveConnectionId,
+    ],
   )
 
   return { handleKeyDown }
@@ -77,12 +97,22 @@ export function AppMenuBar({
 }: AppMenuBarProps) {
   const { t } = useTranslation()
   const isMacOS = useIsMacOS()
+  const qc = useQueryClient()
+  const selectedGroupId = useWorkspaceStore((s) => s.selectedGroupId)
+  const setActiveConnectionId = useWorkspaceStore((s) => s.setActiveConnectionId)
   const mod = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform) ? '⌘' : 'Ctrl+'
 
   const openSqlite = async () => {
     try {
       const path = await dialogApi.openDatabaseFile()
-      if (path) await connectionApi.openFromFile({ filePath: path, readOnly: false, wal: false })
+      if (path) {
+        const conn = await openSqliteAndMaybePlace(
+          { filePath: path, readOnly: false, wal: false },
+          selectedGroupId,
+          qc,
+        )
+        setActiveConnectionId(conn.id)
+      }
     } catch {
       /* handled globally */
     }

@@ -9,12 +9,13 @@ import { dialogApi } from '@/lib/api/dialog'
 import { formatError, isDialogCancelled, mapWailsError } from '@/lib/api/errors'
 import { isVaultLockedError } from '@/lib/api/secrets'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { moveNewConnectionToGroup, openSqliteAndMaybePlace } from './placeConnectionInGroup'
+import { VaultDialog, type VaultDialogMode } from './VaultDialog'
 import {
   ConnectionForm,
   type ConnectionFormHandle,
   type ConnectionFormState,
 } from './ConnectionForm/ConnectionForm'
-import { VaultDialog, type VaultDialogMode } from './VaultDialog'
 import type { TFunction } from 'i18next'
 
 export function NewConnectionDialog({
@@ -32,6 +33,7 @@ export function NewConnectionDialog({
   const qc = useQueryClient()
   const pushToast = useToastStore((s) => s.push)
   const setActiveConnectionId = useWorkspaceStore((s) => s.setActiveConnectionId)
+  const selectedGroupId = useWorkspaceStore((s) => s.selectedGroupId)
   const formRef = useRef<ConnectionFormHandle>(null)
   const [vaultOpen, setVaultOpen] = useState(false)
   const [vaultMode, setVaultMode] = useState<VaultDialogMode>('unlock')
@@ -44,16 +46,27 @@ export function NewConnectionDialog({
   }, [])
 
   const createSQLite = useMutation({
-    mutationFn: (state: ConnectionFormState) =>
-      connectionApi.openFromFile({
-        filePath: state.filePath.trim(),
-        readOnly: state.readOnly,
-        wal: state.readOnly ? false : state.wal,
-      }),
+    mutationFn: async (state: ConnectionFormState) => {
+      let path = state.filePath.trim()
+      if (!path) {
+        path = (await dialogApi.openDatabaseFile()) ?? ''
+      }
+      if (!path) throw new Error('cancelled')
+      return openSqliteAndMaybePlace(
+        {
+          filePath: path,
+          readOnly: state.readOnly,
+          wal: state.readOnly ? false : state.wal,
+        },
+        selectedGroupId,
+        qc,
+      )
+    },
     onSuccess: (conn) => {
       onOpenChange(false)
       setActiveConnectionId(conn.id)
       qc.invalidateQueries({ queryKey: ['connections'] })
+      qc.invalidateQueries({ queryKey: ['connectionSidebarTree'] })
       qc.invalidateQueries({ queryKey: ['tables', conn.id] })
     },
     onError: (err) => {
@@ -73,11 +86,13 @@ export function NewConnectionDialog({
         postgres: state.dialect === 'postgres' ? state.postgres : undefined,
         mysql: state.dialect === 'mysql' ? state.mysql : undefined,
       }),
-    onSuccess: (saved) => {
+    onSuccess: async (saved) => {
+      await moveNewConnectionToGroup(saved.id, selectedGroupId, qc)
       pushToast(t('connection.saveSuccess'), 'success')
       onOpenChange(false)
       setActiveConnectionId(saved.id)
       qc.invalidateQueries({ queryKey: ['connections'] })
+      qc.invalidateQueries({ queryKey: ['connectionSidebarTree'] })
       qc.invalidateQueries({ queryKey: ['tables', saved.id] })
     },
     onError: (err) => {
