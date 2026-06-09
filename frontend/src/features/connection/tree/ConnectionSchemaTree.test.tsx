@@ -112,6 +112,25 @@ describe('ConnectionSchemaTree lazy loading', () => {
     expect(listSchemas).not.toHaveBeenCalled()
   })
 
+  it('selects mysql table with database-qualified name', async () => {
+    listNamespaces.mockResolvedValue({ items: [{ name: 'app', kind: 'database' }] })
+    listTables.mockResolvedValue({
+      items: [{ name: 'users', type: 'table', schema: 'app' }],
+    })
+    const onSelectTable = vi.fn()
+
+    renderWithProviders(
+      <ConnectionSchemaTree item={baseItem('mysql')} onSelectTable={onSelectTable} />,
+    )
+
+    await waitFor(() => expect(screen.getByText('app')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('app'))
+    await waitFor(() => expect(screen.getByRole('button', { name: /users/ })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /users/ }))
+
+    expect(onSelectTable).toHaveBeenCalledWith('app.users', { database: 'app', schema: undefined })
+  })
+
   it('loads schemas then tables for postgres', async () => {
     listNamespaces.mockResolvedValue({ items: [{ name: 'appdb', kind: 'database' }] })
     listSchemas.mockResolvedValue({ items: [{ name: 'public' }] })

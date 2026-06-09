@@ -135,6 +135,33 @@ func TestGetTableSchema(t *testing.T) {
 	}
 }
 
+func TestGetTableSchemaQualifiedCrossDatabase(t *testing.T) {
+	drv, mock := newMockDriver(t)
+	drv.database = ""
+	mock.ExpectQuery(`SELECT TABLE_TYPE FROM information_schema.TABLES`).
+		WithArgs("otherdb", "users").
+		WillReturnRows(sqlmock.NewRows([]string{"TABLE_TYPE"}).AddRow("BASE TABLE"))
+	mock.ExpectQuery(`SELECT COLUMN_NAME, DATA_TYPE`).
+		WithArgs("otherdb", "users").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"COLUMN_NAME", "DATA_TYPE", "COLUMN_TYPE", "IS_NULLABLE", "COLUMN_KEY", "COLUMN_DEFAULT", "ORDINAL_POSITION",
+		}).AddRow("id", "int", "int(11)", "NO", "PRI", nil, 1))
+	mock.ExpectQuery(`SELECT INDEX_NAME, NON_UNIQUE`).
+		WithArgs("otherdb", "users").
+		WillReturnRows(sqlmock.NewRows([]string{"INDEX_NAME", "NON_UNIQUE", "SEQ_IN_INDEX", "COLUMN_NAME"}))
+
+	schema, err := drv.GetTableSchema(context.Background(), "otherdb.users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if schema.Name != "users" || schema.Schema == nil || *schema.Schema != "otherdb" {
+		t.Fatalf("unexpected schema: %+v", schema)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestGetTableSchemaInvalidName(t *testing.T) {
 	drv, mock := newMockDriver(t)
 	_, err := drv.GetTableSchema(context.Background(), `bad"name`)

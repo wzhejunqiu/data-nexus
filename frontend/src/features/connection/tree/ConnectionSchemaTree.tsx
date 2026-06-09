@@ -12,6 +12,7 @@ import { appApi } from '@/lib/api/app'
 import { connectionApi } from '@/lib/api/connection'
 import { formatError } from '@/lib/api/errors'
 import { schemaApi } from '@/lib/api/schema'
+import { tableKey } from '@/lib/tableKey'
 import type { ConnectionListItem, NamespaceInfo } from '@/lib/types'
 
 export function ConnectionSchemaTree({
@@ -223,7 +224,7 @@ function NamespaceTables({
           <button
             type="button"
             className="w-full truncate text-left text-xs hover:text-accent"
-            onClick={() => onSelectTable(tbl.name, { database, schema })}
+            onClick={() => onSelectTable(tableKey(tbl), { database, schema })}
           >
             {tbl.type === 'view' ? '👁' : '📋'} {tbl.name}
           </button>

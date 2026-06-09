@@ -24,7 +24,7 @@ func (d *Driver) parseTableRef(tableName string) (tableRef, error) {
 		if !sqlutil.IsSafeQuotedIdentifier(db) || !sqlutil.IsSafeQuotedIdentifier(bare) || strings.Contains(db, "`") || strings.Contains(bare, "`") {
 			return tableRef{}, model.ErrTableNotFound(tableName)
 		}
-		if db != d.database {
+		if d.database != "" && db != d.database {
 			return tableRef{}, model.ErrTableNotFound(tableName)
 		}
 		return tableRef{
