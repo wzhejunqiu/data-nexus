@@ -343,3 +343,31 @@ func TestConnectionStoreUpdateMySQLSettings(t *testing.T) {
 		t.Fatalf("unexpected mysql settings: %+v", my)
 	}
 }
+
+func TestConnectionStoreUpdateMySQLSettingsPreservesStorageEngine(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := store.UpsertRemote(model.RemoteConnectRequest{
+		Type: model.DriverTypeMySQL,
+		Name: "mysql",
+		MySQL: &model.MySQLConfig{
+			Host: "h1", Port: 3306, Database: "db", User: "u",
+			DefaultStorageEngine: "InnoDB",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := store.UpdateMySQLSettings(item.ID, model.MySQLSettingsUpdate{
+		TLS: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Config.MySQL.DefaultStorageEngine != "InnoDB" {
+		t.Fatalf("expected storage engine preserved, got %q", updated.Config.MySQL.DefaultStorageEngine)
+	}
+}

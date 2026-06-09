@@ -10,7 +10,7 @@ vi.mock('@/lib/api/connectionGroup', () => ({
   connectionGroupApi: {
     renameGroup: vi.fn(),
     createGroup: vi.fn(),
-    countConnectionsInGroup: vi.fn().mockResolvedValue(0),
+    getGroupDeletePreview: vi.fn().mockResolvedValue({ subgroupCount: 0, connCount: 0 }),
     deleteGroup: vi.fn(),
   },
 }))

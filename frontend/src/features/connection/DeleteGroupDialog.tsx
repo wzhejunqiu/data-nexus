@@ -25,17 +25,28 @@ export function DeleteGroupDialog({
   const [deleteConnections, setDeleteConnections] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  const { data: connCount = 0 } = useQuery({
-    queryKey: ['groupConnCount', groupId],
-    queryFn: () => connectionGroupApi.countConnectionsInGroup(groupId),
+  const { data: preview } = useQuery({
+    queryKey: ['groupDeletePreview', groupId],
+    queryFn: () => connectionGroupApi.getGroupDeletePreview(groupId),
     enabled: open,
   })
+
+  const connCount = preview?.connCount ?? 0
+  const subgroupCount = preview?.subgroupCount ?? 0
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setDeleteConnections(false)
+      setBusy(false)
+    }
+    onOpenChange(next)
+  }
 
   const handleDelete = async () => {
     setBusy(true)
     try {
       await connectionGroupApi.deleteGroup({ id: groupId, deleteConnections })
-      onOpenChange(false)
+      handleOpenChange(false)
       onDeleted()
     } catch (err) {
       pushToast(formatError(t, err), 'error')
@@ -45,13 +56,19 @@ export function DeleteGroupDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title={t('connectionGroup.delete')}>
+    <Dialog open={open} onOpenChange={handleOpenChange} title={t('connectionGroup.delete')}>
       <div className="space-y-3 text-sm">
         {connCount === 0 ? (
           <p>{t('connectionGroup.deleteSimpleConfirm', { name: groupName })}</p>
         ) : (
           <>
-            <p>{t('connectionGroup.deleteWithConnections', { name: groupName, connCount })}</p>
+            <p>
+              {t('connectionGroup.deleteWithConnections', {
+                name: groupName,
+                subgroupCount,
+                connCount,
+              })}
+            </p>
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -64,7 +81,7 @@ export function DeleteGroupDialog({
           </>
         )}
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
           <Button variant="danger" disabled={busy} onClick={() => void handleDelete()}>

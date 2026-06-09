@@ -61,6 +61,7 @@ const postgresItem: ConnectionListItem = {
       user: 'admin',
       sslMode: 'disable',
       schema: 'public',
+      clientEncoding: 'LATIN1',
       readOnly: false,
     },
   },
@@ -155,6 +156,53 @@ describe('EditConnectionDialog', () => {
         user: 'admin',
         sslMode: 'disable',
         schema: 'public',
+        clientEncoding: 'LATIN1',
+        readOnly: false,
+        password: undefined,
+      })
+    })
+  })
+
+  it('saves mysql advanced settings including charset and storage engine', async () => {
+    const { connectionApi } = await import('@/lib/api/connection')
+    vi.mocked(connectionApi.updateMySQLSettings).mockResolvedValue({} as never)
+
+    const mysqlItem: ConnectionListItem = {
+      id: 'my-1',
+      name: 'local-mysql',
+      type: 'mysql',
+      config: {
+        type: 'mysql',
+        mysql: {
+          host: 'localhost',
+          port: 3306,
+          database: 'app',
+          user: 'root',
+          tls: false,
+          charset: 'gbk',
+          collation: 'gbk_chinese_ci',
+          defaultStorageEngine: 'InnoDB',
+          readOnly: false,
+        },
+      },
+      status: 'closed',
+      lastUsedAt: '2026-01-01T00:00:00Z',
+    }
+
+    renderDialog(mysqlItem)
+    fireEvent.click(screen.getByRole('button', { name: /confirm|确认/i }))
+
+    await waitFor(() => {
+      expect(connectionApi.updateMySQLSettings).toHaveBeenCalledWith('my-1', {
+        host: 'localhost',
+        port: 3306,
+        database: 'app',
+        user: 'root',
+        tls: false,
+        tlsSkipVerify: false,
+        charset: 'gbk',
+        collation: 'gbk_chinese_ci',
+        defaultStorageEngine: 'InnoDB',
         readOnly: false,
         password: undefined,
       })

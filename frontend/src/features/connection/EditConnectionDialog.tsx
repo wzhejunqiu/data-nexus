@@ -53,6 +53,7 @@ function EditConnectionForm({
           user: state.postgres.user,
           sslMode: state.postgres.sslMode ?? 'disable',
           schema: state.postgres.schema ?? 'public',
+          clientEncoding: state.postgres.clientEncoding ?? 'UTF8',
           readOnly: state.postgres.readOnly,
           password: state.password || undefined,
         })
@@ -64,6 +65,9 @@ function EditConnectionForm({
         user: state.mysql.user,
         tls: state.mysql.tls,
         tlsSkipVerify: state.mysql.tlsSkipVerify ?? false,
+        charset: state.mysql.charset ?? 'utf8mb4',
+        collation: state.mysql.collation ?? 'utf8mb4_unicode_ci',
+        defaultStorageEngine: state.mysql.defaultStorageEngine ?? '',
         readOnly: state.mysql.readOnly,
         password: state.password || undefined,
       })

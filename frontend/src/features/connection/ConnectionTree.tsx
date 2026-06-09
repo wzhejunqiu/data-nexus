@@ -142,7 +142,6 @@ export function ConnectionTree() {
         className="relative flex flex-col border-r border-border"
         style={{ width: sidebarWidth, minWidth: 200, maxWidth: 480 }}
       >
-        <SavedQueries />
         <div
           ref={sidebarRef}
           tabIndex={-1}
@@ -171,6 +170,9 @@ export function ConnectionTree() {
               </ContextMenuContent>
             </ContextMenu>
           </SidebarDndContext>
+        </div>
+        <div className="border-t border-border">
+          <SavedQueries />
         </div>
         <div
           className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-accent/40"

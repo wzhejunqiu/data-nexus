@@ -337,7 +337,7 @@ flowchart TD
 - [x] [phase-v0.5.md](../phase-v0.5.md) §3 功能清单全部勾选
 - [x] [manual-checklist.md](./manual-checklist.md) 代码可验证项已勾选（需实机项见清单备注）
 - [x] `make test` + 前端测试通过
-- [ ] tag **`v0.5.0`**（GitHub Release 自动打 tag）
+- [x] tag **`v0.5.0`**（GitHub Release 自动打 tag，本地不创建）
 
 ---
 

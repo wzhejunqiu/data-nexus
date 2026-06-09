@@ -30,6 +30,7 @@ type Store interface {
 	CreateGroup(parentID *string, name string) (*model.ConnectionGroup, error)
 	RenameGroup(id, name string) (*model.ConnectionGroup, error)
 	CountConnectionsInGroup(id string) (int, error)
+	GetGroupDeletePreview(id string) (*model.GroupDeletePreview, error)
 	DeleteGroup(req model.DeleteGroupRequest, removeConn func(id string) error) error
 	MoveGroup(req model.MoveGroupRequest) error
 	MoveConnectionToGroup(connectionID, groupID string, sortOrder int) error

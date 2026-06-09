@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { queryHistoryApi } from '@/lib/api/queryHistory'
 import { connectionApi } from '@/lib/api/connection'
+import { formatError } from '@/lib/api/errors'
 import { Dialog } from '@/components/ui/Dialog'
+import { useToastStore } from '@/components/ui/Toast'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 
 export function SqlExecutionHistoryDialog({
@@ -13,12 +15,14 @@ export function SqlExecutionHistoryDialog({
   onOpenChange: (v: boolean) => void
 }) {
   const { t } = useTranslation()
+  const qc = useQueryClient()
+  const pushToast = useToastStore((s) => s.push)
   const setActiveConnectionId = useWorkspaceStore((s) => s.setActiveConnectionId)
   const setActiveTab = useWorkspaceStore((s) => s.setActiveTab)
   const setPendingSql = useWorkspaceStore((s) => s.setPendingSql)
 
   const { data: history } = useQuery({
-    queryKey: ['sqlHistoryAll'],
+    queryKey: ['sql-executions-all'],
     queryFn: () => queryHistoryApi.listAllExecutions(50),
     enabled: open,
   })
@@ -28,13 +32,37 @@ export function SqlExecutionHistoryDialog({
     enabled: open,
   })
 
-  const connName = (id: string) => connections?.items.find((c) => c.id === id)?.name ?? id
+  const connName = (id: string) => {
+    const conn = connections?.items.find((c) => c.id === id)
+    if (conn) return conn.name
+    return t('sqlHistory.deletedConnection')
+  }
 
-  const jumpTo = (connectionId: string, sql: string) => {
+  const finishJump = (connectionId: string, sql: string) => {
     setActiveConnectionId(connectionId)
     setActiveTab('sql')
     setPendingSql(sql)
     onOpenChange(false)
+  }
+
+  const jumpTo = async (connectionId: string, sql: string) => {
+    const conn = connections?.items.find((c) => c.id === connectionId)
+    if (!conn) {
+      pushToast(t('sqlHistory.connectionMissing'), 'error')
+      return
+    }
+    if (conn.status === 'open') {
+      finishJump(connectionId, sql)
+      return
+    }
+    try {
+      await connectionApi.open(connectionId)
+      await qc.invalidateQueries({ queryKey: ['connections'] })
+      await qc.invalidateQueries({ queryKey: ['connectionSidebarTree'] })
+      finishJump(connectionId, sql)
+    } catch (err) {
+      pushToast(formatError(t, err), 'error')
+    }
   }
 
   const items = history?.items ?? []
@@ -61,7 +89,7 @@ export function SqlExecutionHistoryDialog({
                 <tr
                   key={row.id ?? i}
                   className="cursor-pointer border-b border-border/50 hover:bg-muted/20"
-                  onClick={() => jumpTo(row.connectionId, row.sql)}
+                  onClick={() => void jumpTo(row.connectionId, row.sql)}
                 >
                   <td className="whitespace-nowrap p-2 text-xs">{row.executedAt}</td>
                   <td className="max-w-[8rem] truncate p-2">{connName(row.connectionId)}</td>

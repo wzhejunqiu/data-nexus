@@ -32,6 +32,11 @@ type DeleteGroupRequest struct {
 	DeleteConnections bool   `json:"deleteConnections"`
 }
 
+type GroupDeletePreview struct {
+	SubgroupCount int `json:"subgroupCount"`
+	ConnCount     int `json:"connCount"`
+}
+
 type MoveGroupRequest struct {
 	ID          string  `json:"id"`
 	NewParentID *string `json:"newParentId,omitempty"`

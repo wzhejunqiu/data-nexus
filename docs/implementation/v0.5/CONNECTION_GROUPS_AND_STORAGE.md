@@ -534,24 +534,24 @@ useQuery({ queryKey: ['connectionSidebarTree'], queryFn: groupApi.getSidebarTree
 
 ## 10. 验收要点
 
-- [ ] **游离连接** 与顶层 📁「我的连接」**第一层同级**（相同缩进）
-- [ ] 删除 Group 且不删连接 → 连接变 **游离**，**不**进入父 Group 或「我的连接」
-- [ ] Group 名称随时可改
-- [ ] 删除空 Group / 含连接 Group（「同时删除连接」默认不勾选）
-- [ ] 不勾选删除连接 → **游离连接**（第一层）
-- [ ] 勾选 → 连接配置删除
-- [ ] 支持无限嵌套子 Group
-- [ ] 默认顶层 Group「我的连接」
-- [ ] Group 内连接仅引用 ID；编辑连接后树仍正确
-- [ ] 首次启动创建 catalog.db + 默认「我的连接」；**无** connections.json 导入
-- [ ] catalog.db 无 password 字段
-- [ ] Group **原地重命名**：F2/Enter/右键；Enter 生效，无 Dialog
-- [ ] Group 右键：**新建 / 重命名 / 删除**
-- [ ] 连接 **inline 重命名**：F2/Enter/右键「重命名」；**open 时也可**改显示名
-- [ ] 连接右键：**打开 / 关闭 / 重命名 / 编辑 / 删除**（SQLite +附加）
-- [ ] **已 open 连接**「编辑连接」disabled + Tooltip；关闭后在 Dialog 内可改 **显示名称** 与配置（与 inline **并存**）
-- [ ] 选中 Group → 新建连接 / Cmd+O → 连接出现在该 Group；未选 → 游离
-- [ ] 拖 `.db` 到 Group → 入组；空白 → 游离；open SQLite → Attach
-- [ ] SQL 执行历史 Dialog 显示 **影响行** 列
-- [ ] 拖 Group 改 **父层级**；拖连接进 Group 或根层游离
-- [ ] 拖 Group / 连接改 **同级顺序**（`sort_order`）
+- [x] **游离连接** 与顶层 📁「我的连接」**第一层同级**（相同缩进）
+- [x] 删除 Group 且不删连接 → 连接变 **游离**，**不**进入父 Group 或「我的连接」
+- [x] Group 名称随时可改
+- [x] 删除空 Group / 含连接 Group（「同时删除连接」默认不勾选）
+- [x] 不勾选删除连接 → **游离连接**（第一层）
+- [x] 勾选 → 连接配置删除
+- [x] 支持无限嵌套子 Group
+- [x] 默认顶层 Group「我的连接」
+- [x] Group 内连接仅引用 ID；编辑连接后树仍正确
+- [x] 首次启动创建 catalog.db + 默认「我的连接」；**无** connections.json 导入
+- [x] catalog.db 无 password 字段
+- [x] Group **原地重命名**：F2/Enter/右键；Enter 生效，无 Dialog
+- [x] Group 右键：**新建 / 重命名 / 删除**
+- [x] 连接 **inline 重命名**：F2/Enter/右键「重命名」；**open 时也可**改显示名
+- [x] 连接右键：**打开 / 关闭 / 重命名 / 编辑 / 删除**（SQLite +附加）
+- [x] **已 open 连接**「编辑连接」disabled + Tooltip；关闭后在 Dialog 内可改 **显示名称** 与配置（与 inline **并存**）
+- [x] 选中 Group → 新建连接 / Cmd+O → 连接出现在该 Group；未选 → 游离
+- [x] 拖 `.db` 到 Group → 入组；空白 → 游离；open SQLite → Attach
+- [x] SQL 执行历史 Dialog 显示 **影响行** 列
+- [x] 拖 Group 改 **父层级**；拖连接进 Group 或根层游离
+- [x] 拖 Group / 连接改 **同级顺序**（`sort_order`）

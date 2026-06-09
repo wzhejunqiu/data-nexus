@@ -69,7 +69,13 @@ export function SidebarDndContext({
         return
       }
 
-      if (overType === 'group' && fromType === 'connection') {
+      if (overType === 'connection' && fromType === 'connection' && overContainer) {
+        if (overContainer === 'root') {
+          await connectionGroupApi.releaseConnection(fromId, -1)
+        } else {
+          await connectionGroupApi.moveConnectionToGroup(fromId, overContainer, -1)
+        }
+      } else if (overType === 'group' && fromType === 'connection') {
         await connectionGroupApi.moveConnectionToGroup(fromId, overId, -1)
       } else if (overType === 'root' && fromType === 'connection') {
         await connectionGroupApi.releaseConnection(fromId, -1)
@@ -107,7 +113,7 @@ export function SidebarDndContext({
       <DragOverlay>
         {active ? (
           <div className="rounded border border-border bg-background px-2 py-1 text-xs shadow">
-            {active.type === 'group' ? '📁' : '●'} dragging
+            {active.type === 'group' ? '📁' : '●'} {t('connectionGroup.dragging')}
           </div>
         ) : null}
       </DragOverlay>

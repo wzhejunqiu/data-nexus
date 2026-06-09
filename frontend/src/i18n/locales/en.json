@@ -30,9 +30,10 @@
     "delete": "Delete Group",
     "newGroupName": "New Group",
     "deleteSimpleConfirm": "Delete group \"{{name}}\" and its subgroups?",
-    "deleteWithConnections": "Delete group \"{{name}}\". Contains {{connCount}} connection(s).",
+    "deleteWithConnections": "Delete group \"{{name}}\" and its {{subgroupCount}} subgroups. Contains {{connCount}} connection(s).",
     "deleteConnectionsToo": "Also delete these {{connCount}} connection(s)",
     "deleteConnectionsHint": "When unchecked, connections become free connections at the root level.",
+    "dragging": "Dragging…",
     "emptyHint": "Use File → New Connection to add a connection",
     "noGroupsHint": "Right-click blank area to create a group",
     "createRoot": "New Group"
@@ -45,7 +46,9 @@
     "sql": "SQL",
     "kind": "Kind",
     "duration": "Duration",
-    "effectRows": "Rows"
+    "effectRows": "Rows",
+    "connectionMissing": "Connection no longer exists",
+    "deletedConnection": "(deleted)"
   },
   "about": {
     "title": "About Data Nexus",

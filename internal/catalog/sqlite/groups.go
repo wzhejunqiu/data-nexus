@@ -425,6 +425,39 @@ func (s *Store) CountConnectionsInGroup(id string) (int, error) {
 	return count, nil
 }
 
+func (s *Store) GetGroupDeletePreview(id string) (*model.GroupDeletePreview, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	descendants, err := s.collectGroupSubtreeIDsLocked(id)
+	if err != nil {
+		return nil, err
+	}
+	subgroupCount := len(descendants) - 1
+	if subgroupCount < 0 {
+		subgroupCount = 0
+	}
+	connCount := 0
+	if len(descendants) > 0 {
+		query := `SELECT COUNT(DISTINCT member_id) FROM group_members WHERE member_type = 'connection' AND group_id IN (`
+		args := make([]any, len(descendants))
+		for i, gid := range descendants {
+			if i > 0 {
+				query += ","
+			}
+			query += "?"
+			args[i] = gid
+		}
+		query += ")"
+		if err := s.db.QueryRow(query, args...).Scan(&connCount); err != nil {
+			return nil, model.ErrInternal(err.Error())
+		}
+	}
+	return &model.GroupDeletePreview{
+		SubgroupCount: subgroupCount,
+		ConnCount:     connCount,
+	}, nil
+}
+
 func (s *Store) collectGroupSubtreeIDsLocked(rootID string) ([]string, error) {
 	all, err := s.loadAllGroupsLocked()
 	if err != nil {
@@ -449,8 +482,13 @@ func (s *Store) collectGroupSubtreeIDsLocked(rootID string) ([]string, error) {
 		}
 	}
 	var result []string
+	visited := make(map[string]struct{})
 	var walk func(string)
 	walk = func(id string) {
+		if _, ok := visited[id]; ok {
+			return
+		}
+		visited[id] = struct{}{}
 		result = append(result, id)
 		for _, child := range children[id] {
 			walk(child)

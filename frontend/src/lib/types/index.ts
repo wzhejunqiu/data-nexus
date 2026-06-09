@@ -344,6 +344,11 @@ export interface DeleteGroupRequest {
   deleteConnections: boolean
 }
 
+export interface GroupDeletePreview {
+  subgroupCount: number
+  connCount: number
+}
+
 export interface MoveGroupRequest {
   id: string
   newParentId?: string | null

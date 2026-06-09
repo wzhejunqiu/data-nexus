@@ -290,7 +290,9 @@ func (s *ConnectionStore) UpdateMySQLSettings(id string, update model.MySQLSetti
 	if update.Collation != "" {
 		my.Collation = update.Collation
 	}
-	my.DefaultStorageEngine = update.DefaultStorageEngine
+	if update.DefaultStorageEngine != "" {
+		my.DefaultStorageEngine = update.DefaultStorageEngine
+	}
 	item.Config.MySQL = my
 	item.UpdatedAt = time.Now().UTC()
 	if err := s.catalog.UpdateConnection(*item); err != nil {

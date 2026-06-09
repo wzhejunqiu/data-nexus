@@ -2,6 +2,7 @@ import {
   CountConnectionsInGroup,
   CreateGroup,
   DeleteGroup,
+  GetGroupDeletePreview,
   GetSidebarTree,
   MoveConnectionToGroup,
   MoveGroup,
@@ -13,6 +14,7 @@ import {
 import type {
   ConnectionSidebarTree,
   DeleteGroupRequest,
+  GroupDeletePreview,
   GroupMemberRef,
   MoveGroupRequest,
   SidebarRootItemRef,
@@ -32,6 +34,8 @@ export const connectionGroupApi = {
   createGroup: (parentId: string, name: string) => wrap(() => CreateGroup(parentId, name)),
   renameGroup: (id: string, name: string) => wrap(() => RenameGroup(id, name)),
   countConnectionsInGroup: (id: string) => wrap(() => CountConnectionsInGroup(id)),
+  getGroupDeletePreview: (id: string) =>
+    wrap(() => GetGroupDeletePreview(id) as Promise<GroupDeletePreview>),
   deleteGroup: (req: DeleteGroupRequest) => wrap(() => DeleteGroup(req)),
   moveGroup: (req: MoveGroupRequest) =>
     wrap(() =>

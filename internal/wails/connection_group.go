@@ -39,6 +39,12 @@ func (s *ConnectionGroupService) CountConnectionsInGroup(id string) (int, error)
 	})
 }
 
+func (s *ConnectionGroupService) GetGroupDeletePreview(id string) (*model.GroupDeletePreview, error) {
+	return call(s.log, "ConnectionGroupService.GetGroupDeletePreview", func() (*model.GroupDeletePreview, error) {
+		return s.svc.GetGroupDeletePreview(id)
+	})
+}
+
 func (s *ConnectionGroupService) DeleteGroup(req model.DeleteGroupRequest) error {
 	return callVoid(s.log, "ConnectionGroupService.DeleteGroup", func() error {
 		return s.svc.DeleteGroup(req)

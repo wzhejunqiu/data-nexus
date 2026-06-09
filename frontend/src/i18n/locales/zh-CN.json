@@ -30,9 +30,10 @@
     "delete": "删除分组",
     "newGroupName": "新分组",
     "deleteSimpleConfirm": "删除分组「{{name}}」及其子分组？",
-    "deleteWithConnections": "将删除分组「{{name}}」。内含 {{connCount}} 个连接。",
+    "deleteWithConnections": "将删除分组「{{name}}」及其 {{subgroupCount}} 个子分组。内含 {{connCount}} 个连接。",
     "deleteConnectionsToo": "同时删除这 {{connCount}} 个连接",
     "deleteConnectionsHint": "未勾选时，连接将变为游离连接，与分组同级显示。",
+    "dragging": "拖动中…",
     "emptyHint": "使用 文件 → 新建连接 添加连接",
     "noGroupsHint": "在空白处右键可新建分组",
     "createRoot": "新建分组"
@@ -45,7 +46,9 @@
     "sql": "SQL",
     "kind": "类型",
     "duration": "耗时",
-    "effectRows": "影响行"
+    "effectRows": "影响行",
+    "connectionMissing": "该连接已不存在，无法跳转",
+    "deletedConnection": "（已删除）"
   },
   "about": {
     "title": "关于 Data Nexus",

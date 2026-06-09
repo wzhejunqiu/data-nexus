@@ -373,15 +373,15 @@ v0.6 `--api` 实施时再添加 HTTP handler；v0.5 仅 Wails 绑定。
 
 ## 9. 实施检查清单
 
-- [ ] `Store.ListAllExecutions` 接口 + SQLite 实现
-- [ ] `SqlExecutionService.ListAllSqlExecutions`
-- [ ] Wails `ListAllSqlExecutions` 绑定
-- [ ] **`Driver.ListNamespaces` / `ListSchemas`** + `SchemaService` 扩展
-- [ ] **`ListTables` 扩展** + Wails 绑定
-- [ ] **`GetSidebarTree`** 返回 `rootItems` + Group `memberItems`
-- [ ] **`AppService.GetPlatform`** + **`RevealFileInExplorer`**
-- [ ] 单元测试通过
-- [ ] **`app_menu_darwin.go`** macOS 系统菜单 + EventsEmit
-- [ ] **`app_menu.go`** Win/Linux 精简菜单
-- [ ] **`handleFileDrop`** → `app:file-drop`
-- [ ] `wails generate` 更新前端绑定
+- [x] `Store.ListAllExecutions` 接口 + SQLite 实现
+- [x] `SqlExecutionService.ListAllSqlExecutions`
+- [x] Wails `ListAllSqlExecutions` 绑定
+- [x] **`Driver.ListNamespaces` / `ListSchemas`** + `SchemaService` 扩展
+- [x] **`ListTables` 扩展** + Wails 绑定
+- [x] **`GetSidebarTree`** 返回 `rootItems` + Group `memberItems`
+- [x] **`AppService.GetPlatform`** + **`RevealFileInExplorer`**
+- [x] 单元测试通过
+- [x] **`app_menu_darwin.go`** macOS 系统菜单 + EventsEmit
+- [x] **`app_menu.go`** Win/Linux 精简菜单
+- [x] **`handleFileDrop`** → `app:file-drop`
+- [x] `wails generate` 更新前端绑定

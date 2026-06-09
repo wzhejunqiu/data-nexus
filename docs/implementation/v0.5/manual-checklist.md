@@ -157,4 +157,4 @@ cd frontend && npm test
 ## 完成
 
 - [ ] 上述全部勾选（含需实机项）
-- [x] tag **`v0.5.0`**（GitHub Release 自动打 tag）
+- [x] tag **`v0.5.0`**（GitHub Release 自动打 tag，本地不创建）

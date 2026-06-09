@@ -134,6 +134,17 @@ func TestStoreNestedGroupAndFreeConnection(t *testing.T) {
 	if !foundNested {
 		t.Fatal("production group not found in tree")
 	}
+
+	preview, err := store.GetGroupDeletePreview(child.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.SubgroupCount != 1 {
+		t.Fatalf("expected 1 subgroup, got %d", preview.SubgroupCount)
+	}
+	if preview.ConnCount != 1 {
+		t.Fatalf("expected 1 connection in subtree, got %d", preview.ConnCount)
+	}
 }
 
 func TestStoreDeleteGroupReleasesConnections(t *testing.T) {
