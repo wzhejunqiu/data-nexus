@@ -12,7 +12,7 @@ import (
 
 func TestConnectionManagerCreateRemoteStoresPassword(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestConnectionManagerCreateRemoteStoresPassword(t *testing.T) {
 
 func TestConnectionManagerOpenRemoteRequiresVaultUnlock(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestConnectionManagerOpenRemoteRequiresVaultUnlock(t *testing.T) {
 
 func TestConnectionManagerRemoveRemoteDeletesPassword(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -2,10 +2,10 @@ import { useTranslation } from 'react-i18next'
 import { useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Quit } from '../../wailsjs/runtime/runtime'
-import { connectionApi } from '@/lib/api/connection'
 import { dialogApi } from '@/lib/api/dialog'
 import { useIsMacOS } from '@/lib/platform'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { closeActiveConnection } from '@/features/connection/connectionLifecycle'
 import { openSqliteAndMaybePlace } from '@/features/connection/placeConnectionInGroup'
 import {
   Menubar,
@@ -64,7 +64,7 @@ export function useAppShortcuts(props: AppMenuBarProps) {
       } else if (key === 'w') {
         if (!activeConnectionId) return
         e.preventDefault()
-        await connectionApi.close(activeConnectionId)
+        await closeActiveConnection(qc, activeConnectionId)
       } else if (key === ',') {
         e.preventDefault()
         onOpenSettings()
@@ -119,7 +119,7 @@ export function AppMenuBar({
   }
 
   const closeActive = async () => {
-    if (activeConnectionId) await connectionApi.close(activeConnectionId)
+    await closeActiveConnection(qc, activeConnectionId)
   }
 
   return (

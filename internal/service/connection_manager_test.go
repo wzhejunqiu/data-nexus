@@ -15,7 +15,7 @@ import (
 
 func TestConnectionStoreUpsertSamePath(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "connections.json")
+	path := filepath.Join(dir, "catalog.db")
 	store, err := service.NewConnectionStore(path)
 	if err != nil {
 		t.Fatal(err)
@@ -53,7 +53,7 @@ func TestConnectionManagerMultipleOpen(t *testing.T) {
 		_ = f.Close()
 	}
 
-	storePath := filepath.Join(dir, "connections.json")
+	storePath := filepath.Join(dir, "catalog.db")
 	store, err := service.NewConnectionStore(storePath)
 	if err != nil {
 		t.Fatal(err)
@@ -98,7 +98,7 @@ func TestConnectionManagerPersistOpenConnections(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestConnectionManagerRemoveOpen(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestConnectionManagerCreateWithoutOpen(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +179,7 @@ func TestConnectionManagerUpdateReadOnly(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +216,7 @@ func TestConnectionManagerUpdateReadOnly(t *testing.T) {
 
 func TestOpenConnectionFromFile_EmptyPath(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +234,7 @@ func TestOpenConnectionFromFile_EmptyPath(t *testing.T) {
 
 func TestOpenConnectionFromFile_Directory(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +252,7 @@ func TestOpenConnectionFromFile_Directory(t *testing.T) {
 
 func TestOpenConnectionFromFile_FileNotExist(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +288,7 @@ func TestOpenConnectionFromFile_RelativePath(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chdir(origWd) })
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +312,7 @@ func TestOpenConnection_AlreadyOpen(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,7 +334,7 @@ func TestOpenConnection_AlreadyOpen(t *testing.T) {
 
 func TestCloseConnection_NotOpen(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,7 +352,7 @@ func TestCloseConnection_NotOpen(t *testing.T) {
 
 func TestRestoreConnectionsOnStartup_Disabled(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +371,7 @@ func TestRestoreConnectionsOnStartup_RestoresOpenConnection(t *testing.T) {
 	}
 	_ = f.Close()
 
-	storePath := filepath.Join(dir, "connections.json")
+	storePath := filepath.Join(dir, "catalog.db")
 	store, err := service.NewConnectionStore(storePath)
 	if err != nil {
 		t.Fatal(err)
@@ -409,7 +409,7 @@ func TestRestoreConnectionsOnStartup_RestoresOpenConnection(t *testing.T) {
 func TestRestoreConnectionsOnStartup_MissingFileLogsWarning(t *testing.T) {
 	dir := t.TempDir()
 	missing := filepath.Join(dir, "gone.db")
-	storePath := filepath.Join(dir, "connections.json")
+	storePath := filepath.Join(dir, "catalog.db")
 
 	store, err := service.NewConnectionStore(storePath)
 	if err != nil {
@@ -447,7 +447,7 @@ func TestConnectionManagerAttachDetach(t *testing.T) {
 		_ = f.Close()
 	}
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -482,7 +482,7 @@ func TestConnectionManagerAttachDetach(t *testing.T) {
 
 func TestConnectionManagerAttachValidation(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -502,7 +502,7 @@ func TestConnectionManagerAttachValidation(t *testing.T) {
 
 func TestConnectionManagerTestConnectionInvalidRequest(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -535,7 +535,7 @@ func TestConnectionManagerTestConnectionInvalidRequest(t *testing.T) {
 
 func TestConnectionManagerUpdateRemoteSettings(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,12 +10,16 @@ import (
 	"github.com/wzhejunqiu/data-nexus/internal/testutil"
 )
 
+func testCatalogDBPath(dir string) string {
+	return filepath.Join(dir, "catalog.db")
+}
+
 func newTestEnv(t *testing.T) (*service.ConnectionManager, *service.QueryService, *model.Connection) {
 	t.Helper()
 	dir := t.TempDir()
 	path := testutil.CreateEmptyDB(t)
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(testCatalogDBPath(dir))
 	if err != nil {
 		t.Fatal(err)
 	}

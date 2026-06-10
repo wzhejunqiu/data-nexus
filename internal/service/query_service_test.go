@@ -21,7 +21,7 @@ func TestQueryServiceReadOnlyBlocksWrite(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestQueryServiceSelectReturnsResult(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestQueryServiceDescTableReturnsSchema(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func TestQueryServiceWithDeleteUsesExecPath(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestQueryServiceClassifySQL(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -323,7 +323,7 @@ func TestQueryServiceInvalidDescReturnsSQLError(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -599,7 +599,7 @@ func TestQueryServiceExecuteRecordsExecution(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

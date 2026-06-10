@@ -20,6 +20,10 @@ import { connectionApi } from '@/lib/api/connection'
 import { connectionGroupApi } from '@/lib/api/connectionGroup'
 import { dialogApi } from '@/lib/api/dialog'
 import { formatError } from '@/lib/api/errors'
+import {
+  closeActiveConnection,
+  invalidateConnectionQueries,
+} from '@/features/connection/connectionLifecycle'
 import { openSqliteAndMaybePlace } from '@/features/connection/placeConnectionInGroup'
 import { useExportStore } from '@/stores/exportStore'
 import { useImportStore } from '@/stores/importStore'
@@ -106,10 +110,7 @@ export function AppShell() {
 
   useEffect(() => {
     const pushToast = useToastStore.getState().push
-    const invalidateConnections = () => {
-      qc.invalidateQueries({ queryKey: ['connections'] })
-      qc.invalidateQueries({ queryKey: ['connectionSidebarTree'] })
-    }
+    const invalidateConnections = () => invalidateConnectionQueries(qc)
     const unsubs = [
       EventsOn('app:connections-changed', invalidateConnections),
       EventsOn('app:connection-opened', (payload: { id?: string }) => {
@@ -135,7 +136,6 @@ export function AppShell() {
                 qc,
               )
               setActiveConnectionId(conn.id)
-              invalidateConnections()
             }
           } catch {
             /* cancelled or error via toast */
@@ -143,14 +143,7 @@ export function AppShell() {
         })()
       }),
       EventsOn('app:close-connection', () => {
-        void (async () => {
-          const id = useWorkspaceStore.getState().activeConnectionId
-          if (!id) return
-          await connectionApi.close(id)
-          setActiveConnectionId(null)
-          useWorkspaceStore.getState().setSelectedTable(null)
-          invalidateConnections()
-        })()
+        void closeActiveConnection(qc, useWorkspaceStore.getState().activeConnectionId)
       }),
       EventsOn('app:sql-history', () => setSqlHistoryOpen(true)),
       EventsOn('app:about', () => setAboutOpen(true)),

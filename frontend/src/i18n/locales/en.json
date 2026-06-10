@@ -240,7 +240,10 @@
     "showInFinder": "Show in Finder",
     "showInFileManager": "Show in file manager",
     "dropRequiresOpenSqlite": "Open a SQLite connection first to attach a database file",
-    "multiDropOpenedFirst": "Opened the first file as a new connection"
+    "multiDropOpenedFirst": "Opened the first file as a new connection",
+    "invalidAlias": "Alias contains invalid characters",
+    "reservedAlias": "Alias cannot be \"main\" or \"temp\"",
+    "duplicateAlias": "This alias is already in use"
   },
   "data": {
     "selectTable": "Select a table from the sidebar",

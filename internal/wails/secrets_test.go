@@ -13,7 +13,7 @@ import (
 func newSecretsTestEnv(t *testing.T, mock secrets.Store) *wailssvc.SecretsService {
 	t.Helper()
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

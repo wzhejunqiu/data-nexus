@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { connectionApi } from '@/lib/api/connection'
 import { dialogApi } from '@/lib/api/dialog'
+import { validateAttachAlias } from '@/lib/attachAlias'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { formatError } from '@/lib/api/errors'
@@ -33,6 +35,24 @@ export function AttachDatabaseDialog({
   const [alias, setAlias] = useState(initialPath ? suggestAlias(initialPath) : '')
   const [busy, setBusy] = useState(false)
 
+  const { data: attached } = useQuery({
+    queryKey: ['attached', connectionId],
+    queryFn: () => connectionApi.listAttached(connectionId),
+    enabled: open,
+  })
+
+  const existingAliases = useMemo(() => {
+    const names = ['main']
+    for (const item of attached ?? []) {
+      names.push(item.alias)
+    }
+    return names
+  }, [attached])
+
+  const effectiveAlias = alias.trim() || (filePath.trim() ? suggestAlias(filePath) : '')
+  const aliasError = effectiveAlias ? validateAttachAlias(effectiveAlias, existingAliases) : null
+  const aliasErrorMessage = aliasError ? t(`attach.${aliasError}Alias`) : null
+
   const handleOpenChange = (next: boolean) => {
     if (!next) {
       setFilePath('')
@@ -57,10 +77,12 @@ export function AttachDatabaseDialog({
   }
 
   const submit = async () => {
-    if (!filePath.trim()) return
+    const path = filePath.trim()
+    if (!path || aliasError) return
+    const attachAlias = effectiveAlias
     setBusy(true)
     try {
-      await connectionApi.attach(connectionId, filePath.trim(), alias.trim())
+      await connectionApi.attach(connectionId, path, attachAlias)
       onAttached()
       if (closeOnSuccess) handleOpenChange(false)
     } catch (err) {
@@ -69,6 +91,8 @@ export function AttachDatabaseDialog({
       setBusy(false)
     }
   }
+
+  const canSubmit = Boolean(filePath.trim()) && !aliasError && !busy
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange} title={t('connection.attachDatabase')}>
@@ -94,12 +118,13 @@ export function AttachDatabaseDialog({
             placeholder={t('connection.attachAliasOptional')}
             onChange={(e) => setAlias(e.target.value)}
           />
+          {aliasErrorMessage && <p className="mt-1 text-xs text-red-500">{aliasErrorMessage}</p>}
         </label>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button disabled={busy || !filePath.trim()} onClick={() => void submit()}>
+          <Button disabled={!canSubmit} onClick={() => void submit()}>
             {t('connection.attach')}
           </Button>
         </div>

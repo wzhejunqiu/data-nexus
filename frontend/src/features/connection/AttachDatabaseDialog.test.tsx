@@ -6,6 +6,7 @@ import { AttachDatabaseDialog } from './AttachDatabaseDialog'
 vi.mock('@/lib/api/connection', () => ({
   connectionApi: {
     attach: vi.fn(),
+    listAttached: vi.fn().mockResolvedValue([]),
   },
 }))
 
@@ -54,5 +55,23 @@ describe('AttachDatabaseDialog', () => {
       expect(onAttached).toHaveBeenCalled()
       expect(onOpenChange).toHaveBeenCalledWith(false)
     })
+  })
+
+  it('disables attach when alias is reserved', async () => {
+    renderWithProviders(
+      <AttachDatabaseDialog
+        connectionId="c1"
+        open
+        initialPath="/tmp/extra.db"
+        onOpenChange={vi.fn()}
+        onAttached={vi.fn()}
+      />,
+    )
+
+    const aliasInput = screen.getAllByRole('textbox')[1] as HTMLInputElement
+    fireEvent.change(aliasInput, { target: { value: 'main' } })
+
+    expect(screen.getByText('别名不能为 main 或 temp')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '附加' })).toBeDisabled()
   })
 })

@@ -66,7 +66,7 @@ func TestIntegrationThreeDriversConcurrentOpen(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

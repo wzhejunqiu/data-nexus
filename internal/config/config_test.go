@@ -70,8 +70,8 @@ func TestConfigPaths(t *testing.T) {
 	if config.ConfigPath() != filepath.Join(home, ".data-nexus", "config.yaml") {
 		t.Fatal("unexpected config path")
 	}
-	if config.ConnectionsPath() != filepath.Join(home, ".data-nexus", "connections.json") {
-		t.Fatal("unexpected connections path")
+	if config.CatalogDBPath() != filepath.Join(home, ".data-nexus", "catalog.db") {
+		t.Fatal("unexpected catalog db path")
 	}
 	if config.QueriesPath() != filepath.Join(home, ".data-nexus", "queries.json") {
 		t.Fatal("unexpected queries path")

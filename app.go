@@ -56,6 +56,7 @@ func (a *App) startup(ctx context.Context) {
 	a.dialog.SetContext(ctx)
 	a.export.SetContext(ctx)
 	a.appSvc.SetContext(ctx)
+	a.conn.SetContext(ctx)
 	runtime.OnFileDrop(ctx, a.handleFileDrop)
 
 	a.log.Debug("app startup begin")

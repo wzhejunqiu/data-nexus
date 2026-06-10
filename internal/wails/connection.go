@@ -11,10 +11,39 @@ import (
 type ConnectionService struct {
 	mgr *service.ConnectionManager
 	log *zap.Logger
+	rt  RuntimePort
+	ctx context.Context
 }
 
 func NewConnectionService(mgr *service.ConnectionManager, log *zap.Logger) *ConnectionService {
-	return &ConnectionService{mgr: mgr, log: log}
+	return NewConnectionServiceWithRuntime(mgr, log, wailsRuntime{})
+}
+
+func NewConnectionServiceWithRuntime(
+	mgr *service.ConnectionManager,
+	log *zap.Logger,
+	rt RuntimePort,
+) *ConnectionService {
+	return &ConnectionService{mgr: mgr, log: log, rt: rt}
+}
+
+func (s *ConnectionService) SetContext(ctx context.Context) {
+	s.ctx = ctx
+}
+
+func (s *ConnectionService) emitConnectionOpened(connectionID string) {
+	if s.ctx == nil || connectionID == "" {
+		return
+	}
+	s.rt.EventsEmit(s.ctx, "app:connection-opened", map[string]string{"id": connectionID})
+	s.emitConnectionsChanged()
+}
+
+func (s *ConnectionService) emitConnectionsChanged() {
+	if s.ctx == nil {
+		return
+	}
+	s.rt.EventsEmit(s.ctx, "app:connections-changed")
 }
 
 func (s *ConnectionService) ListConnections() (*model.ConnectionListView, error) {
@@ -43,19 +72,33 @@ func (s *ConnectionService) TestConnection(req model.TestConnectionRequest) erro
 
 func (s *ConnectionService) OpenConnection(connectionID string) (*model.Connection, error) {
 	return call(s.log, "ConnectionService.OpenConnection", func() (*model.Connection, error) {
-		return s.mgr.OpenConnection(context.Background(), connectionID)
+		conn, err := s.mgr.OpenConnection(context.Background(), connectionID)
+		if err != nil {
+			return nil, err
+		}
+		s.emitConnectionOpened(conn.ID)
+		return conn, nil
 	})
 }
 
 func (s *ConnectionService) OpenConnectionFromFile(req model.ConnectRequest) (*model.Connection, error) {
 	return call(s.log, "ConnectionService.OpenConnectionFromFile", func() (*model.Connection, error) {
-		return s.mgr.OpenConnectionFromFile(context.Background(), req)
+		conn, err := s.mgr.OpenConnectionFromFile(context.Background(), req)
+		if err != nil {
+			return nil, err
+		}
+		s.emitConnectionOpened(conn.ID)
+		return conn, nil
 	})
 }
 
 func (s *ConnectionService) CloseConnection(connectionID string) error {
 	return callVoid(s.log, "ConnectionService.CloseConnection", func() error {
-		return s.mgr.CloseConnection(context.Background(), connectionID)
+		if err := s.mgr.CloseConnection(context.Background(), connectionID); err != nil {
+			return err
+		}
+		s.emitConnectionsChanged()
+		return nil
 	})
 }
 

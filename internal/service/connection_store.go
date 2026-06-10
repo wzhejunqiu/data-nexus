@@ -20,9 +20,6 @@ type ConnectionStore struct {
 func NewConnectionStore(path string) (*ConnectionStore, error) {
 	if path == "" {
 		path = config.CatalogDBPath()
-	} else if strings.HasSuffix(strings.ToLower(path), ".json") {
-		// Tests may pass legacy path; use catalog.db in same dir.
-		path = filepath.Join(filepath.Dir(path), "catalog.db")
 	}
 	cat, err := catalogsqlite.NewStore(path)
 	if err != nil {
@@ -40,19 +37,8 @@ func (s *ConnectionStore) Save() error {
 	return nil
 }
 
-func (s *ConnectionStore) Snapshot() model.ConnectionsFile {
-	items, err := s.catalog.ListConnections()
-	if err != nil {
-		return model.ConnectionsFile{Version: 1, OpenConnectionIDs: []string{}, Items: []model.SavedConnection{}}
-	}
-	restore, _ := s.catalog.RestoreOpenOnStartup()
-	openIDs, _ := s.catalog.OpenConnectionIDs()
-	return model.ConnectionsFile{
-		Version:              1,
-		RestoreOpenOnStartup: restore,
-		OpenConnectionIDs:    openIDs,
-		Items:                items,
-	}
+func (s *ConnectionStore) ListSavedConnections() ([]model.SavedConnection, error) {
+	return s.catalog.ListConnections()
 }
 
 func (s *ConnectionStore) FindByID(id string) (*model.SavedConnection, bool) {

@@ -45,13 +45,16 @@ func (m *ConnectionManager) SecretsStore() secrets.Store {
 }
 
 func (m *ConnectionManager) ListConnections() *model.ConnectionListView {
-	snap := m.store.Snapshot()
+	savedItems, err := m.store.ListSavedConnections()
+	if err != nil {
+		return &model.ConnectionListView{Items: []model.ConnectionListItem{}}
+	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	backend := model.SecretsBackend(m.secrets.ActiveBackend())
-	items := make([]model.ConnectionListItem, 0, len(snap.Items))
-	for _, saved := range snap.Items {
+	items := make([]model.ConnectionListItem, 0, len(savedItems))
+	for _, saved := range savedItems {
 		item := model.ConnectionListItem{
 			ID:             saved.ID,
 			Name:           saved.Name,

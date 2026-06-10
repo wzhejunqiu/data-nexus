@@ -240,7 +240,10 @@
     "showInFinder": "在 Finder 中显示",
     "showInFileManager": "在文件管理器中显示",
     "dropRequiresOpenSqlite": "请先将 .db 拖到已打开的 SQLite 连接，或先打开 SQLite 连接",
-    "multiDropOpenedFirst": "已将第一个文件作为新连接打开"
+    "multiDropOpenedFirst": "已将第一个文件作为新连接打开",
+    "invalidAlias": "别名包含非法字符",
+    "reservedAlias": "别名不能为 main 或 temp",
+    "duplicateAlias": "该别名已被使用"
   },
   "data": {
     "selectTable": "从左侧选择一个表",

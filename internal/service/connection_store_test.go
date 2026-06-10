@@ -13,7 +13,7 @@ import (
 
 func TestConnectionStoreSaveLoad(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "connections.json")
+	path := filepath.Join(dir, "catalog.db")
 	store, err := service.NewConnectionStore(path)
 	if err != nil {
 		t.Fatal(err)
@@ -33,7 +33,7 @@ func TestConnectionStoreSaveLoad(t *testing.T) {
 
 func TestConnectionStoreRenameRemove(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "connections.json")
+	path := filepath.Join(dir, "catalog.db")
 	dbPath := filepath.Join(dir, "app.db")
 	f, err := os.Create(dbPath)
 	if err != nil {
@@ -63,7 +63,7 @@ func TestConnectionStoreRenameRemove(t *testing.T) {
 
 func TestConnectionManagerOpenMissingFile(t *testing.T) {
 	dir := t.TempDir()
-	storePath := filepath.Join(dir, "connections.json")
+	storePath := filepath.Join(dir, "catalog.db")
 	store, err := service.NewConnectionStore(storePath)
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +88,7 @@ func TestConnectionManagerOpenMissingFile(t *testing.T) {
 
 func TestConnectionManagerRestoreSettings(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +113,7 @@ func TestConnectionManagerRename(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestConnectionStore_FindByFilePath(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestConnectionStore_FindByFilePath(t *testing.T) {
 
 func TestConnectionStore_FindByID_NotFound(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestConnectionStore_FindByID_NotFound(t *testing.T) {
 
 func TestConnectionStore_FreshCatalogInit(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +184,7 @@ func TestConnectionStore_FreshCatalogInit(t *testing.T) {
 
 func TestConnectionStore_UpdateSQLiteSettings_NotFound(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +200,7 @@ func TestConnectionStore_UpdateSQLiteSettings_NotFound(t *testing.T) {
 
 func TestConnectionStoreUpsertRemote(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +290,7 @@ func TestConnectionStoreUpsertRemote(t *testing.T) {
 
 func TestConnectionStoreUpdatePostgresSettings(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +318,7 @@ func TestConnectionStoreUpdatePostgresSettings(t *testing.T) {
 
 func TestConnectionStoreUpdateMySQLSettings(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -347,7 +347,7 @@ func TestConnectionStoreUpdateMySQLSettings(t *testing.T) {
 
 func TestConnectionStoreUpdateMySQLSettingsClearsDatabase(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -375,7 +375,7 @@ func TestConnectionStoreUpdateMySQLSettingsClearsDatabase(t *testing.T) {
 
 func TestConnectionStoreUpdateMySQLSettingsPreservesStorageEngine(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

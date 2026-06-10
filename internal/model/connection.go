@@ -207,13 +207,6 @@ type ConnectionListView struct {
 	Items []ConnectionListItem `json:"items"`
 }
 
-type ConnectionsFile struct {
-	Version              int               `json:"version"`
-	RestoreOpenOnStartup bool              `json:"restoreOpenOnStartup"`
-	OpenConnectionIDs    []string          `json:"openConnectionIds"`
-	Items                []SavedConnection `json:"items"`
-}
-
 type AttachedDatabase struct {
 	Alias    string `json:"alias"`
 	FilePath string `json:"filePath"`

@@ -17,7 +17,7 @@ func openPerfEnv(t *testing.T, rowCount int) (*service.QueryService, *model.Conn
 	path := testutil.CreateEmptyDB(t)
 	testutil.SeedTable(t, path, "large_rows", rowCount)
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

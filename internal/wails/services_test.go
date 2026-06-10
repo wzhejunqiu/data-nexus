@@ -28,7 +28,7 @@ func newWailsTestEnv(t *testing.T) (*service.ConnectionManager, *service.QuerySe
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,6 +66,41 @@ func TestConnectionServiceCloseAndRename(t *testing.T) {
 	}
 	if renamed.Name != "Renamed" {
 		t.Fatalf("unexpected name %s", renamed.Name)
+	}
+}
+
+func TestConnectionServiceEmitsEvents(t *testing.T) {
+	mgr, _, conn := newWailsTestEnv(t)
+	rt := &mockRuntime{}
+	svc := wailssvc.NewConnectionServiceWithRuntime(mgr, zap.NewNop(), rt)
+	svc.SetContext(context.Background())
+
+	if err := svc.CloseConnection(conn.ID); err != nil {
+		t.Fatal(err)
+	}
+	rt.events = nil
+
+	if _, err := svc.OpenConnection(conn.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.CloseConnection(conn.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	var opened, changed int
+	for _, ev := range rt.events {
+		switch ev.name {
+		case "app:connection-opened":
+			opened++
+		case "app:connections-changed":
+			changed++
+		}
+	}
+	if opened != 1 {
+		t.Fatalf("expected 1 app:connection-opened, got %d", opened)
+	}
+	if changed < 2 {
+		t.Fatalf("expected at least 2 app:connections-changed, got %d", changed)
 	}
 }
 
@@ -276,7 +311,7 @@ func TestConnectionServiceCreateAndRemove(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -474,7 +509,7 @@ func TestTableServiceUpdateCellsBatch(t *testing.T) {
 
 func TestConnectionServiceCreateRemoteConnection(t *testing.T) {
 	dir := t.TempDir()
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -506,7 +541,7 @@ func TestConnectionServiceOpenFromFile(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}

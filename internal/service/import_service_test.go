@@ -238,7 +238,7 @@ func TestImportServiceReadOnlyBlocksImport(t *testing.T) {
 	}
 	_ = f.Close()
 
-	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
