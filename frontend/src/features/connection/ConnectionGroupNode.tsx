@@ -16,6 +16,7 @@ import { formatError } from '@/lib/api/errors'
 import { useToastStore } from '@/components/ui/Toast'
 import type { ConnectionGroupNode as GroupNode } from '@/lib/types'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import type { AttachDatabaseOpen } from './attachDatabaseState'
 import { DeleteGroupDialog } from './DeleteGroupDialog'
 import { ConnectionTreeItem } from './ConnectionTreeItem'
 import type { VaultDialogMode } from './VaultDialog'
@@ -36,6 +37,7 @@ export function ConnectionGroupNode({
   onRequestRename,
   onRefresh,
   onVaultRequired,
+  onOpenAttach = () => {},
 }: {
   node: GroupNode
   depth: number
@@ -46,6 +48,7 @@ export function ConnectionGroupNode({
   onRequestRename?: (id: string) => void
   onRefresh: () => void
   onVaultRequired?: (id: string, mode: VaultDialogMode) => void
+  onOpenAttach?: (target: AttachDatabaseOpen) => void
 }) {
   const { t } = useTranslation()
   const pushToast = useToastStore((s) => s.push)
@@ -241,6 +244,7 @@ export function ConnectionGroupNode({
                     searchQuery={searchQuery}
                     onRefresh={onRefresh}
                     onVaultRequired={onVaultRequired}
+                    onOpenAttach={onOpenAttach}
                   />
                 )
               }
@@ -258,6 +262,7 @@ export function ConnectionGroupNode({
                   onRequestRename={onRequestRename}
                   onRefresh={onRefresh}
                   onVaultRequired={onVaultRequired}
+                  onOpenAttach={onOpenAttach}
                 />
               )
             })}

@@ -21,6 +21,7 @@ export function AttachDatabaseDialog({
   onAttached,
   initialPath,
   closeOnSuccess = true,
+  readOnly = false,
 }: {
   connectionId: string
   open: boolean
@@ -28,6 +29,7 @@ export function AttachDatabaseDialog({
   onAttached: () => void
   initialPath?: string
   closeOnSuccess?: boolean
+  readOnly?: boolean
 }) {
   const { t } = useTranslation()
   const pushToast = useToastStore((s) => s.push)
@@ -50,7 +52,11 @@ export function AttachDatabaseDialog({
   }, [attached])
 
   const effectiveAlias = alias.trim() || (filePath.trim() ? suggestAlias(filePath) : '')
-  const aliasError = effectiveAlias ? validateAttachAlias(effectiveAlias, existingAliases) : null
+  const aliasError = effectiveAlias
+    ? validateAttachAlias(effectiveAlias, existingAliases)
+    : filePath.trim()
+      ? 'required'
+      : null
   const aliasErrorMessage = aliasError ? t(`attach.${aliasError}Alias`) : null
 
   const handleOpenChange = (next: boolean) => {
@@ -97,6 +103,9 @@ export function AttachDatabaseDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange} title={t('connection.attachDatabase')}>
       <div className="space-y-3 text-sm">
+        {readOnly && (
+          <p className="text-xs text-amber-600 dark:text-amber-500">{t('attach.readOnlyHint')}</p>
+        )}
         <label className="block">
           <span className="text-muted">{t('connection.pathHint')}</span>
           <div className="mt-1 flex gap-2">
@@ -120,6 +129,7 @@ export function AttachDatabaseDialog({
           />
           {aliasErrorMessage && <p className="mt-1 text-xs text-red-500">{aliasErrorMessage}</p>}
         </label>
+        <p className="text-xs text-muted">{t('attach.sessionHint')}</p>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}

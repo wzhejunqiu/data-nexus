@@ -243,7 +243,10 @@
     "multiDropOpenedFirst": "已将第一个文件作为新连接打开",
     "invalidAlias": "别名包含非法字符",
     "reservedAlias": "别名不能为 main 或 temp",
-    "duplicateAlias": "该别名已被使用"
+    "duplicateAlias": "该别名已被使用",
+    "requiredAlias": "请输入别名",
+    "sessionHint": "附加为当前会话临时挂载，关闭连接后失效",
+    "readOnlyHint": "附加库将以只读模式挂载"
   },
   "data": {
     "selectTable": "从左侧选择一个表",

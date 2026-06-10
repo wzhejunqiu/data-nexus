@@ -57,6 +57,29 @@ describe('AttachDatabaseDialog', () => {
     })
   })
 
+  it('shows session hint', () => {
+    renderWithProviders(
+      <AttachDatabaseDialog connectionId="c1" open onOpenChange={vi.fn()} onAttached={vi.fn()} />,
+    )
+
+    expect(screen.getByText('附加为当前会话临时挂载，关闭连接后失效')).toBeInTheDocument()
+    expect(screen.queryByText('附加库将以只读模式挂载')).not.toBeInTheDocument()
+  })
+
+  it('shows read-only hint when connection is read-only', () => {
+    renderWithProviders(
+      <AttachDatabaseDialog
+        connectionId="c1"
+        open
+        readOnly
+        onOpenChange={vi.fn()}
+        onAttached={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('附加库将以只读模式挂载')).toBeInTheDocument()
+  })
+
   it('disables attach when alias is reserved', async () => {
     renderWithProviders(
       <AttachDatabaseDialog

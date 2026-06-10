@@ -7,6 +7,13 @@ export function invalidateConnectionQueries(qc: QueryClient) {
   void qc.invalidateQueries({ queryKey: ['connectionSidebarTree'] })
 }
 
+export function invalidateAttachQueries(qc: QueryClient, connectionId: string) {
+  void qc.invalidateQueries({ queryKey: ['namespaces', connectionId] })
+  void qc.invalidateQueries({ queryKey: ['tables', connectionId] })
+  void qc.invalidateQueries({ queryKey: ['attached', connectionId] })
+  invalidateConnectionQueries(qc)
+}
+
 export async function closeActiveConnection(qc: QueryClient, connectionId: string | null) {
   if (!connectionId) return
   await connectionApi.close(connectionId)

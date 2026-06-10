@@ -13,13 +13,13 @@ import { formatError } from '@/lib/api/errors'
 import { SavedQueries } from '@/features/saved-queries/SavedQueries'
 import type { ConnectionGroupNode as GroupNode, SidebarRootItemRef } from '@/lib/types'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import type { AttachDatabaseOpen } from './attachDatabaseState'
 import { ConnectionGroupNode } from './ConnectionGroupNode'
 import { ConnectionTreeItem } from './ConnectionTreeItem'
-import { AttachDatabaseDialog } from './AttachDatabaseDialog'
 import { VaultDialog, type VaultDialogMode } from './VaultDialog'
 import { SidebarDndContext, RootDropZone } from './dnd/SidebarDndContext'
 import { collectGroupMemberMaps, defaultRootItems } from './dnd/sidebarOrder'
-import { useSidebarFileDrop, type FileAttachTarget } from './dnd/useSidebarFileDrop'
+import { useSidebarFileDrop } from './dnd/useSidebarFileDrop'
 import { groupMatchesSearch, matchesConnectionName } from './sidebarSearch'
 import { invokeSidebarRename, isAnySidebarRenaming } from './sidebarRenameHandlers'
 
@@ -40,7 +40,11 @@ function countGroupConnections(groups: GroupNode[]): number {
   return total
 }
 
-export function ConnectionTree() {
+export function ConnectionTree({
+  onOpenAttach = () => {},
+}: {
+  onOpenAttach?: (target: AttachDatabaseOpen) => void
+}) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const pushToast = useToastStore((s) => s.push)
@@ -50,7 +54,6 @@ export function ConnectionTree() {
   const [vaultOpen, setVaultOpen] = useState(false)
   const [vaultMode, setVaultMode] = useState<VaultDialogMode>('unlock')
   const [pendingOpenId, setPendingOpenId] = useState<string | null>(null)
-  const [fileAttach, setFileAttach] = useState<FileAttachTarget | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [pendingRenameGroupId, setPendingRenameGroupId] = useState<string | null>(null)
 
@@ -65,7 +68,13 @@ export function ConnectionTree() {
   }, [qc])
 
   useSidebarFileDrop({
-    onAttach: setFileAttach,
+    onAttach: ({ connectionId, paths }) => {
+      onOpenAttach({
+        connectionId,
+        initialPath: paths[0],
+        queue: paths.slice(1),
+      })
+    },
     onRefresh: refresh,
   })
 
@@ -122,19 +131,6 @@ export function ConnectionTree() {
     })
   }, [rootItems, searchQuery, freeConnections, groups])
 
-  const advanceFileAttach = () => {
-    setFileAttach((prev) => {
-      if (!prev) return null
-      void qc.invalidateQueries({ queryKey: ['namespaces', prev.connectionId] })
-      const remaining = prev.paths.slice(1)
-      if (remaining.length > 0) {
-        return { connectionId: prev.connectionId, paths: remaining }
-      }
-      refresh()
-      return null
-    })
-  }
-
   const renderRootItem = (ref: SidebarRootItemRef) => {
     if (ref.itemType === 'group') {
       const rootGroup = groups.find((g) => g.id === ref.itemId)
@@ -151,6 +147,7 @@ export function ConnectionTree() {
           onRequestRename={setPendingRenameGroupId}
           onRefresh={refresh}
           onVaultRequired={handleVaultRequired}
+          onOpenAttach={onOpenAttach}
         />
       )
     }
@@ -166,6 +163,7 @@ export function ConnectionTree() {
         searchQuery={searchQuery}
         onRefresh={refresh}
         onVaultRequired={handleVaultRequired}
+        onOpenAttach={onOpenAttach}
       />
     )
   }
@@ -246,18 +244,6 @@ export function ConnectionTree() {
           }
         }}
       />
-      {fileAttach && (
-        <AttachDatabaseDialog
-          connectionId={fileAttach.connectionId}
-          open
-          closeOnSuccess={false}
-          initialPath={fileAttach.paths[0]}
-          onOpenChange={(open) => {
-            if (!open) setFileAttach(null)
-          }}
-          onAttached={advanceFileAttach}
-        />
-      )}
     </>
   )
 }

@@ -1,11 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { AboutDialog } from '@/components/AboutDialog'
 import { Header, StatusBar, useAppShortcuts } from '@/components/Header'
 import { Tabs } from '@/components/ui/Tabs'
 import { Toaster, useToastStore } from '@/components/ui/Toast'
+import { AttachDatabaseDialog } from '@/features/connection/AttachDatabaseDialog'
+import type { AttachDatabaseOpen } from '@/features/connection/attachDatabaseState'
 import { ConnectionTree } from '@/features/connection/ConnectionTree'
 import { NewConnectionDialog } from '@/features/connection/NewConnectionDialog'
 import { ExportWizardPage } from '@/features/csv/ExportWizardPage'
@@ -22,6 +24,7 @@ import { dialogApi } from '@/lib/api/dialog'
 import { formatError } from '@/lib/api/errors'
 import {
   closeActiveConnection,
+  invalidateAttachQueries,
   invalidateConnectionQueries,
 } from '@/features/connection/connectionLifecycle'
 import { openSqliteAndMaybePlace } from '@/features/connection/placeConnectionInGroup'
@@ -49,6 +52,7 @@ export function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [sqlHistoryOpen, setSqlHistoryOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
+  const [attachDatabaseOpen, setAttachDatabaseOpen] = useState<AttachDatabaseOpen | null>(null)
 
   const wizardActive = Boolean(exportSession || importSession)
 
@@ -65,6 +69,27 @@ export function AppShell() {
   const openConnections = connections?.items.filter((c) => c.status === 'open') ?? []
   const openCount = openConnections.length
   const activeConn = openConnections.find((c) => c.id === activeConnectionId)
+
+  const attachReadOnly = useMemo(() => {
+    if (!attachDatabaseOpen) return false
+    const conn = connections?.items.find((c) => c.id === attachDatabaseOpen.connectionId)
+    return conn?.type === 'sqlite' && Boolean(conn.config.sqlite?.readOnly)
+  }, [attachDatabaseOpen, connections?.items])
+
+  const handleAttachSuccess = useCallback(() => {
+    if (!attachDatabaseOpen) return
+    const { connectionId, queue } = attachDatabaseOpen
+    invalidateAttachQueries(qc, connectionId)
+    if (queue && queue.length > 0) {
+      setAttachDatabaseOpen({
+        connectionId,
+        initialPath: queue[0],
+        queue: queue.slice(1),
+      })
+    } else {
+      setAttachDatabaseOpen(null)
+    }
+  }, [attachDatabaseOpen, qc])
 
   const createRootGroup = useCallback(async () => {
     try {
@@ -183,7 +208,7 @@ export function AppShell() {
       ) : (
         <>
           <div className="flex min-h-0 flex-1">
-            <ConnectionTree />
+            <ConnectionTree onOpenAttach={setAttachDatabaseOpen} />
             <main className="flex min-w-0 flex-1 flex-col">
               <div className="flex items-center justify-between border-b border-border pr-3">
                 <Tabs
@@ -244,6 +269,20 @@ export function AppShell() {
       <SettingsDialogContainer open={settingsOpen} onOpenChange={setSettingsOpen} />
       <SqlExecutionHistoryDialog open={sqlHistoryOpen} onOpenChange={setSqlHistoryOpen} />
       <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
+      {attachDatabaseOpen && (
+        <AttachDatabaseDialog
+          key={attachDatabaseOpen.initialPath ?? attachDatabaseOpen.connectionId}
+          connectionId={attachDatabaseOpen.connectionId}
+          open
+          initialPath={attachDatabaseOpen.initialPath}
+          readOnly={attachReadOnly}
+          closeOnSuccess={!attachDatabaseOpen.queue?.length}
+          onOpenChange={(open) => {
+            if (!open) setAttachDatabaseOpen(null)
+          }}
+          onAttached={handleAttachSuccess}
+        />
+      )}
       <Toaster />
     </div>
   )

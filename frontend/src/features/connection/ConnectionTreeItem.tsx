@@ -16,9 +16,9 @@ import { isVaultLockedError } from '@/lib/api/secrets'
 import { connectionSubtitle, connectionTypeLabel } from '@/lib/connectionDisplay'
 import type { ConnectionListItem } from '@/lib/types'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import type { AttachDatabaseOpen } from './attachDatabaseState'
 import { EditConnectionDialog } from './EditConnectionDialog'
 import type { VaultDialogMode } from './VaultDialog'
-import { AttachDatabaseDialog } from './AttachDatabaseDialog'
 import { ConnectionSchemaTree } from './tree/ConnectionSchemaTree'
 import { registerConnectionRenameHandler } from './sidebarRenameHandlers'
 
@@ -29,6 +29,7 @@ export function ConnectionTreeItem({
   searchQuery = '',
   onRefresh,
   onVaultRequired,
+  onOpenAttach = () => {},
 }: {
   item: ConnectionListItem
   depth: number
@@ -36,6 +37,7 @@ export function ConnectionTreeItem({
   searchQuery?: string
   onRefresh: () => void
   onVaultRequired?: (id: string, mode: VaultDialogMode) => void
+  onOpenAttach?: (target: AttachDatabaseOpen) => void
 }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
@@ -47,7 +49,6 @@ export function ConnectionTreeItem({
   const selectTable = useWorkspaceStore((s) => s.selectTable)
   const isFocused = sidebarFocus?.kind === 'connection' && sidebarFocus.id === item.id
   const [editOpen, setEditOpen] = useState(false)
-  const [attachOpen, setAttachOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(item.name)
   const [error, setError] = useState<string | null>(null)
@@ -223,7 +224,7 @@ export function ConnectionTreeItem({
             <ContextMenuItem
               disabled={!isOpen}
               hint={!isOpen ? t('connection.attachRequiresOpen') : undefined}
-              onSelect={() => isOpen && setAttachOpen(true)}
+              onSelect={() => isOpen && onOpenAttach({ connectionId: item.id })}
             >
               {t('connection.attachDatabase')}
             </ContextMenuItem>
@@ -247,17 +248,6 @@ export function ConnectionTreeItem({
         onOpenChange={setEditOpen}
         onSaved={onRefresh}
       />
-      {item.type === 'sqlite' && (
-        <AttachDatabaseDialog
-          connectionId={item.id}
-          open={attachOpen}
-          onOpenChange={setAttachOpen}
-          onAttached={() => {
-            void qc.invalidateQueries({ queryKey: ['namespaces', item.id] })
-            onRefresh()
-          }}
-        />
-      )}
     </div>
   )
 }

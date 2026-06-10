@@ -28,10 +28,6 @@ vi.mock('./EditConnectionDialog', () => ({
   EditConnectionDialog: () => null,
 }))
 
-vi.mock('./AttachDatabaseDialog', () => ({
-  AttachDatabaseDialog: () => null,
-}))
-
 const closedItem: ConnectionListItem = {
   id: 'c1',
   name: 'app.db',
@@ -103,5 +99,25 @@ describe('ConnectionTreeItem', () => {
     fireEvent.keyDown(input, { key: 'Enter' })
 
     expect(connectionApi.rename).not.toHaveBeenCalled()
+  })
+
+  it('calls onOpenAttach when attach menu is selected on open sqlite', async () => {
+    const onOpenAttach = vi.fn()
+    renderWithProviders(
+      <DndContext onDragEnd={() => {}}>
+        <ConnectionTreeItem
+          item={openItem}
+          depth={0}
+          sortContainerId="g1"
+          onRefresh={() => {}}
+          onOpenAttach={onOpenAttach}
+        />
+      </DndContext>,
+    )
+
+    fireEvent.contextMenu(screen.getByText('app.db'))
+    fireEvent.click(await screen.findByText('附加数据库…'))
+
+    expect(onOpenAttach).toHaveBeenCalledWith({ connectionId: 'c2' })
   })
 })
