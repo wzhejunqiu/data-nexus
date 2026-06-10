@@ -1,4 +1,3 @@
-import type { TFunction } from 'i18next'
 import type { DriverType } from '@/lib/types'
 import type { ConnectionFormState } from './connectionFormDefaults'
 
@@ -14,6 +13,8 @@ export type ConnectionFormField =
 export type ConnectionFormErrorCode = 'required' | 'invalidPort' | 'auth' | 'network' | 'database'
 
 export type ConnectionFormErrors = Partial<Record<ConnectionFormField, ConnectionFormErrorCode>>
+
+export type ConnectionFormTranslateFn = (key: string, opts?: Record<string, string>) => string
 
 export function validateConnectionForm(
   state: ConnectionFormState,
@@ -124,7 +125,7 @@ export function parseConnectionFailureReason(err: unknown): string | null {
 }
 
 export function formatFieldError(
-  t: TFunction,
+  t: ConnectionFormTranslateFn,
   field: ConnectionFormField,
   code: ConnectionFormErrorCode | undefined,
 ): string | undefined {
