@@ -54,10 +54,9 @@ describe('connectionLifecycle', () => {
     const { connectionGroupApi } = await import('@/lib/api/connectionGroup')
     vi.mocked(connectionApi.openFromFile).mockResolvedValue({
       id: 'new-1',
-      name: 'app.db',
+      displayName: 'app.db',
       type: 'sqlite',
       config: { type: 'sqlite', sqlite: { filePath: '/tmp/app.db', readOnly: false } },
-      status: 'open',
       connectedAt: '2026-01-01T00:00:00Z',
     })
     const qc = new QueryClient()

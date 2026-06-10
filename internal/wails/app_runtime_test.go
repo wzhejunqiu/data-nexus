@@ -3,7 +3,6 @@ package wails_test
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -92,20 +91,20 @@ func TestShowAboutWithContext(t *testing.T) {
 	if err := svc.ShowAbout(); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(rt.dialogMsg, "Data Nexus v") {
-		t.Fatalf("unexpected dialog message: %q", rt.dialogMsg)
+	if len(rt.events) != 1 || rt.events[0].name != "app:about" {
+		t.Fatalf("expected app:about event, got %+v", rt.events)
 	}
 }
 
-func TestShowAboutDialogError(t *testing.T) {
-	svc, rt := newAppWithMock(t)
-	rt.dialogErr = errors.New("dialog failed")
+func TestShowAboutNilContext(t *testing.T) {
+	svc := wailssvc.NewAppServiceWithRuntime(zap.NewNop(), &mockRuntime{})
 	err := svc.ShowAbout()
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if err.Error() != "dialog failed" {
-		t.Fatalf("unexpected error: %v", err)
+	appErr, ok := err.(*model.AppError)
+	if !ok || appErr.Code != "INTERNAL_ERROR" {
+		t.Fatalf("expected INTERNAL_ERROR, got %v", err)
 	}
 }
 

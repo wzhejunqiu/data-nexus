@@ -20,6 +20,7 @@ export function validateConnectionForm(
   const errors: ConnectionFormErrors = {}
 
   if (dialect === 'sqlite') {
+    // Create mode: empty filePath is allowed; NewConnectionDialog opens the file picker on submit.
     if (mode === 'edit' && !state.filePath.trim()) {
       errors.filePath = 'required'
     }

@@ -15,6 +15,16 @@ func NewSqlExecutionService(store executionlog.Store) *SqlExecutionService {
 	return &SqlExecutionService{store: store}
 }
 
+func clampLimit(limit, defaultLimit, max int) int {
+	if limit <= 0 {
+		return defaultLimit
+	}
+	if limit > max {
+		return max
+	}
+	return limit
+}
+
 func (s *SqlExecutionService) ListQueryHistory(ctx context.Context, connectionID string) ([]string, error) {
 	if s.store == nil {
 		return []string{}, nil
@@ -26,7 +36,7 @@ func (s *SqlExecutionService) ListSqlExecutions(ctx context.Context, connectionI
 	if s.store == nil {
 		return &model.SqlExecutionList{Items: []model.SqlExecutionRecord{}}, nil
 	}
-	items, err := s.store.ListExecutions(ctx, connectionID, limit)
+	items, err := s.store.ListExecutions(ctx, connectionID, clampLimit(limit, 50, 200))
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +47,7 @@ func (s *SqlExecutionService) ListAllSqlExecutions(ctx context.Context, limit in
 	if s.store == nil {
 		return &model.SqlExecutionList{Items: []model.SqlExecutionRecord{}}, nil
 	}
-	items, err := s.store.ListAllExecutions(ctx, limit)
+	items, err := s.store.ListAllExecutions(ctx, clampLimit(limit, 50, 200))
 	if err != nil {
 		return nil, err
 	}

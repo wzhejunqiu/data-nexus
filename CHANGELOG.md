@@ -7,36 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Selected Group placement: new connections, Cmd/Ctrl+O, and `.db` drop onto Group nodes use `selectedGroupId` + `moveConnectionToGroup`
-- Sidebar inline rename for connections (F2/Enter/context menu); open and closed connections supported
-- Disabled context menu hints for edit (requires closed) and attach (requires open)
-- SQL execution history **effect rows** column
-
-### Changed
-
-- Connection display name: dual entry — inline rename and Edit Dialog (closed) coexist; both call `RenameConnection`
-
 ## [0.5.0] - 2026-06-09
 
 ### Added
 
 - Application menu bar: Win/Linux in-app File / View / Help; macOS system menu bar (`app_menu_darwin.go`) with equivalent actions
 - Connection groups with nesting, free connections at root level, and drag-and-drop reorder (`ConnectionGroupService`, `@dnd-kit`)
+- Selected Group placement: new connections, Cmd/Ctrl+O, and `.db` drop onto Group nodes use `selectedGroupId` + `moveConnectionToGroup`
+- Sidebar inline rename for connections (F2/Enter/context menu); open and closed connections supported
+- Disabled context menu hints for edit (requires closed) and attach (requires open)
 - Schema hierarchy tree under each open connection (`ConnectionSchemaTree`: database → [PG: schema] → tables)
 - `catalog.db` SQLite store for connections, groups, and startup restore state (`~/.data-nexus/catalog.db`)
 - Refactored `ConnectionForm` (SQLite / PostgreSQL / MySQL) shared by new and edit dialogs
 - `AttachDatabaseDialog`, file-drop routing (`app:file-drop`), detach and reveal-in-finder for attached SQLite databases
-- Global SQL execution history dialog (`ListAllExecutions` / `SqlExecutionHistoryDialog`)
+- Global SQL execution history dialog (`ListAllExecutions` / `SqlExecutionHistoryDialog`) with **effect rows** column
 - `AboutDialog` with platform info; settings moved from header to menu (`SettingsDialog` + restore-on-startup)
 
 ### Changed
 
 - Connection persistence moved from `connections.json` to `catalog.db` (**no automatic migration** from legacy JSON)
+- Connection display name: dual entry — inline rename and Edit Dialog (closed) coexist; both call `RenameConnection`
 - Removed sidebar global controls (new connection button, readOnly/wal toggles, startup restore); moved to menu and dialogs
 - Removed `RemoteNamespaceSwitch` and `SchemaSubtree`; schema browsing integrated into connection tree
-- macOS: hide in-window File/View/Help menubar; Quit only in App menu (`Cmd+Q`)
+- macOS: hide in-window File/View/Help menubar; Quit only in App menu (`Cmd+Q`); `ShowAbout` emits `app:about` for `AboutDialog`
 - Product version bumped to 0.5.0
 
 ## [0.4.0] - 2026-06-07

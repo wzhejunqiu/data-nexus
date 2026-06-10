@@ -3,6 +3,14 @@ import { defaultConnectionFormState } from './connectionFormDefaults'
 import { validateConnectionForm } from './connectionFormValidation'
 
 describe('validateConnectionForm', () => {
+  it('allows sqlite create with empty filePath', () => {
+    const state = {
+      ...defaultConnectionFormState('sqlite'),
+      filePath: '',
+    }
+    expect(validateConnectionForm(state, 'create', 'sqlite')).toEqual({})
+  })
+
   it('allows mysql without database on create', () => {
     const state = {
       ...defaultConnectionFormState('mysql'),

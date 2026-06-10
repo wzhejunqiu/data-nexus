@@ -2,14 +2,12 @@ package wails
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sync"
 
-	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/wzhejunqiu/data-nexus/internal/model"
 	"github.com/wzhejunqiu/data-nexus/internal/version"
 	"go.uber.org/zap"
@@ -65,17 +63,8 @@ func (s *AppService) ShowAbout() error {
 		if s.ctx == nil {
 			return model.ErrInternal("app context not ready")
 		}
-		info, err := s.GetVersion()
-		if err != nil {
-			return err
-		}
-		msg := fmt.Sprintf("Data Nexus v%s\nPlatform: %s/%s", info.Version, info.Platform, info.Arch)
-		_, err = s.rt.MessageDialog(s.ctx, wailsruntime.MessageDialogOptions{
-			Type:    wailsruntime.InfoDialog,
-			Title:   "About Data Nexus",
-			Message: msg,
-		})
-		return err
+		s.rt.EventsEmit(s.ctx, "app:about")
+		return nil
 	})
 }
 

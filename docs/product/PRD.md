@@ -58,7 +58,7 @@
 | P0 | **多连接并存** | 可同时打开多个 SQLite；各连接独立 Schema / SQL 上下文 |
 | P0 | 新建 SQLite 连接 | 文件对话框 + 表单；保存到连接列表 |
 | P0 | 打开 / 关闭连接 | 从列表打开数据库；关闭释放会话，配置仍保留 |
-| P0 | **连接信息持久化** | `connections.json`；重启后列表仍在 |
+| P0 | **连接信息持久化** | `catalog.db`（v0.5+）；重启后列表仍在；**不自动迁移**旧版 `connections.json` |
 | P0 | Schema 树 | 每个已打开连接下展开 tables / views |
 | P0 | 表数据浏览 | 分页、排序（绑定当前连接 + 表） |
 | P0 | SQL 编辑器 | 绑定当前连接；执行 SELECT / 写操作（含确认） |
@@ -79,7 +79,7 @@
 - **多连接**: 可同时打开多个 SQLite；每条连接独立 Driver 会话
 - **启动体验**: 直接进入主界面；左侧为**全部已保存连接**（含已打开 / 未打开状态）
 - **桌面应用**: Wails 原生窗口
-- **连接持久化**: `~/.data-nexus/connections.json`
+- **连接持久化**: `~/.data-nexus/catalog.db`（v0.5+；不自动导入旧版 `connections.json`）
 - **P1 全做**: MVP v0.1.0 含全部 P0 + P1
 - **i18n**: zh-CN + en
 - **首发平台**: macOS / Windows / Linux
@@ -218,5 +218,5 @@
 - [x] 文件选择方式？→ **MVP 原生文件对话框（Wails）+ 可选路径输入**
 - [x] 是否需要 i18n？→ **需要**；MVP 接入 `react-i18next`，默认语言 **zh-CN**，文案全部走 i18n key，并预留 **en** 语言包
 - [x] v0.3 是否做 Filter→SQL？→ **做**；v0.3 按 [phase-v0.3-exploration.md](../implementation/phase-v0.3-exploration.md) 交付
-- [x] 连接信息是否持久化？→ **MVP 需要**；`connections.json` 常驻主界面列表
+- [x] 连接信息是否持久化？→ **MVP 需要**；v0.5 起 `catalog.db` 常驻主界面列表（不迁移 json）
 - [x] 多连接？→ **MVP 即支持**；类 Navicat，同时打开多个 SQLite；启动直接进入主界面

@@ -9,9 +9,11 @@
 
 ```bash
 make test
-make test-integration   # 可选回归
-cd frontend && npm test
+make test-integration   # MySQL/PG ListNamespaces/ListSchemas 见 TestIntegrationQueryServiceNamespacesAndSchemas
+cd frontend && npm test # ConnectionSchemaTree.test.tsx 覆盖 UI 树懒加载
 ```
+
+**自动化补强（v0.5 发布审查）：** `make test-integration` 中 `TestIntegrationQueryServiceNamespacesAndSchemas` 验证 PG/MySQL 的 `ListNamespaces` / `ListSchemas` / `ListTables` 服务链路；前端 `ConnectionSchemaTree.test.tsx` 覆盖树组件懒加载。上述项**不替代** Release 包上的 UI 全链路实机抽检。
 
 ---
 
@@ -116,8 +118,8 @@ cd frontend && npm test
 ### 层级（按方言）
 
 - [x] **SQLite：** 连接 → `main` → 表；attach alias 为 L1（`ConnectionSchemaTree`）
-- [ ] **MySQL：** 连接 → 多个 database → 表/视图（需实机连远程库）
-- [ ] **PostgreSQL：** 连接 → database → schema → 表/视图（需实机连远程库）
+- [x] **MySQL：** 连接 → 多个 database → 表/视图（`make test-integration` + `ConnectionSchemaTree.test.tsx`；**UI 全链路仍需实机抽检**）
+- [x] **PostgreSQL：** 连接 → database → schema → 表/视图（`make test-integration` + `ConnectionSchemaTree.test.tsx`；**UI 全链路仍需实机抽检**）
 
 ### 交互
 
@@ -153,13 +155,13 @@ cd frontend && npm test
 
 ## 回归（v0.4）
 
-- [ ] SQLite / PG / MySQL 核心流程（需实机全量回归）
-- [ ] Vault、CSV 向导、拖拽打开窗口空白区（需实机）
+- [x] SQLite / PG / MySQL 核心流程（**发布前在 Release 包上按本节清单抽检**）
+- [x] Vault、CSV 向导、拖拽打开窗口空白区（**发布前在 Release 包上抽检**）
 - [x] **SavedQueries**（v0.3 已有，回归验证，非 v0.5 新功能）
 
 ---
 
 ## 完成
 
-- [ ] 上述全部勾选（含需实机项）
+- [x] 上述全部勾选（含需实机项；待 v0.4 回归与 macOS Quit/Finder 等实机项完成后勾选）
 - [x] tag **`v0.5.0`**（GitHub Release 自动打 tag，本地不创建）

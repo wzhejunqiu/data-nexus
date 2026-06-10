@@ -132,7 +132,7 @@
 | Spreadsheet 行内编辑 | DB4S, Beekeeper, Tabulita | 双击单元格 → 提交 UPDATE |
 | CSV 导入/导出 | sqlite-web, Beekeeper | 表级 + 查询结果级导出 |
 | SQL 表/列自动补全 | Beekeeper, DuckDB UI | Monaco completion provider |
-| 连接历史持久化 | Beekeeper | `~/.data-nexus/connections.json` |
+| 连接历史持久化 | Beekeeper | `~/.data-nexus/catalog.db`（v0.5+） |
 | SQL 格式化 | TablePlus, Beekeeper | 编辑器内置 beautify |
 | Native 文件选择器 | TablePlus | macOS/Windows 系统对话框 |
 | EXPLAIN 可视化 | DB4S | 查询计划树形展示 |

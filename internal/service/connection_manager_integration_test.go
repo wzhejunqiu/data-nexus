@@ -138,3 +138,112 @@ func TestIntegrationThreeDriversConcurrentOpen(t *testing.T) {
 
 	mgr.CloseAll()
 }
+
+func TestIntegrationQueryServiceNamespacesAndSchemas(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test skipped in -short mode")
+	}
+	if testPostgres == nil || testMySQL == nil {
+		t.Fatal("integration harness not started")
+	}
+
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "catalog.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr := service.NewTestConnectionManagerWithSecrets(store, secrets.NewMockStore())
+	qs := service.NewQueryService(mgr, nil, nil)
+	ctx := context.Background()
+
+	pgSaved, err := mgr.CreateRemoteConnection(ctx, model.RemoteConnectRequest{
+		Type:     model.DriverTypePostgres,
+		Name:     "integration-pg-ns",
+		Password: testPostgres.Password,
+		Open:     true,
+		Postgres: &model.PostgresConfig{
+			Host:     testPostgres.Host,
+			Port:     testPostgres.Port,
+			Database: testPostgres.Database,
+			User:     testPostgres.User,
+			Schema:   "public",
+			SSLMode:  "disable",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mysqlSaved, err := mgr.CreateRemoteConnection(ctx, model.RemoteConnectRequest{
+		Type:     model.DriverTypeMySQL,
+		Name:     "integration-mysql-ns",
+		Password: "",
+		Open:     true,
+		MySQL: &model.MySQLConfig{
+			Host:     testMySQL.Host,
+			Port:     testMySQL.Port,
+			Database: testMySQL.Database,
+			User:     "root",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pgNamespaces, err := qs.ListNamespaces(ctx, pgSaved.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !namespaceContains(pgNamespaces.Items, testPostgres.Database) {
+		t.Fatalf("postgres namespaces: want %q in %#v", testPostgres.Database, pgNamespaces.Items)
+	}
+
+	pgSchemas, err := qs.ListSchemas(ctx, pgSaved.ID, testPostgres.Database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !schemaContains(pgSchemas.Items, "public") {
+		t.Fatalf("postgres schemas: want public in %#v", pgSchemas.Items)
+	}
+
+	if _, err := qs.ListTables(ctx, pgSaved.ID, model.ListTablesOptions{
+		Database: testPostgres.Database,
+		Schema:   "public",
+	}); err != nil {
+		t.Fatalf("postgres ListTables: %v", err)
+	}
+
+	mysqlNamespaces, err := qs.ListNamespaces(ctx, mysqlSaved.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !namespaceContains(mysqlNamespaces.Items, testMySQL.Database) {
+		t.Fatalf("mysql namespaces: want %q in %#v", testMySQL.Database, mysqlNamespaces.Items)
+	}
+
+	if _, err := qs.ListTables(ctx, mysqlSaved.ID, model.ListTablesOptions{
+		Database: testMySQL.Database,
+	}); err != nil {
+		t.Fatalf("mysql ListTables: %v", err)
+	}
+
+	mgr.CloseAll()
+}
+
+func namespaceContains(items []model.NamespaceInfo, name string) bool {
+	for _, item := range items {
+		if item.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func schemaContains(items []model.SchemaInfo, name string) bool {
+	for _, item := range items {
+		if item.Name == name {
+			return true
+		}
+	}
+	return false
+}
