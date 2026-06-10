@@ -9,6 +9,7 @@ import { dialogApi } from '@/lib/api/dialog'
 import { formatError, isDialogCancelled, mapWailsError } from '@/lib/api/errors'
 import { isVaultLockedError } from '@/lib/api/secrets'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { handleRemoteConnectionError } from './connectionFormFailure'
 import { moveNewConnectionToGroup, openSqliteAndMaybePlace } from './placeConnectionInGroup'
 import { VaultDialog, type VaultDialogMode } from './VaultDialog'
 import {
@@ -16,7 +17,6 @@ import {
   type ConnectionFormHandle,
   type ConnectionFormState,
 } from './ConnectionForm/ConnectionForm'
-import type { TFunction } from 'i18next'
 
 export function NewConnectionDialog({
   open,
@@ -103,7 +103,8 @@ export function NewConnectionDialog({
         )
         return
       }
-      pushToast(formatConnectionError(t, err), 'error')
+      if (handleRemoteConnectionError(err, { t, pushToast, formRef })) return
+      pushToast(formatError(t, err), 'error')
     },
   })
 
@@ -116,7 +117,10 @@ export function NewConnectionDialog({
         mysql: state.dialect === 'mysql' ? state.mysql : undefined,
       }),
     onSuccess: () => pushToast(t('connection.testSuccess'), 'success'),
-    onError: (err) => pushToast(formatConnectionError(t, err), 'error'),
+    onError: (err) => {
+      if (handleRemoteConnectionError(err, { t, pushToast, formRef })) return
+      pushToast(formatError(t, err), 'error')
+    },
   })
 
   const handleSubmit = async (state: ConnectionFormState) => {
@@ -191,20 +195,4 @@ export function NewConnectionDialog({
       />
     </>
   )
-}
-
-function formatConnectionError(t: TFunction, err: unknown): string {
-  if (
-    err &&
-    typeof err === 'object' &&
-    'code' in err &&
-    (err as { code: string }).code === 'CONNECTION_FAILED'
-  ) {
-    const details = (err as { details?: { reason?: string } }).details
-    const reason = details?.reason
-    if (reason === 'auth') return t('connection.error.auth')
-    if (reason === 'network') return t('connection.error.network')
-    if (reason === 'database') return t('connection.error.database')
-  }
-  return formatError(t, err)
 }

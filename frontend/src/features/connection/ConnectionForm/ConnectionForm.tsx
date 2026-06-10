@@ -11,10 +11,13 @@ import {
   type ConnectionFormState,
 } from './connectionFormDefaults'
 import {
+  connectionFailureFieldErrors,
   firstErrorField,
   sectionForField,
+  validateConnectionField,
   validateConnectionForm,
   type ConnectionFormErrors,
+  type ConnectionFormField,
 } from './connectionFormValidation'
 
 type SectionKey = 'general' | 'security' | 'advanced'
@@ -22,6 +25,7 @@ type SectionKey = 'general' | 'security' | 'advanced'
 export type ConnectionFormHandle = {
   submit: () => void
   test: () => void
+  highlightConnectionFailure: (reason: string) => void
 }
 
 function CollapsibleSection({
@@ -106,6 +110,21 @@ export const ConnectionForm = forwardRef<
 
   const dialect = dialectLocked && initialItem ? initialItem.type : state.dialect
 
+  const focusFirstError = useCallback(
+    (next: ConnectionFormErrors) => {
+      const first = firstErrorField(next)
+      if (!first) return
+      const section = sectionForField(first, dialect)
+      setOpenSections((s) => ({ ...s, [section]: true }))
+      const refMap = { general: generalRef, security: securityRef, advanced: advancedRef }
+      window.requestAnimationFrame(() => {
+        refMap[section].current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        document.getElementById(first)?.focus()
+      })
+    },
+    [dialect],
+  )
+
   const patch = useCallback((p: Partial<ConnectionFormState>) => {
     setState((prev) => ({ ...prev, ...p }))
     setErrors((prev) => {
@@ -129,21 +148,39 @@ export const ConnectionForm = forwardRef<
     })
   }, [])
 
+  const handleFieldBlur = useCallback(
+    (field: ConnectionFormField) => {
+      const code = validateConnectionField(field, state, mode, dialect)
+      setErrors((prev) => {
+        const next = { ...prev }
+        if (code) {
+          next[field] = code
+        } else {
+          delete next[field]
+        }
+        return next
+      })
+    },
+    [state, mode, dialect],
+  )
+
+  const highlightConnectionFailure = useCallback(
+    (reason: string) => {
+      const failureErrors = connectionFailureFieldErrors(reason)
+      if (Object.keys(failureErrors).length === 0) return
+      setErrors((prev) => ({ ...prev, ...failureErrors }))
+      setOpenSections((s) => ({ ...s, general: true }))
+      focusFirstError(failureErrors)
+    },
+    [focusFirstError],
+  )
+
   const runValidation = useCallback(() => {
     const next = validateConnectionForm(state, mode, dialect)
     setErrors(next)
-    const first = firstErrorField(next)
-    if (first) {
-      const section = sectionForField(first, dialect)
-      setOpenSections((s) => ({ ...s, [section]: true, general: true }))
-      const refMap = { general: generalRef, security: securityRef, advanced: advancedRef }
-      window.requestAnimationFrame(() => {
-        refMap[section].current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-        document.getElementById(first)?.focus()
-      })
-    }
+    focusFirstError(next)
     return Object.keys(next).length === 0
-  }, [state, mode, dialect])
+  }, [state, mode, dialect, focusFirstError])
 
   const submit = useCallback(() => {
     if (!runValidation()) return
@@ -155,7 +192,11 @@ export const ConnectionForm = forwardRef<
     onTest?.({ ...state, dialect })
   }, [runValidation, onTest, state, dialect])
 
-  useImperativeHandle(ref, () => ({ submit, test }), [submit, test])
+  useImperativeHandle(ref, () => ({ submit, test, highlightConnectionFailure }), [
+    submit,
+    test,
+    highlightConnectionFailure,
+  ])
 
   const showSecurity = dialect === 'postgres' || dialect === 'mysql'
 
@@ -180,6 +221,7 @@ export const ConnectionForm = forwardRef<
             errors={errors}
             onChange={patch}
             onBrowse={onBrowse}
+            onFieldBlur={handleFieldBlur}
           />
         </CollapsibleSection>
         {showSecurity && (

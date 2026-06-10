@@ -1,8 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { fieldErrorClass, FormField } from '../FormField'
-import type { ConnectionFormErrors } from '../connectionFormValidation'
+import { fieldErrorClass, fieldErrorId, FormField } from '../FormField'
+import {
+  formatFieldError,
+  type ConnectionFormErrors,
+  type ConnectionFormField,
+} from '../connectionFormValidation'
 import type { ConnectionFormState } from '../connectionFormDefaults'
 
 export function SQLiteFields({
@@ -11,12 +15,14 @@ export function SQLiteFields({
   mode,
   onChange,
   onBrowse,
+  onFieldBlur,
 }: {
   state: ConnectionFormState
   errors: ConnectionFormErrors
   mode: 'create' | 'edit'
   onChange: (patch: Partial<ConnectionFormState>) => void
   onBrowse?: () => Promise<string | undefined>
+  onFieldBlur?: (field: ConnectionFormField) => void
 }) {
   const { t } = useTranslation()
   const optionalLabel = t('connectionForm.optional')
@@ -27,13 +33,7 @@ export function SQLiteFields({
         id="displayName"
         label={t('connectionForm.fields.displayName')}
         optional={mode === 'create' ? optionalLabel : undefined}
-        error={
-          errors.displayName
-            ? t('connectionForm.validation.required', {
-                field: t('connectionForm.fields.displayName'),
-              })
-            : undefined
-        }
+        error={formatFieldError(t, 'displayName', errors.displayName)}
       >
         <Input
           id="displayName"
@@ -42,19 +42,14 @@ export function SQLiteFields({
           aria-invalid={!!errors.displayName}
           className={fieldErrorClass(!!errors.displayName)}
           onChange={(e) => onChange({ displayName: e.target.value })}
+          onBlur={() => onFieldBlur?.('displayName')}
         />
       </FormField>
       <FormField
         id="filePath"
         label={t('connectionForm.fields.filePath')}
         required
-        error={
-          errors.filePath
-            ? t('connectionForm.validation.required', {
-                field: t('connectionForm.fields.filePath'),
-              })
-            : undefined
-        }
+        error={formatFieldError(t, 'filePath', errors.filePath)}
       >
         {mode === 'edit' ? (
           <Input id="filePath" value={state.filePath} readOnly className="bg-muted/20" />
@@ -65,8 +60,10 @@ export function SQLiteFields({
               value={state.filePath}
               aria-required
               aria-invalid={!!errors.filePath}
+              aria-describedby={errors.filePath ? fieldErrorId('filePath') : undefined}
               className={fieldErrorClass(!!errors.filePath)}
               onChange={(e) => onChange({ filePath: e.target.value })}
+              onBlur={() => onFieldBlur?.('filePath')}
             />
             {onBrowse && (
               <Button

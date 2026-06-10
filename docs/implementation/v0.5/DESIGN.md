@@ -134,7 +134,7 @@
 
 | 能力 | Group | 连接 |
 |------|-------|------|
-| 重命名 | **原地 inline**，Enter 保存；**无 Dialog** | **无**；displayName 在 **编辑连接** Dialog |
+| 重命名 | **原地 inline**，Enter 保存；**无 Dialog** | **inline 重命名**（F2/Enter/右键），open/closed 均可；Edit Dialog（仅 closed）亦可改显示名 |
 | 右键 | **新建 / 重命名 / 删除**；**根层空白 → 新建分组** | 见 §4.4（PG/MySQL 四项；SQLite 五项） |
 | 文件菜单 | **新建分组…**（顶层 Group，与空白右键等价） | — |
 | 编辑 | — | **仅 closed**；含显示名称 + 连接配置 |

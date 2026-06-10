@@ -2,7 +2,11 @@ import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { fieldErrorClass, FormField } from '../FormField'
 import { MYSQL_COLLATIONS } from '../connectionFormDefaults'
-import type { ConnectionFormErrors } from '../connectionFormValidation'
+import {
+  formatFieldError,
+  type ConnectionFormErrors,
+  type ConnectionFormField,
+} from '../connectionFormValidation'
 import type { ConnectionFormState } from '../connectionFormDefaults'
 
 export function MySQLFields({
@@ -10,11 +14,13 @@ export function MySQLFields({
   errors,
   mode,
   onChange,
+  onFieldBlur,
 }: {
   state: ConnectionFormState
   errors: ConnectionFormErrors
   mode: 'create' | 'edit'
   onChange: (patch: Partial<ConnectionFormState>) => void
+  onFieldBlur?: (field: ConnectionFormField) => void
 }) {
   const { t } = useTranslation()
   const my = state.mysql
@@ -28,13 +34,7 @@ export function MySQLFields({
         id="displayName"
         label={t('connectionForm.fields.displayName')}
         required
-        error={
-          errors.displayName
-            ? t('connectionForm.validation.required', {
-                field: t('connectionForm.fields.displayName'),
-              })
-            : undefined
-        }
+        error={formatFieldError(t, 'displayName', errors.displayName)}
       >
         <Input
           id="displayName"
@@ -43,17 +43,14 @@ export function MySQLFields({
           aria-invalid={!!errors.displayName}
           className={fieldErrorClass(!!errors.displayName)}
           onChange={(e) => onChange({ displayName: e.target.value })}
+          onBlur={() => onFieldBlur?.('displayName')}
         />
       </FormField>
       <div className="grid grid-cols-2 gap-2">
         <FormField
           id="host"
           label={t('connectionForm.fields.host')}
-          error={
-            errors.host
-              ? t('connectionForm.validation.required', { field: t('connectionForm.fields.host') })
-              : undefined
-          }
+          error={formatFieldError(t, 'host', errors.host)}
         >
           <Input
             id="host"
@@ -61,12 +58,13 @@ export function MySQLFields({
             aria-invalid={!!errors.host}
             className={fieldErrorClass(!!errors.host)}
             onChange={(e) => setMySQL({ host: e.target.value })}
+            onBlur={() => onFieldBlur?.('host')}
           />
         </FormField>
         <FormField
           id="port"
           label={t('connectionForm.fields.port')}
-          error={errors.port ? t('connectionForm.validation.invalidPort') : undefined}
+          error={formatFieldError(t, 'port', errors.port)}
         >
           <Input
             id="port"
@@ -75,6 +73,7 @@ export function MySQLFields({
             aria-invalid={!!errors.port}
             className={fieldErrorClass(!!errors.port)}
             onChange={(e) => setMySQL({ port: Number(e.target.value) || my.port })}
+            onBlur={() => onFieldBlur?.('port')}
           />
         </FormField>
       </div>
@@ -83,17 +82,14 @@ export function MySQLFields({
           id="database"
           value={my.database}
           onChange={(e) => setMySQL({ database: e.target.value })}
+          onBlur={() => onFieldBlur?.('database')}
         />
       </FormField>
       <FormField
         id="user"
         label={t('connectionForm.fields.user')}
         required
-        error={
-          errors.user
-            ? t('connectionForm.validation.required', { field: t('connectionForm.fields.user') })
-            : undefined
-        }
+        error={formatFieldError(t, 'user', errors.user)}
       >
         <Input
           id="user"
@@ -102,19 +98,14 @@ export function MySQLFields({
           aria-invalid={!!errors.user}
           className={fieldErrorClass(!!errors.user)}
           onChange={(e) => setMySQL({ user: e.target.value })}
+          onBlur={() => onFieldBlur?.('user')}
         />
       </FormField>
       <FormField
         id="password"
         label={t('connectionForm.fields.password')}
         required={mode === 'create'}
-        error={
-          errors.password
-            ? t('connectionForm.validation.required', {
-                field: t('connectionForm.fields.password'),
-              })
-            : undefined
-        }
+        error={formatFieldError(t, 'password', errors.password)}
       >
         <Input
           id="password"
@@ -125,6 +116,7 @@ export function MySQLFields({
           aria-invalid={!!errors.password}
           className={fieldErrorClass(!!errors.password)}
           onChange={(e) => onChange({ password: e.target.value })}
+          onBlur={() => onFieldBlur?.('password')}
         />
         {mode === 'edit' && (
           <p className="text-xs text-muted">{t('connectionForm.passwordKeep')}</p>

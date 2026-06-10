@@ -8,6 +8,7 @@ import { connectionApi } from '@/lib/api/connection'
 import { formatError } from '@/lib/api/errors'
 import { isVaultLockedError } from '@/lib/api/secrets'
 import type { ConnectionListItem } from '@/lib/types'
+import { handleRemoteConnectionError } from './connectionFormFailure'
 import {
   ConnectionForm,
   type ConnectionFormHandle,
@@ -85,6 +86,7 @@ function EditConnectionForm({
         setVaultOpen(true)
         return
       }
+      if (handleRemoteConnectionError(err, { t, pushToast, formRef })) return
       pushToast(formatError(t, err), 'error')
     },
   })

@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import type { DriverType } from '@/lib/types'
 import type { ConnectionFormState } from './connectionFormDefaults'
 
@@ -10,7 +11,9 @@ export type ConnectionFormField =
   | 'user'
   | 'password'
 
-export type ConnectionFormErrors = Partial<Record<ConnectionFormField, string>>
+export type ConnectionFormErrorCode = 'required' | 'invalidPort' | 'auth' | 'network' | 'database'
+
+export type ConnectionFormErrors = Partial<Record<ConnectionFormField, ConnectionFormErrorCode>>
 
 export function validateConnectionForm(
   state: ConnectionFormState,
@@ -57,6 +60,93 @@ export function validateConnectionForm(
   return errors
 }
 
+export function validateConnectionField(
+  field: ConnectionFormField,
+  state: ConnectionFormState,
+  mode: 'create' | 'edit',
+  dialect: DriverType,
+): ConnectionFormErrorCode | undefined {
+  if (dialect === 'sqlite') {
+    if (field === 'filePath' && mode === 'edit' && !state.filePath.trim()) {
+      return 'required'
+    }
+    return undefined
+  }
+
+  const cfg = dialect === 'postgres' ? state.postgres : state.mysql
+
+  switch (field) {
+    case 'displayName':
+      return !state.displayName.trim() ? 'required' : undefined
+    case 'host':
+      return !cfg.host.trim() ? 'required' : undefined
+    case 'port': {
+      const port = cfg.port
+      return !Number.isInteger(port) || port < 1 || port > 65535 ? 'invalidPort' : undefined
+    }
+    case 'database':
+      if (dialect === 'postgres' && !cfg.database.trim()) return 'required'
+      return undefined
+    case 'user':
+      return !cfg.user.trim() ? 'required' : undefined
+    case 'password':
+      if (mode === 'create' && !state.password) return 'required'
+      return undefined
+    default:
+      return undefined
+  }
+}
+
+export function connectionFailureFieldErrors(reason: string): ConnectionFormErrors {
+  switch (reason) {
+    case 'auth':
+      return { user: 'auth', password: 'auth' }
+    case 'network':
+      return { host: 'network', port: 'network' }
+    case 'database':
+      return { database: 'database' }
+    default:
+      return {}
+  }
+}
+
+export function parseConnectionFailureReason(err: unknown): string | null {
+  if (
+    err &&
+    typeof err === 'object' &&
+    'code' in err &&
+    (err as { code: string }).code === 'CONNECTION_FAILED'
+  ) {
+    const details = (err as { details?: { reason?: string } }).details
+    return details?.reason ?? null
+  }
+  return null
+}
+
+export function formatFieldError(
+  t: TFunction,
+  field: ConnectionFormField,
+  code: ConnectionFormErrorCode | undefined,
+): string | undefined {
+  if (!code) return undefined
+  switch (code) {
+    case 'required':
+      return t('connectionForm.validation.required', {
+        field: t(`connectionForm.fields.${field}`),
+      })
+    case 'invalidPort':
+      return t('connectionForm.validation.invalidPort')
+    case 'auth':
+      return t('connection.error.auth')
+    case 'network':
+      return t('connection.error.network')
+    case 'database':
+      return t('connection.error.database')
+    default:
+      return undefined
+  }
+}
+
 export function firstErrorField(errors: ConnectionFormErrors): ConnectionFormField | null {
   const order: ConnectionFormField[] = [
     'displayName',
@@ -74,19 +164,8 @@ export function firstErrorField(errors: ConnectionFormErrors): ConnectionFormFie
 }
 
 export function sectionForField(
-  field: ConnectionFormField,
-  dialect: DriverType,
+  _field: ConnectionFormField,
+  _dialect: DriverType,
 ): 'general' | 'security' | 'advanced' {
-  if (field === 'password' && dialect !== 'sqlite') return 'general'
-  if (
-    field === 'displayName' ||
-    field === 'filePath' ||
-    field === 'host' ||
-    field === 'port' ||
-    field === 'database' ||
-    field === 'user'
-  ) {
-    return 'general'
-  }
   return 'general'
 }

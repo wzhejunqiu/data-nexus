@@ -264,6 +264,36 @@ describe('NewConnectionDialog', () => {
     })
   })
 
+  it('highlights auth fields when test connection fails', async () => {
+    const { connectionApi } = await import('@/lib/api/connection')
+    vi.mocked(connectionApi.test).mockRejectedValue({
+      code: 'CONNECTION_FAILED',
+      message: 'auth failed',
+      details: { reason: 'auth' },
+    })
+
+    render(<NewConnectionDialog open onOpenChange={() => {}} readOnly={false} wal={false} />)
+    fireEvent.click(screen.getByRole('button', { name: 'connection.type.postgres' }))
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.displayName/i), {
+      target: { value: 'pg-local' },
+    })
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.database/i), {
+      target: { value: 'app' },
+    })
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.user/i), {
+      target: { value: 'admin' },
+    })
+    fireEvent.change(screen.getByLabelText(/connectionForm.fields.password/i), {
+      target: { value: 'secret' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'connectionForm.testConnection' }))
+
+    await waitFor(() => {
+      expect(pushToast).toHaveBeenCalledWith('connection.error.auth', 'error')
+      expect(screen.getAllByText('connection.error.auth')).toHaveLength(2)
+    })
+  })
+
   it('opens vault dialog and retries createRemote on vault locked', async () => {
     const { connectionApi } = await import('@/lib/api/connection')
     const { secretsApi } = await import('@/lib/api/secrets')

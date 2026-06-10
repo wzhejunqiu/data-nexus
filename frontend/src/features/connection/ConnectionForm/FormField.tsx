@@ -1,5 +1,9 @@
+import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import type { ReactNode } from 'react'
+
+export function fieldErrorId(id: string) {
+  return `${id}-error`
+}
 
 export function FormField({
   id,
@@ -16,7 +20,16 @@ export function FormField({
   error?: string
   children: ReactNode
 }) {
-  const errorId = error ? `${id}-error` : undefined
+  const errorId = error ? fieldErrorId(id) : undefined
+  const control = Children.toArray(children).map((child, index) => {
+    if (index === 0 && isValidElement(child) && errorId) {
+      return cloneElement(child as ReactElement<{ 'aria-describedby'?: string }>, {
+        'aria-describedby': errorId,
+      })
+    }
+    return child
+  })
+
   return (
     <div className="space-y-1">
       <label htmlFor={id} className="block text-xs font-medium text-foreground">
@@ -28,7 +41,7 @@ export function FormField({
         )}
         {optional && <span className="ml-1 font-normal text-muted">({optional})</span>}
       </label>
-      {children}
+      {control}
       {error && (
         <p id={errorId} className="text-xs text-red-500">
           {error}

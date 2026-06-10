@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { createRef } from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { ConnectionForm, type ConnectionFormHandle } from './ConnectionForm'
 import type { ConnectionListItem } from '@/lib/types'
 
@@ -95,5 +95,46 @@ describe('ConnectionForm', () => {
     })
     ref.current?.submit()
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('highlights user and password on auth connection failure', () => {
+    const ref = createRef<ConnectionFormHandle>()
+    render(
+      <ConnectionForm
+        ref={ref}
+        mode="create"
+        initialDialect="postgres"
+        onSubmit={vi.fn()}
+        showTest
+        onTest={vi.fn()}
+      />,
+    )
+
+    act(() => {
+      ref.current?.highlightConnectionFailure('auth')
+    })
+    expect(screen.getAllByText('connection.error.auth')).toHaveLength(2)
+    expect(screen.getByLabelText(/connectionForm.fields.user/i)).toHaveAttribute(
+      'aria-describedby',
+      'user-error',
+    )
+  })
+
+  it('validates host on blur', () => {
+    render(
+      <ConnectionForm
+        mode="create"
+        initialDialect="postgres"
+        onSubmit={vi.fn()}
+        showTest
+        onTest={vi.fn()}
+      />,
+    )
+
+    const host = screen.getByLabelText(/connectionForm.fields.host/i)
+    fireEvent.change(host, { target: { value: '' } })
+    fireEvent.blur(host)
+    expect(screen.getByText(/connectionForm.validation.required/)).toBeInTheDocument()
+    expect(host).toHaveAttribute('aria-describedby', 'host-error')
   })
 })
