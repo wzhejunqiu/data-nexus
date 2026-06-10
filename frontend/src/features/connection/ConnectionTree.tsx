@@ -11,7 +11,7 @@ import { useToastStore } from '@/components/ui/Toast'
 import { connectionGroupApi } from '@/lib/api/connectionGroup'
 import { formatError } from '@/lib/api/errors'
 import { SavedQueries } from '@/features/saved-queries/SavedQueries'
-import type { SidebarRootItemRef } from '@/lib/types'
+import type { ConnectionGroupNode as GroupNode, SidebarRootItemRef } from '@/lib/types'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { ConnectionGroupNode } from './ConnectionGroupNode'
 import { ConnectionTreeItem } from './ConnectionTreeItem'
@@ -20,6 +20,7 @@ import { VaultDialog, type VaultDialogMode } from './VaultDialog'
 import { SidebarDndContext, RootDropZone } from './dnd/SidebarDndContext'
 import { collectGroupMemberMaps, defaultRootItems } from './dnd/sidebarOrder'
 import { useSidebarFileDrop, type FileAttachTarget } from './dnd/useSidebarFileDrop'
+import { groupMatchesSearch, matchesConnectionName } from './sidebarSearch'
 import { invokeSidebarRename, isAnySidebarRenaming } from './sidebarRenameHandlers'
 
 function isEditableTarget(target: EventTarget | null) {
@@ -28,6 +29,15 @@ function isEditableTarget(target: EventTarget | null) {
   if (tag === 'INPUT' || tag === 'TEXTAREA') return true
   if (target.isContentEditable) return true
   return Boolean(target.closest('.monaco-editor'))
+}
+
+function countGroupConnections(groups: GroupNode[]): number {
+  let total = 0
+  for (const g of groups) {
+    total += g.connections?.length ?? 0
+    total += countGroupConnections(g.childGroups ?? [])
+  }
+  return total
 }
 
 export function ConnectionTree() {
@@ -41,6 +51,8 @@ export function ConnectionTree() {
   const [vaultMode, setVaultMode] = useState<VaultDialogMode>('unlock')
   const [pendingOpenId, setPendingOpenId] = useState<string | null>(null)
   const [fileAttach, setFileAttach] = useState<FileAttachTarget | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [pendingRenameGroupId, setPendingRenameGroupId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['connectionSidebarTree'],
@@ -83,16 +95,32 @@ export function ConnectionTree() {
     setVaultOpen(true)
   }
 
-  const groups = data?.groups ?? []
-  const freeConnections = data?.freeConnections ?? []
+  const groups = useMemo(() => data?.groups ?? [], [data?.groups])
+  const freeConnections = useMemo(() => data?.freeConnections ?? [], [data?.freeConnections])
   const rootItems = useMemo(() => (data ? defaultRootItems(data) : []), [data])
   const groupMembers = useMemo(() => collectGroupMemberMaps(groups), [groups])
+
+  const totalConnections = freeConnections.length + countGroupConnections(groups)
+  const hasNoConnections = !isLoading && totalConnections === 0
 
   const isEmpty =
     !isLoading &&
     groups.length <= 1 &&
     freeConnections.length === 0 &&
     groups.every((g) => !g.connections?.length && !g.childGroups?.length)
+
+  const filteredRootItems = useMemo(() => {
+    const q = searchQuery.trim()
+    if (!q) return rootItems
+    return rootItems.filter((ref) => {
+      if (ref.itemType === 'connection') {
+        const item = freeConnections.find((c) => c.id === ref.itemId)
+        return item && matchesConnectionName(item, q)
+      }
+      const group = groups.find((g) => g.id === ref.itemId)
+      return group && groupMatchesSearch(group, q)
+    })
+  }, [rootItems, searchQuery, freeConnections, groups])
 
   const advanceFileAttach = () => {
     setFileAttach((prev) => {
@@ -117,6 +145,10 @@ export function ConnectionTree() {
           node={rootGroup}
           depth={0}
           sortContainerId="root"
+          searchQuery={searchQuery}
+          pendingRenameGroupId={pendingRenameGroupId}
+          onPendingRenameHandled={() => setPendingRenameGroupId(null)}
+          onRequestRename={setPendingRenameGroupId}
           onRefresh={refresh}
           onVaultRequired={handleVaultRequired}
         />
@@ -124,12 +156,14 @@ export function ConnectionTree() {
     }
     const item = freeConnections.find((c) => c.id === ref.itemId)
     if (!item) return null
+    if (searchQuery.trim() && !matchesConnectionName(item, searchQuery)) return null
     return (
       <ConnectionTreeItem
         key={item.id}
         item={item}
         depth={0}
         sortContainerId="root"
+        searchQuery={searchQuery}
         onRefresh={refresh}
         onVaultRequired={handleVaultRequired}
       />
@@ -147,6 +181,13 @@ export function ConnectionTree() {
           tabIndex={-1}
           className="flex min-h-0 flex-1 flex-col overflow-auto p-2 outline-none"
         >
+          <input
+            type="search"
+            className="mb-2 w-full rounded border border-border bg-transparent px-2 py-1 text-sm"
+            placeholder={t('connection.search')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
           <SidebarDndContext onRefresh={refresh} rootItems={rootItems} groupMembers={groupMembers}>
             <ContextMenu>
               <ContextMenuTrigger asChild>
@@ -156,10 +197,13 @@ export function ConnectionTree() {
                     {groups.length === 0 && !isLoading && (
                       <p className="text-sm text-muted">{t('connectionGroup.noGroupsHint')}</p>
                     )}
-                    {isEmpty && groups.length > 0 && (
+                    {hasNoConnections && groups.length > 0 && (
+                      <p className="text-sm text-muted">{t('connection.emptyHint')}</p>
+                    )}
+                    {isEmpty && groups.length > 0 && !hasNoConnections && (
                       <p className="text-sm text-muted">{t('connectionGroup.emptyHint')}</p>
                     )}
-                    {rootItems.map(renderRootItem)}
+                    {filteredRootItems.map(renderRootItem)}
                   </RootDropZone>
                 </div>
               </ContextMenuTrigger>

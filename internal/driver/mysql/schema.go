@@ -17,6 +17,10 @@ type tableRef struct {
 	Qualified string
 }
 
+func isMySQLViewTableType(typ string) bool {
+	return typ == "VIEW" || typ == "SYSTEM VIEW"
+}
+
 func (d *Driver) parseTableRef(tableName string) (tableRef, error) {
 	if strings.Contains(tableName, ".") {
 		parts := strings.SplitN(tableName, ".", 2)
@@ -51,7 +55,7 @@ func (d *Driver) ListTables(ctx context.Context, opts model.ListTablesOptions) (
 		SELECT TABLE_NAME, TABLE_TYPE
 		FROM information_schema.TABLES
 		WHERE TABLE_SCHEMA = ?
-		  AND TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+		  AND TABLE_TYPE IN ('BASE TABLE', 'VIEW', 'SYSTEM VIEW')
 		ORDER BY TABLE_NAME`
 	rows, err := d.db.QueryContext(ctx, query, dbName)
 	if err != nil {
@@ -80,7 +84,7 @@ func (d *Driver) ListTables(ctx context.Context, opts model.ListTablesOptions) (
 	var items []model.TableInfo
 	for _, entry := range entries {
 		info := model.TableInfo{Name: entry.name, Schema: &schemaLabel}
-		if entry.typ == "VIEW" {
+		if isMySQLViewTableType(entry.typ) {
 			info.Type = model.TableTypeView
 			items = append(items, info)
 			continue
@@ -136,7 +140,7 @@ func (d *Driver) lookupTableType(ctx context.Context, ref tableRef) (model.Table
 	if err != nil {
 		return "", model.ErrSQL(err.Error())
 	}
-	if typ == "VIEW" {
+	if isMySQLViewTableType(typ) {
 		return model.TableTypeView, nil
 	}
 	return model.TableTypeTable, nil

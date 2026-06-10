@@ -118,10 +118,20 @@ export function SqlEditor({ connectionId }: { connectionId: string | null }) {
   const openConnections = connections?.items.filter((c) => c.status === 'open') ?? []
   const [selectedConn, setSelectedConn] = useState('')
   const activeConn = connectionId || selectedConn
+  const browseDatabase = useWorkspaceStore((s) =>
+    activeConn ? s.browseContext[activeConn]?.database : undefined,
+  )
+  const browseSchema = useWorkspaceStore((s) =>
+    activeConn ? s.browseContext[activeConn]?.schema : undefined,
+  )
 
   const { data: tables } = useQuery({
-    queryKey: ['schema', 'tables', activeConn],
-    queryFn: () => schemaApi.listTables(activeConn),
+    queryKey: ['schema', 'tables', activeConn, browseDatabase, browseSchema],
+    queryFn: () =>
+      schemaApi.listTables(activeConn, {
+        database: browseDatabase,
+        schema: browseSchema,
+      }),
     enabled: !!activeConn,
   })
 

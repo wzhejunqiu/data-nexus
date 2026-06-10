@@ -26,12 +26,14 @@ export function ConnectionTreeItem({
   item,
   depth,
   sortContainerId,
+  searchQuery = '',
   onRefresh,
   onVaultRequired,
 }: {
   item: ConnectionListItem
   depth: number
   sortContainerId: string
+  searchQuery?: string
   onRefresh: () => void
   onVaultRequired?: (id: string, mode: VaultDialogMode) => void
 }) {
@@ -235,6 +237,7 @@ export function ConnectionTreeItem({
       {isOpen && (
         <ConnectionSchemaTree
           item={item}
+          searchQuery={searchQuery}
           onSelectTable={(table, ctx) => selectTable(item.id, table, ctx)}
         />
       )}

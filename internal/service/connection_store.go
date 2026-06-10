@@ -276,8 +276,8 @@ func (s *ConnectionStore) UpdateMySQLSettings(id string, update model.MySQLSetti
 	if update.Port > 0 {
 		my.Port = update.Port
 	}
-	if update.Database != "" {
-		my.Database = update.Database
+	if update.Database != nil {
+		my.Database = *update.Database
 	}
 	if update.User != "" {
 		my.User = update.User

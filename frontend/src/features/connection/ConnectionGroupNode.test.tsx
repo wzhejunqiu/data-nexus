@@ -72,6 +72,25 @@ describe('ConnectionGroupNode', () => {
     })
   })
 
+  it('enters rename when pendingRenameGroupId matches node', async () => {
+    renderWithProviders(
+      <DndContext onDragEnd={() => {}}>
+        <ConnectionGroupNode
+          node={{ id: 'g-new', name: '新分组', childGroups: [], connections: [] }}
+          depth={0}
+          sortContainerId="root"
+          pendingRenameGroupId="g-new"
+          onPendingRenameHandled={() => {}}
+          onRefresh={() => {}}
+        />
+      </DndContext>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('新分组')).toBeInTheDocument()
+    })
+  })
+
   it('does not call rename when name is empty', async () => {
     const { connectionGroupApi } = await import('@/lib/api/connectionGroup')
     renderGroup()

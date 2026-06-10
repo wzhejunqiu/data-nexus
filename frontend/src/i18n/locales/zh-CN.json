@@ -69,6 +69,7 @@
     "attachAlias": "别名",
     "attachAliasOptional": "可选，留空自动生成",
     "attachedBadge": "已附加",
+    "emptyHint": "暂无连接。使用 文件 → 新建连接 开始。",
     "emptyTables": "无表",
     "readOnly": "只读",
     "rename": "重命名",
@@ -233,6 +234,7 @@
   "attach": {
     "attach": "Attach 数据库…",
     "detach": "取消附加",
+    "detachConfirm": "当前正在浏览该附加库，取消附加将清除浏览上下文。是否继续？",
     "aliasPrompt": "附加数据库别名",
     "mainDb": "主数据库",
     "showInFinder": "在 Finder 中显示",

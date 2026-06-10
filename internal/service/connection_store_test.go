@@ -332,15 +332,44 @@ func TestConnectionStoreUpdateMySQLSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	db2 := "db2"
 	updated, err := store.UpdateMySQLSettings(item.ID, model.MySQLSettingsUpdate{
-		Host: "h2", Port: 3307, Database: "db2", User: "u2", TLS: true, TLSSkipVerify: true,
+		Host: "h2", Port: 3307, Database: &db2, User: "u2", TLS: true, TLSSkipVerify: true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	my := updated.Config.MySQL
-	if my.Host != "h2" || my.Port != 3307 || !my.TLS || !my.TLSSkipVerify {
+	if my.Host != "h2" || my.Port != 3307 || my.Database != "db2" || !my.TLS || !my.TLSSkipVerify {
 		t.Fatalf("unexpected mysql settings: %+v", my)
+	}
+}
+
+func TestConnectionStoreUpdateMySQLSettingsClearsDatabase(t *testing.T) {
+	dir := t.TempDir()
+	store, err := service.NewConnectionStore(filepath.Join(dir, "connections.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := store.UpsertRemote(model.RemoteConnectRequest{
+		Type: model.DriverTypeMySQL,
+		Name: "mysql",
+		MySQL: &model.MySQLConfig{
+			Host: "h1", Port: 3306, Database: "db", User: "u",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	empty := ""
+	updated, err := store.UpdateMySQLSettings(item.ID, model.MySQLSettingsUpdate{
+		Database: &empty,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Config.MySQL.Database != "" {
+		t.Fatalf("expected empty database, got %q", updated.Config.MySQL.Database)
 	}
 }
 
@@ -369,5 +398,8 @@ func TestConnectionStoreUpdateMySQLSettingsPreservesStorageEngine(t *testing.T) 
 	}
 	if updated.Config.MySQL.DefaultStorageEngine != "InnoDB" {
 		t.Fatalf("expected storage engine preserved, got %q", updated.Config.MySQL.DefaultStorageEngine)
+	}
+	if updated.Config.MySQL.Database != "db" {
+		t.Fatalf("expected database preserved on partial update, got %q", updated.Config.MySQL.Database)
 	}
 }

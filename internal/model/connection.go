@@ -155,7 +155,7 @@ type PostgresSettingsUpdate struct {
 type MySQLSettingsUpdate struct {
 	Host                 string  `json:"host"`
 	Port                 int     `json:"port"`
-	Database             string  `json:"database"`
+	Database             *string `json:"database,omitempty"`
 	User                 string  `json:"user"`
 	Password             *string `json:"password,omitempty"`
 	TLS                  bool    `json:"tls"`

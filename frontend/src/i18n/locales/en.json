@@ -69,6 +69,7 @@
     "attachAlias": "Alias",
     "attachAliasOptional": "Optional, auto-generated if empty",
     "attachedBadge": "Attached",
+    "emptyHint": "No connections yet. Use File → New Connection to get started.",
     "emptyTables": "No tables",
     "readOnly": "Read-only",
     "rename": "Rename",
@@ -233,6 +234,7 @@
   "attach": {
     "attach": "Attach database…",
     "detach": "Detach",
+    "detachConfirm": "You are browsing this attached database. Detaching will clear the browse context. Continue?",
     "aliasPrompt": "Alias for attached database",
     "mainDb": "Main database",
     "showInFinder": "Show in Finder",

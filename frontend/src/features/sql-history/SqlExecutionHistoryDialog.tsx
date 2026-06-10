@@ -93,7 +93,9 @@ export function SqlExecutionHistoryDialog({
                 >
                   <td className="whitespace-nowrap p-2 text-xs">{row.executedAt}</td>
                   <td className="max-w-[8rem] truncate p-2">{connName(row.connectionId)}</td>
-                  <td className="max-w-[20rem] truncate p-2 font-mono text-xs">{row.sql}</td>
+                  <td title={row.sql} className="max-w-[20rem] truncate p-2 font-mono text-xs">
+                    {row.sql}
+                  </td>
                   <td className="p-2 text-xs">{row.kind}</td>
                   <td className="p-2 text-xs">{row.durationMs}ms</td>
                   <td className="p-2 text-xs">{row.effectRows}</td>

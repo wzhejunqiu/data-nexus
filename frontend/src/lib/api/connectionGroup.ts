@@ -12,6 +12,7 @@ import {
   ReorderSidebarRoot,
 } from '../../../wailsjs/go/wails/ConnectionGroupService'
 import type {
+  ConnectionGroup,
   ConnectionSidebarTree,
   DeleteGroupRequest,
   GroupDeletePreview,
@@ -31,7 +32,8 @@ async function wrap<T>(fn: () => Promise<T>): Promise<T> {
 
 export const connectionGroupApi = {
   getSidebarTree: () => wrap(() => GetSidebarTree() as Promise<ConnectionSidebarTree>),
-  createGroup: (parentId: string, name: string) => wrap(() => CreateGroup(parentId, name)),
+  createGroup: (parentId: string, name: string) =>
+    wrap(() => CreateGroup(parentId, name) as Promise<ConnectionGroup>),
   renameGroup: (id: string, name: string) => wrap(() => RenameGroup(id, name)),
   countConnectionsInGroup: (id: string) => wrap(() => CountConnectionsInGroup(id)),
   getGroupDeletePreview: (id: string) =>

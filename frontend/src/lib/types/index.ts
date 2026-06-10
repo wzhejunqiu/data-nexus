@@ -86,7 +86,7 @@ export interface PostgresSettingsUpdate {
 export interface MySQLSettingsUpdate {
   host: string
   port: number
-  database: string
+  database?: string | null
   user: string
   password?: string | null
   tls: boolean

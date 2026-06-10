@@ -21,6 +21,7 @@ import { ConnectionTreeItem } from './ConnectionTreeItem'
 import type { VaultDialogMode } from './VaultDialog'
 import { GroupSortableList } from './dnd/SidebarDndContext'
 import { defaultMemberItems } from './dnd/sidebarOrder'
+import { groupMatchesSearch, matchesConnectionName } from './sidebarSearch'
 import { registerGroupRenameHandler } from './sidebarRenameHandlers'
 
 const DEFAULT_GROUP_NAME = 'My Connections'
@@ -29,12 +30,20 @@ export function ConnectionGroupNode({
   node,
   depth,
   sortContainerId,
+  searchQuery = '',
+  pendingRenameGroupId,
+  onPendingRenameHandled,
+  onRequestRename,
   onRefresh,
   onVaultRequired,
 }: {
   node: GroupNode
   depth: number
   sortContainerId: string
+  searchQuery?: string
+  pendingRenameGroupId?: string | null
+  onPendingRenameHandled?: () => void
+  onRequestRename?: (id: string) => void
   onRefresh: () => void
   onVaultRequired?: (id: string, mode: VaultDialogMode) => void
 }) {
@@ -49,6 +58,8 @@ export function ConnectionGroupNode({
   const setSelectedGroupId = useWorkspaceStore((s) => s.setSelectedGroupId)
   const setSidebarFocus = useWorkspaceStore((s) => s.setSidebarFocus)
   const isFocused = sidebarFocus?.kind === 'group' && sidebarFocus.id === node.id
+  const q = searchQuery.trim()
+  const visible = !q || groupMatchesSearch(node, q)
 
   const displayName =
     node.name === DEFAULT_GROUP_NAME ? t('connectionGroup.defaultName') : node.name
@@ -87,10 +98,18 @@ export function ConnectionGroupNode({
     opacity: isDragging ? 0.5 : 1,
   }
 
+  const pendingRename = pendingRenameGroupId === node.id
+  const isRenaming = editing || pendingRename
+
+  const finishPendingRename = useCallback(() => {
+    if (pendingRename) onPendingRenameHandled?.()
+  }, [pendingRename, onPendingRenameHandled])
+
   const renameMut = useMutation({
     mutationFn: (name: string) => connectionGroupApi.renameGroup(node.id, name),
     onSuccess: () => {
       setEditing(false)
+      finishPendingRename()
       onRefresh()
       qc.invalidateQueries({ queryKey: ['connectionSidebarTree'] })
     },
@@ -99,9 +118,13 @@ export function ConnectionGroupNode({
 
   const createChildMut = useMutation({
     mutationFn: () => connectionGroupApi.createGroup(node.id, t('connectionGroup.newGroupName')),
-    onSuccess: () => {
+    onSuccess: (created) => {
       onRefresh()
       qc.invalidateQueries({ queryKey: ['connectionSidebarTree'] })
+      if (created?.id) {
+        setSidebarFocus({ kind: 'group', id: created.id })
+        onRequestRename?.(created.id)
+      }
     },
     onError: (err) => pushToast(formatError(t, err), 'error'),
   })
@@ -111,10 +134,14 @@ export function ConnectionGroupNode({
     if (!trimmed) {
       setEditName(node.name)
       setEditing(false)
+      finishPendingRename()
       return
     }
     if (trimmed !== node.name) renameMut.mutate(trimmed)
-    else setEditing(false)
+    else {
+      setEditing(false)
+      finishPendingRename()
+    }
   }
 
   const startRename = useCallback(() => {
@@ -131,6 +158,8 @@ export function ConnectionGroupNode({
     setSelectedGroupId(node.id)
     setSidebarFocus({ kind: 'group', id: node.id })
   }
+
+  if (!visible) return null
 
   return (
     <div style={{ paddingLeft: depth * 12 }} className="mb-1">
@@ -159,7 +188,7 @@ export function ConnectionGroupNode({
                 {expanded ? '▼' : '▶'}
               </button>
               <span className="text-sm">📁</span>
-              {editing ? (
+              {isRenaming ? (
                 <input
                   data-sidebar-rename-input="true"
                   className="min-w-0 flex-1 rounded border border-border bg-transparent px-1 text-sm"
@@ -173,6 +202,7 @@ export function ConnectionGroupNode({
                     if (e.key === 'Escape') {
                       setEditName(node.name)
                       setEditing(false)
+                      finishPendingRename()
                     }
                   }}
                   onBlur={commitRename}
@@ -201,12 +231,14 @@ export function ConnectionGroupNode({
               if (member.memberType === 'connection') {
                 const conn = connById.get(member.memberId)
                 if (!conn) return null
+                if (q && !matchesConnectionName(conn, q)) return null
                 return (
                   <ConnectionTreeItem
                     key={conn.id}
                     item={conn}
                     depth={depth + 1}
                     sortContainerId={node.id}
+                    searchQuery={searchQuery}
                     onRefresh={onRefresh}
                     onVaultRequired={onVaultRequired}
                   />
@@ -220,6 +252,10 @@ export function ConnectionGroupNode({
                   node={child}
                   depth={depth + 1}
                   sortContainerId={node.id}
+                  searchQuery={searchQuery}
+                  pendingRenameGroupId={pendingRenameGroupId}
+                  onPendingRenameHandled={onPendingRenameHandled}
+                  onRequestRename={onRequestRename}
                   onRefresh={onRefresh}
                   onVaultRequired={onVaultRequired}
                 />

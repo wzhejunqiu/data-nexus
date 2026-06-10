@@ -92,6 +92,29 @@ func TestListNamespaces(t *testing.T) {
 	}
 }
 
+func TestListTablesSystemViews(t *testing.T) {
+	drv, mock := newMockDriver(t)
+	mock.ExpectQuery(`SELECT TABLE_NAME, TABLE_TYPE`).
+		WithArgs("information_schema").
+		WillReturnRows(sqlmock.NewRows([]string{"TABLE_NAME", "TABLE_TYPE"}).
+			AddRow("TABLES", "SYSTEM VIEW").
+			AddRow("COLUMNS", "SYSTEM VIEW"))
+
+	tables, err := drv.ListTables(context.Background(), model.ListTablesOptions{Database: "information_schema"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tables) != 2 {
+		t.Fatalf("expected 2 system views, got %d: %+v", len(tables), tables)
+	}
+	if tables[0].Name != "TABLES" || tables[0].Type != model.TableTypeView {
+		t.Fatalf("unexpected first table: %+v", tables[0])
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestListTables(t *testing.T) {
 	drv, mock := newMockDriver(t)
 	mock.ExpectQuery(`SELECT TABLE_NAME, TABLE_TYPE`).
